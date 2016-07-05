@@ -1,0 +1,6 @@
+*.enc
+*.tar.gz
+*.o
+*.json
+*.so
+*.pem
