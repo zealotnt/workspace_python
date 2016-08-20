@@ -11,10 +11,10 @@ import time
 import sys
 import serial
 import struct
-
-from datalink_deliver import BluefinserialSend, BluefinserialCommand
-
 from optparse import OptionParser, OptionGroup
+
+sys.path.insert(0, 'bluefinserial')
+from datalink_deliver import BluefinserialSend, BluefinserialCommand
 from scan import scan
 from utils import *
 
@@ -59,7 +59,7 @@ while idx < cmd_len:
 	send_buff += pos_val
 	idx += 1
 
-comm = BluefinserialSend("/dev/rfcomm0", 460800)
+comm = BluefinserialSend("/dev/ttyUSB0", 460800)
 
 pkt = BluefinserialCommand()
 cmd = pkt.Packet('\x8b', '\x70', send_buff)

@@ -51,6 +51,7 @@ class BluefinserialSend(serial.Serial):
 	"""
 	BluefinserialSend extends `Serial` by adding functions to read BluefinSerial commands.
 	"""
+	ACK_RETRY = 3
 	ACK_TIMEOUT = 500
 	RESPONSE_TIMEOUT = 6000
 	def __init__(self, port, baud):
@@ -58,62 +59,60 @@ class BluefinserialSend(serial.Serial):
 		:Parameter port: serial port to use (/dev/tty* or COM*)
 		"""
 		# worst-case latency timer should be 100ms (actually 20ms)
-		timeout = 0.1
-		full_packet = ""
-		response = ""
-		serial.Serial.__init__(self, port=port, baudrate=baud, timeout=timeout)
+		self._timeout = 0.1
+		self.__full_packet = ""
+		self._response = ""
+		self._ack_remain = ""
+		self._port = serial.Serial(port=port, baudrate=baud, timeout=self._timeout)
 		
-
-	def writePacket(self, packet):
-
-		return self.write(packet)
-
 	def Exchange(self, packet):
-		self.response = ""
-		self.full_packet = ""
+		retry = 0
+		self._ack_remain = ""
+		self._response = ""
+		self._full_packet = ""
 
-		self.flushInput()
-		self.write(packet)
+		self._port.flushInput()
+		self._port.write(packet)
 
-		ret = self.GetResponse()
+		ret = self.GetACK()
+		if ret is False:
+			print_err("ACK not received, retry " + str(retry))
+			return None
+
+		ret = self.GetResponse(self._ack_remain)
 
 		if ret == False:
 			return None
 
-		return self.response
+		return self._response
+
 	def GetACK(self):
 		partial_packet = ""
-		state = 0
 		ACK_PACKET = "\x00\x3a\x00\xff\xff"
-		time_start = time.clock()
+		time_start = int(round(time.time() * 1000))
 		while True:
-			time_check = time.clock()
-			waiting = self.inWaiting()
-			read_bytes = self.read(1 if waiting == 0 else waiting)
-
+			time_check = int(round(time.time() * 1000))
+			waiting = self._port.inWaiting()
+			read_bytes = self._port.read(1 if waiting == 0 else waiting)
 			if read_bytes == '' and (time_check - time_start) > self.ACK_TIMEOUT :
 				if len(partial_packet) != 0:
 					dump_hex(partial_packet, "ACK read timeout, rcv before timeout: ")
-				return None
+				return False
 
 			for b in read_bytes:
-				self.full_packet += b
+				self._full_packet += b
 				partial_packet += b
 
 			if len(partial_packet) >= 5:
 				if ACK_PACKET == partial_packet[:5]:
 					partial_packet = partial_packet[5:]
-					return partial_packet
+					self._ack_remain = partial_packet
+					return True
 				else:
 					print_err("Not expected ACK packet")
-					return None
+					return False
 
-	def GetResponse(self):
-		remain = self.GetACK()
-		if remain is None:
-			print_err("ACK not received")
-			return False
-
+	def GetResponse(self, remain):
 		partial_packet = remain
 		pkt_len = 0
 		FI_HDR = "\x00\x3a"
@@ -121,9 +120,9 @@ class BluefinserialSend(serial.Serial):
 		pkt_frame_len = ""
 		pkt_frame_data = ""
 		loop_times = 0
-		time_start = time.clock()
+		time_start = int(round(time.time() * 1000))
 		while True:
-			time_check = time.clock()
+			time_check = int(round(time.time() * 1000))
 
 			if (len(partial_packet) >= 2 and 
 				STATE == 0):
@@ -157,15 +156,15 @@ class BluefinserialSend(serial.Serial):
 				self.response = pkt_frame_data	
 				return True
 			
-			waiting = self.inWaiting()
-			read_bytes = self.read(1 if waiting == 0 else waiting)
+			waiting = self._port.inWaiting()
+			read_bytes = self._port.read(1 if waiting == 0 else waiting)
 
 			if read_bytes == '' and (time_check - time_start) > self.RESPONSE_TIMEOUT:
-				dump_hex(self.full_packet, "Receive timeout, receive: ")
+				dump_hex(self._full_packet, "Receive timeout, receive: ")
 				return False
 
 			for b in read_bytes:
-				self.full_packet += b
+				self._full_packet += b
 				partial_packet += b
 
 

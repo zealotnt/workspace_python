@@ -12,13 +12,13 @@ import time
 import sys
 import serial
 import struct
-import binascii
-
 from optparse import OptionParser, OptionGroup
 
+sys.path.insert(0, 'bluefinserial')
 from datalink_deliver import BluefinserialSend, BluefinserialCommand
 from scan import scan
 from utils import *
+
 
 # ---- CONSTANTS
 
