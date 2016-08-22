@@ -69,7 +69,8 @@ def CryptoTDESTestMode(string, plaintext, key, iv, mode, fileOutName, secret = N
 	print "base64_enc    : " + base64_enc 			+ " --> " + str(len(base64_enc))
 	Conclusion("for: " + string, key, iv, plaintext, cipher_text)
 
-myInput="Some random 32 byte message, not"
+# myInput="Some random 32 byte message, not"
+myInput=  "Some random 32 b"
 myKey= ''.join(chr(x) for x in [0x5D,0x41,0x40,0x2A,0xBC,0x4B,0x2A,0x76,0xB9,0x71,0x9D,0x91,0x10,0x17,0xC5,0x92,0x28,0xB4,0x6E,0xD3,0xC1,0x11,0xE8,0x51])
 myIV= ''.join(chr(x) for x in [0x02,0x90,0x9B,0x1C,0xFB,0x50,0xEA,0x0F])
 ###################################### DES3 ECB Test ###############################################
