@@ -69,15 +69,14 @@ rsp = ''
 times = 1
 while True:
 	# dump_hex(cmd, "Command: ")
-	start = time.clock()
+	start = int(round(time.time() * 1000))
 	rsp = comm.Exchange(cmd)
 	if rsp is None:
 		print_err("Transmit fail")
-		comm.close()
 		sys.exit(-1)
 
 	# dump_hex(rsp, "Response: ")
-	end = time.clock()
+	end = int(round(time.time() * 1000))
 	print "Send %d times, %.2gms" % (times, ((end-start)*1000))
 	times += 1
 
