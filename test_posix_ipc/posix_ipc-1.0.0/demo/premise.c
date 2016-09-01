@@ -36,7 +36,13 @@ int main() {
 
     // Create the shared memory
     fd = shm_open(params.shared_memory_name, O_RDWR | O_CREAT | O_EXCL, params.permissions);
-    
+
+    if (fd < 0) {
+        sprintf(s, "share mem already created, open it !!!");
+        say(MY_NAME, s);
+        fd = shm_open(params.shared_memory_name, O_RDWR, params.permissions);    
+    }
+
     if (fd == -1) {
         fd = 0;
         sprintf(s, "Creating the shared memory failed; errno is %d", errno);
