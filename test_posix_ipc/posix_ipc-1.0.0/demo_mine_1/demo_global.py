@@ -1,0 +1,1 @@
+MSQ_QUEUE_OBJ_NAME = "/mlsSerialServiceEPIn"
