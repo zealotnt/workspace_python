@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import os
+import platform
 import re
 import subprocess
 import Tkinter as tk
@@ -31,6 +32,33 @@ WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
 GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
 CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
 
+def GetApplicationName(argument):
+	result = re.findall(r'/(\w+)[\s\r\n$]', argument)
+	if len(result) == 0:
+		result = re.findall(r'/(\w+)$', argument)
+		return result[0]
+	return result[0]
+
+def KillApplication(name):
+	if platform.system().lower() == "windows":
+		os.system("echo y | " + \
+				CURRENT_DIR + \
+				"\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + \
+				"killall " + name);
+
+def KillAllApp():
+	KillApplication(GetApplicationName(ZEBRA_SCANNER_APP))
+	KillApplication(GetApplicationName(WIFI_TEST_APP))
+	KillApplication(GetApplicationName(GPS_3G_TEST_APP))
+	KillApplication(GetApplicationName(CEPAS_TEST_APP))
+
+def RunApplication(command):
+	if platform.system().lower() == "windows":
+		return subprocess.Popen([CURRENT_DIR + '\plink.exe', "-ssh", "-2", "-pw", "123", "root@192.168.100.15", command],
+				stdin=subprocess.PIPE,
+				stdout=subprocess.PIPE,
+				stderr=subprocess.PIPE)
+
 class SshSession():
 	def __init__(self):
 		self.running = False
@@ -39,10 +67,7 @@ class SshSession():
 		if self.running == True:
 			self.pSsh.terminate()
 			self.pSsh.kill()
-			os.system("echo y | " + \
-				CURRENT_DIR + \
-				"\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + \
-				"killall " + self._last_application);
+			KillApplication(self._last_application)
 			self.running = False
 
 	def CallSshScript(self, argument):
@@ -51,21 +76,11 @@ class SshSession():
 			return
 		self.running = True
 		# os.system("echo y | " + CURRENT_DIR + "\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + argument);
-		self.pSsh = subprocess.Popen([CURRENT_DIR + '\plink.exe', "-ssh", "-2", "-pw", "123", "root@192.168.100.15", argument],
-			stdin=subprocess.PIPE,
-			stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE)
-		self._last_application = self._getApplicationName(argument)
+		self.pSsh = RunApplication(argument)
+		self._last_application = GetApplicationName(argument)
 
 	def CreateSshSession(self, argument):
 		thread.start_new_thread(self.CallSshScript, (argument, ))
-
-	def _getApplicationName(self, argument):
-		result = re.findall(r'/(\w+)[\s\r\n$]', argument)
-		if len(result) == 0:
-			result = re.findall(r'/(\w+)$', argument)
-			return result[0]
-		return result[0]
 
 ssh_session = SshSession()
 
@@ -370,6 +385,7 @@ class UI(tk.Tk):
 
 	def TestConnection(self):
 		if test_ping("192.168.100.15") == True:
+			KillAllApp()
 			mbox.showinfo("Connection Result", "Connect ok")
 			frame = self.show_frame("StartPage")
 			frame._enable_test()
