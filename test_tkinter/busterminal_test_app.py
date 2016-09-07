@@ -27,10 +27,17 @@ Tel: +84 8 62917497 Fax: +84 8 62917498
 TITLE_FONT = ("Helvetica", 18, "bold")
 BTN_WIDTH = 20
 
+ENABLE_ARGUMENT = False
 ZEBRA_SCANNER_APP = "/home/root/post/ledindicator 1 5"
 WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
 GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
 CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
+
+# ENABLE_ARGUMENT = True
+# ZEBRA_SCANNER_APP = "/home/MSI/post/mlsScaner"
+# WIFI_TEST_APP = "/home/root/MSI/mlsNetWorkClient"
+# GPS_3G_TEST_APP = "/home/root/MSI/BusTerminal"
+# CEPAS_TEST_APP = "/home/root/MSI/CEPASReader"
 
 def GetApplicationName(argument):
 	result = re.findall(r'/(\w+)[\s\r\n$]', argument)
@@ -78,6 +85,9 @@ class SshSession():
 		# os.system("echo y | " + CURRENT_DIR + "\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + argument);
 		self.pSsh = RunApplication(argument)
 		self._last_application = GetApplicationName(argument)
+		output, err = self.pSsh.communicate()
+		print "plink end !!! with output: "
+		print output
 
 	def CreateSshSession(self, argument):
 		thread.start_new_thread(self.CallSshScript, (argument, ))
@@ -216,6 +226,7 @@ class Test_Wifi(tk.Frame):
 		lbl_url = tk.Label(frame_url, text="url", width=6)
 		lbl_url.pack(side=tk.LEFT, padx=5, pady=5)
 		self.entry_url = Entry(frame_url)
+		self.entry_url.insert(tk.END, 'www.google.com')
 		self.entry_url.pack(fill=tk.X, padx=5, expand=True)
 
 		btn_exit = tk.Button(self, text="Back",
@@ -241,11 +252,15 @@ class Test_Wifi(tk.Frame):
 			mbox.showerror("Error", "url should not be blank")
 			return
 
-		print "WifiTest" + \
-		"with ssid = " + self.entry_ssid.get() + \
-		" password = " + self.entry_password.get() + \
-		" url = " + self.entry_url.get()
-		ssh_session.CreateSshSession(WIFI_TEST_APP + "")
+		App_Argument = ""
+		if ENABLE_ARGUMENT == True:
+			App_Argument = " -t wifi -s " + self.entry_ssid.get() + \
+						" -p " + self.entry_password.get() + \
+						" -l " + self.entry_url.get()
+
+		print "WifiTest" + App_Argument
+
+		ssh_session.CreateSshSession(WIFI_TEST_APP + App_Argument)
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_GPS3G(tk.Frame):
@@ -304,11 +319,18 @@ class Test_GPS3G(tk.Frame):
 			mbox.showerror("Error", "apn should not be blank")
 			return
 
-		print "GPS3GTest " + \
-		"with apn = " + self.entry_apn.get() + \
-		" with username = " + self.entry_username.get() + \
-		" with password = " + self.entry_password.get()
-		ssh_session.CreateSshSession(GPS_3G_TEST_APP + "")
+		App_Argument = ""
+		if ENABLE_ARGUMENT == True:
+			App_Argument = " -a " + self.entry_apn.get() + \
+						" -d " + self.entry_dial_number.get()
+			if len(self.entry_username.get()) > 0:
+				App_Argument += " -u " + self.entry_username.get()
+			if len(self.entry_password.get()) > 0:
+				App_Argument += " -p " + self.entry_password.get()
+
+		print "GPS3GTest " + App_Argument
+
+		ssh_session.CreateSshSession(GPS_3G_TEST_APP + App_Argument)
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_Cepas(tk.Frame):
