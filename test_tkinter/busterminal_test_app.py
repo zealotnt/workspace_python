@@ -39,6 +39,7 @@ ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
 WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
 GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
 CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
+SIRIUS_PASSWORD = ""
 
 def GetApplicationName(argument):
 	result = re.findall(r'/(\w+)[\s\r\n$]', argument)
@@ -51,7 +52,7 @@ def KillApplication(name):
 	if platform.system().lower() == "windows":
 		os.system("echo y | " + \
 				CURRENT_DIR + \
-				"\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + \
+				"\plink.exe -ssh -2 -pw " + "\"" + SIRIUS_PASSWORD + "\"" + " root@192.168.100.15 " + \
 				"killall " + name);
 
 def KillAllApp():
@@ -62,10 +63,12 @@ def KillAllApp():
 
 def RunApplication(command):
 	if platform.system().lower() == "windows":
-		return subprocess.Popen([CURRENT_DIR + '\plink.exe', "-ssh", "-2", "-pw", "123", "root@192.168.100.15", command],
-				stdin=subprocess.PIPE,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE)
+		return subprocess.Popen([CURRENT_DIR + '\plink.exe', "-ssh", "-2", \
+								"-pw", SIRIUS_PASSWORD, \
+								"root@192.168.100.15", command],
+								stdin=subprocess.PIPE,
+								stdout=subprocess.PIPE,
+								stderr=subprocess.PIPE)
 
 class SshSession():
 	def __init__(self):
