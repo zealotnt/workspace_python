@@ -125,7 +125,7 @@ def test_ping(host_ip):
 	return check_connection(output)
 
 class StartPage(Frame):
-	_title = "Bus Terminal Test App"
+	_title = "Bus Terminal Demo App"
 	def __init__(self, parent, controller):
 		Frame.__init__(self, parent)
 		self.controller = controller
@@ -141,23 +141,23 @@ class StartPage(Frame):
 		self.rowconfigure(2, pad=10)
 
 		self.btn_wifi = Button(self,
-			text="Wifi Connection Test",
+			text="Wifi Connection Demo",
 			command=lambda: controller.show_frame("Test_Wifi"), width=BTN_WIDTH)
 		self.btn_wifi.grid(row=1, column=0)
 		# self.btn_wifi.config(height=BTN_HEIGHT, width=BTN_WIDTH)
 
 		self.btn_gps_3g = Button(self,
-			text="3G + GPS Test",
+			text="3G + GPS Demo",
 			command=lambda: controller.show_frame("Test_GPS3G"), width=BTN_WIDTH)
 		self.btn_gps_3g.grid(row=1, column=1)
 
 		self.btn_cepas = Button(self,
-			text="Cepas Reader Test",
+			text="Cepas Reader Demo",
 			command=lambda: controller.show_frame("Test_Cepas"), width=BTN_WIDTH)
 		self.btn_cepas.grid(row=2, column=0)
 
 		self.btn_zebra_scanner = Button(self,
-			text="Zebra Scanner Test",
+			text="Zebra Scanner Demo",
 			command=lambda: controller.show_frame("Test_ZebraScanner"), width=BTN_WIDTH)
 		self.btn_zebra_scanner.grid(row=2, column=1)
 
@@ -176,12 +176,12 @@ class StartPage(Frame):
 		self.btn_zebra_scanner.config(state=tk.DISABLED)
 
 class Test_ZebraScanner(tk.Frame):
-	_title = "Zebra Scanner Test"
+	_title = "Zebra Scanner Demo"
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
 		self.controller = controller
 
-		label = tk.Label(self, text="Zebra Scanner Test", font=TITLE_FONT)
+		label = tk.Label(self, text=self._title, font=TITLE_FONT)
 		label.pack(side="top", fill="x", pady=10)
 
 		btn_exit = tk.Button(self, text="Back",
@@ -206,12 +206,12 @@ class Test_ZebraScanner(tk.Frame):
 		self.btn_test.config(state=tk.NORMAL)
 
 class Test_Wifi(tk.Frame):
-	_title = "Wifi Test"
+	_title = "Wifi Demo"
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
 		self.controller = controller
 
-		label = tk.Label(self, text="Wifi Test", font=TITLE_FONT)
+		label = tk.Label(self, text=self._title, font=TITLE_FONT)
 		label.pack(side="top", fill="x", pady=10)
 
 		frame_ssid = tk.Frame(self)
@@ -240,7 +240,7 @@ class Test_Wifi(tk.Frame):
 						   command=self.OnClose)
 		btn_exit.pack(side=tk.RIGHT, padx=5, pady=5)
 
-		self.btn_test = tk.Button(self, text="Test",
+		self.btn_test = tk.Button(self, text="Run",
 						   command=self.WifiTest)
 		self.btn_test.pack(side=tk.RIGHT, padx=5, pady=5)
 
@@ -272,12 +272,12 @@ class Test_Wifi(tk.Frame):
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_GPS3G(tk.Frame):
-	_title = "GPS + 3G Test"
+	_title = "GPS + 3G Demo"
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
 		self.controller = controller
 
-		label = tk.Label(self, text="GPS + 3G Test", font=TITLE_FONT)
+		label = tk.Label(self, text=self._title, font=TITLE_FONT)
 		label.pack(side="top", fill="x", pady=10)
 
 		frame_apn = tk.Frame(self)
@@ -314,7 +314,7 @@ class Test_GPS3G(tk.Frame):
 						   command=self.OnClose)
 		btn_exit.pack(side=tk.RIGHT, padx=5, pady=5)
 
-		self.btn_test = tk.Button(self, text="Test",
+		self.btn_test = tk.Button(self, text="Run",
 						   command=self.GPS3GTest)
 		self.btn_test.pack(side=tk.RIGHT, padx=5, pady=5)
 
@@ -343,19 +343,19 @@ class Test_GPS3G(tk.Frame):
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_Cepas(tk.Frame):
-	_title = "Cepas reader Test"
+	_title = "Cepas reader Demo"
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
 		self.controller = controller
 
-		label = tk.Label(self, text="Cepas reader Test", font=TITLE_FONT)
+		label = tk.Label(self, text=self._title, font=TITLE_FONT)
 		label.pack(side="top", fill="x", pady=10)
 
 		btn_exit = tk.Button(self, text="Back",
 						   command=self.OnClose)
 		btn_exit.pack(side=tk.RIGHT, padx=5, pady=5)
 
-		self.btn_test = tk.Button(self, text="Test",
+		self.btn_test = tk.Button(self, text="Run",
 						   command=self.CepasTest)
 		self.btn_test.pack(side=tk.RIGHT, padx=5, pady=5)
 

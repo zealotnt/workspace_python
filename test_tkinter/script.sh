@@ -2,6 +2,7 @@
 
 #bash /etc/profile.d/tslib.sh
 
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 export LD_LIBRARY_PATH=/opt/qt-5.4.2-sailfish/lib:/usr/lib:/lib
 export TSLIB_CONFFILE=/etc/ts.conf
 export TSLIB_CALIBFILE=/etc/pointercal
@@ -21,9 +22,5 @@ fi
 
 export DBUS_SESSION_BUS_ADDRESS=$(cat /home/root/dbus-session.txt)
 export ZEBRA_SCANNER=/dev/ttyACM7
-
-#/home/root/busterminal_demo/CEPASReader
-
-echo $2
 
 $1 $2
