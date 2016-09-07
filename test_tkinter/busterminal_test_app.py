@@ -10,6 +10,7 @@ import inspect
 import thread
 import signal
 import time
+import serial
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
@@ -34,12 +35,20 @@ BTN_WIDTH = 20
 # CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
 
 ENABLE_ARGUMENT = True
-RUN_SCRIPT = "/home/root/busterminal_demo/script.sh "
+# RUN_SCRIPT = "/home/root/busterminal_demo/script.sh "
+# ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
+# WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
+# GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
+# CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
+SIRIUS_PASSWORD = "123"
+
+RUN_SCRIPT = ""
 ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
 WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
 GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
 CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
-SIRIUS_PASSWORD = ""
+
+_port = serial.Serial(port="COM46", baudrate=9600, timeout=0.1)
 
 def GetApplicationName(argument):
 	result = re.findall(r'/(\w+)[\s\r\n$]', argument)
@@ -49,6 +58,7 @@ def GetApplicationName(argument):
 	return result[0]
 
 def KillApplication(name):
+	return
 	if platform.system().lower() == "windows":
 		os.system("echo y | " + \
 				CURRENT_DIR + \
@@ -62,6 +72,7 @@ def KillAllApp():
 	KillApplication(GetApplicationName(CEPAS_TEST_APP))
 
 def RunApplication(command):
+	return
 	if platform.system().lower() == "windows":
 		return subprocess.Popen([CURRENT_DIR + '\plink.exe', "-ssh", "-2", \
 								"-pw", SIRIUS_PASSWORD, \
@@ -94,8 +105,9 @@ class SshSession():
 		print output
 
 	def CreateSshSession(self, argument, app_name):
-		self.app_name = app_name
-		thread.start_new_thread(self.CallSshScript, (argument, ))
+		# self.app_name = app_name
+		# thread.start_new_thread(self.CallSshScript, (argument, ))
+		_port.write(argument + " \r\n")
 
 ssh_session = SshSession()
 
@@ -170,6 +182,7 @@ class StartPage(Frame):
 		self.btn_zebra_scanner.config(state="normal")
 
 	def _disable_test(self):
+		return
 		self.btn_wifi.config(state=tk.DISABLED)
 		self.btn_gps_3g.config(state=tk.DISABLED)
 		self.btn_cepas.config(state=tk.DISABLED)
@@ -261,11 +274,9 @@ class Test_Wifi(tk.Frame):
 
 		App_Argument = ""
 		if ENABLE_ARGUMENT == True:
-			App_Argument += " \'"
 			App_Argument += " -t wifi -s " + self.entry_ssid.get() + \
 						" -p " + self.entry_password.get() + \
 						" -l " + self.entry_url.get()
-			App_Argument += "\'"
 		print RUN_SCRIPT + WIFI_TEST_APP + App_Argument
 
 		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_TEST_APP + App_Argument, WIFI_TEST_APP)
@@ -329,14 +340,12 @@ class Test_GPS3G(tk.Frame):
 
 		App_Argument = ""
 		if ENABLE_ARGUMENT == True:
-			App_Argument += " \'"
-			App_Argument += "-a " + self.entry_apn.get() + \
+			App_Argument += " -a " + self.entry_apn.get() + \
 						" -d " + self.entry_dial_number.get()
 			if len(self.entry_username.get()) > 0:
 				App_Argument += " -u " + self.entry_username.get()
 			if len(self.entry_password.get()) > 0:
 				App_Argument += " -p " + self.entry_password.get()
-			App_Argument += "\'"
 		print RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument
 
 		ssh_session.CreateSshSession(RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument, GPS_3G_TEST_APP)
@@ -416,7 +425,7 @@ class UI(tk.Tk):
 
 	def TestConnection(self):
 		if test_ping("192.168.100.15") == True:
-			KillAllApp()
+			# KillAllApp()
 			mbox.showinfo("Connection Result", "Connect ok")
 			frame = self.show_frame("StartPage")
 			frame._enable_test()
