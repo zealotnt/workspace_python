@@ -27,17 +27,18 @@ Tel: +84 8 62917497 Fax: +84 8 62917498
 TITLE_FONT = ("Helvetica", 18, "bold")
 BTN_WIDTH = 20
 
-ENABLE_ARGUMENT = False
-ZEBRA_SCANNER_APP = "/home/root/post/ledindicator 1 5"
-WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
-GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
-CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
+# ENABLE_ARGUMENT = False
+# ZEBRA_SCANNER_APP = "/home/root/post/ledindicator 1 5"
+# WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
+# GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
+# CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
 
-# ENABLE_ARGUMENT = True
-# ZEBRA_SCANNER_APP = "/home/MSI/post/mlsScaner"
-# WIFI_TEST_APP = "/home/root/MSI/mlsNetWorkClient"
-# GPS_3G_TEST_APP = "/home/root/MSI/BusTerminal"
-# CEPAS_TEST_APP = "/home/root/MSI/CEPASReader"
+ENABLE_ARGUMENT = True
+RUN_SCRIPT = "/home/root/busterminal_demo/script.sh "
+ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
+WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
+GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
+CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
 
 def GetApplicationName(argument):
 	result = re.findall(r'/(\w+)[\s\r\n$]', argument)
@@ -84,12 +85,13 @@ class SshSession():
 		self.running = True
 		# os.system("echo y | " + CURRENT_DIR + "\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + argument);
 		self.pSsh = RunApplication(argument)
-		self._last_application = GetApplicationName(argument)
+		self._last_application = GetApplicationName(self.app_name)
 		output, err = self.pSsh.communicate()
 		print "plink end !!! with output: "
 		print output
 
-	def CreateSshSession(self, argument):
+	def CreateSshSession(self, argument, app_name):
+		self.app_name = app_name
 		thread.start_new_thread(self.CallSshScript, (argument, ))
 
 ssh_session = SshSession()
@@ -195,8 +197,10 @@ class Test_ZebraScanner(tk.Frame):
 
 	def ZebraScannerTest(self):
 		print "ZebraScannerTest"
-		ssh_session.CreateSshSession(ZEBRA_SCANNER_APP + "")
 		self.btn_test.config(state=tk.DISABLED)
+		KillApplication(GetApplicationName(ZEBRA_SCANNER_APP))
+		ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP, ZEBRA_SCANNER_APP)
+		self.btn_test.config(state=tk.NORMAL)
 
 class Test_Wifi(tk.Frame):
 	_title = "Wifi Test"
@@ -226,7 +230,7 @@ class Test_Wifi(tk.Frame):
 		lbl_url = tk.Label(frame_url, text="url", width=6)
 		lbl_url.pack(side=tk.LEFT, padx=5, pady=5)
 		self.entry_url = Entry(frame_url)
-		self.entry_url.insert(tk.END, 'www.google.com')
+		self.entry_url.insert(tk.END, 'google.com')
 		self.entry_url.pack(fill=tk.X, padx=5, expand=True)
 
 		btn_exit = tk.Button(self, text="Back",
@@ -254,13 +258,14 @@ class Test_Wifi(tk.Frame):
 
 		App_Argument = ""
 		if ENABLE_ARGUMENT == True:
-			App_Argument = " -t wifi -s " + self.entry_ssid.get() + \
+			App_Argument += " \'"
+			App_Argument += " -t wifi -s " + self.entry_ssid.get() + \
 						" -p " + self.entry_password.get() + \
 						" -l " + self.entry_url.get()
+			App_Argument += "\'"
+		print RUN_SCRIPT + WIFI_TEST_APP + App_Argument
 
-		print "WifiTest" + App_Argument
-
-		ssh_session.CreateSshSession(WIFI_TEST_APP + App_Argument)
+		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_TEST_APP + App_Argument, WIFI_TEST_APP)
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_GPS3G(tk.Frame):
@@ -321,16 +326,17 @@ class Test_GPS3G(tk.Frame):
 
 		App_Argument = ""
 		if ENABLE_ARGUMENT == True:
-			App_Argument = " -a " + self.entry_apn.get() + \
+			App_Argument += " \'"
+			App_Argument += "-a " + self.entry_apn.get() + \
 						" -d " + self.entry_dial_number.get()
 			if len(self.entry_username.get()) > 0:
 				App_Argument += " -u " + self.entry_username.get()
 			if len(self.entry_password.get()) > 0:
 				App_Argument += " -p " + self.entry_password.get()
+			App_Argument += "\'"
+		print RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument
 
-		print "GPS3GTest " + App_Argument
-
-		ssh_session.CreateSshSession(GPS_3G_TEST_APP + App_Argument)
+		ssh_session.CreateSshSession(RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument, GPS_3G_TEST_APP)
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_Cepas(tk.Frame):
@@ -356,7 +362,7 @@ class Test_Cepas(tk.Frame):
 
 	def CepasTest(self):
 		print "CepasTest"
-		ssh_session.CreateSshSession(CEPAS_TEST_APP + "")
+		ssh_session.CreateSshSession(RUN_SCRIPT + CEPAS_TEST_APP, CEPAS_TEST_APP)
 		self.btn_test.config(state=tk.DISABLED)
 
 class UI(tk.Tk):
