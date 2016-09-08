@@ -462,12 +462,6 @@ class UI(tk.Tk):
 							command=self.SerialConnect)
 		self.btn_serial_connect.pack(side=tk.RIGHT, padx=5, pady=5)
 
-		# if test_connection("192.168.100.15") == True:
-			# mbox.showinfo("Connection Result", "Connect ok")
-			# frame = self.show_frame("StartPage")
-			# frame._enable_test()
-		# else:
-			# mbox.showerror("Connection Result", "Connect fail, please try again !!!")
 	def SerialConnect(self):
 		print "serial port = "
 		print self.serial_value.get()
