@@ -10,6 +10,28 @@ import inspect
 import thread
 import signal
 import time
+import glob
+import serial
+
+
+def serial_scan():
+	"""
+	Return a name list of available serial ports
+	"""
+
+	available = []
+
+	if os.name == 'posix':
+		available = glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
+	else:
+		for i in range(256):
+			try:
+				s = serial.Serial(i)
+				available.append(s.portstr)
+				s.close()   # explicit close 'cause of delayed GC in java
+			except serial.SerialException:
+				pass
+	return available
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
@@ -34,12 +56,27 @@ BTN_WIDTH = 20
 # CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
 
 ENABLE_ARGUMENT = True
-RUN_SCRIPT = "/home/root/busterminal_demo/script.sh "
+RUN_SCRIPT = ""
 ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
 WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
 GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
+WIFI_DOWN = "/sbin/ifconfig eth0 down"
 CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
-SIRIUS_PASSWORD = ""
+
+class SerialPort():
+	def __init__(self):
+		self.isConnected = False
+
+	def Connect(self, port_name):
+		self._port = serial.Serial(port=port_name, baudrate=9600, timeout=0.1)
+		if self._port.isOpen() == True:
+			self.isConnected = True
+
+	def Write(self, data):
+		self._port.write(data)
+
+# serial_port = serial.Serial(port="COM46", baudrate=9600, timeout=0.1)
+serial_port = SerialPort()
 
 def GetApplicationName(argument):
 	result = re.findall(r'/(\w+)[\s\r\n$]', argument)
@@ -49,11 +86,7 @@ def GetApplicationName(argument):
 	return result[0]
 
 def KillApplication(name):
-	if platform.system().lower() == "windows":
-		os.system("echo y | " + \
-				CURRENT_DIR + \
-				"\plink.exe -ssh -2 -pw " + "\"" + SIRIUS_PASSWORD + "\"" + " root@192.168.100.15 " + \
-				"killall " + name);
+	return
 
 def KillAllApp():
 	KillApplication(GetApplicationName(ZEBRA_SCANNER_APP))
@@ -62,13 +95,7 @@ def KillAllApp():
 	KillApplication(GetApplicationName(CEPAS_TEST_APP))
 
 def RunApplication(command):
-	if platform.system().lower() == "windows":
-		return subprocess.Popen([CURRENT_DIR + '\plink.exe', "-ssh", "-2", \
-								"-pw", SIRIUS_PASSWORD, \
-								"root@192.168.100.15", command],
-								stdin=subprocess.PIPE,
-								stdout=subprocess.PIPE,
-								stderr=subprocess.PIPE)
+	return
 
 class SshSession():
 	def __init__(self):
@@ -94,8 +121,9 @@ class SshSession():
 		print output
 
 	def CreateSshSession(self, argument, app_name):
-		self.app_name = app_name
-		thread.start_new_thread(self.CallSshScript, (argument, ))
+		# self.app_name = app_name
+		# thread.start_new_thread(self.CallSshScript, (argument, ))
+		serial_port.Write(argument + " \r\n")
 
 ssh_session = SshSession()
 
@@ -110,19 +138,11 @@ def check_connection(ping_result):
 		return True
 	return False
 
-def test_ping(host_ip):
+def test_connection(host_ip):
 	"""
 	Returns True if host responds to a ping request
 	"""
-	pSshProcess = subprocess.Popen(['ping', '-n', '1', host_ip],
-		stdin=subprocess.PIPE,
-		stdout=subprocess.PIPE,
-		stderr=subprocess.PIPE)
-	print type(pSshProcess)
-	output, err = pSshProcess.communicate()
-	rc = pSshProcess.returncode
-	print output
-	return check_connection(output)
+	return
 
 class StartPage(Frame):
 	_title = "Bus Terminal Demo App"
@@ -261,11 +281,9 @@ class Test_Wifi(tk.Frame):
 
 		App_Argument = ""
 		if ENABLE_ARGUMENT == True:
-			App_Argument += " \'"
 			App_Argument += " -t wifi -s " + self.entry_ssid.get() + \
 						" -p " + self.entry_password.get() + \
 						" -l " + self.entry_url.get()
-			App_Argument += "\'"
 		print RUN_SCRIPT + WIFI_TEST_APP + App_Argument
 
 		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_TEST_APP + App_Argument, WIFI_TEST_APP)
@@ -329,16 +347,16 @@ class Test_GPS3G(tk.Frame):
 
 		App_Argument = ""
 		if ENABLE_ARGUMENT == True:
-			App_Argument += " \'"
-			App_Argument += "-a " + self.entry_apn.get() + \
+			App_Argument += " -a " + self.entry_apn.get() + \
 						" -d " + self.entry_dial_number.get()
 			if len(self.entry_username.get()) > 0:
 				App_Argument += " -u " + self.entry_username.get()
 			if len(self.entry_password.get()) > 0:
 				App_Argument += " -p " + self.entry_password.get()
-			App_Argument += "\'"
 		print RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument
 
+		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_DOWN, WIFI_DOWN)
+		time.sleep(2)
 		ssh_session.CreateSshSession(RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument, GPS_3G_TEST_APP)
 		self.btn_test.config(state=tk.DISABLED)
 
@@ -415,13 +433,55 @@ class UI(tk.Tk):
 		self.quit()
 
 	def TestConnection(self):
-		if test_ping("192.168.100.15") == True:
-			KillAllApp()
+		self.com_chooser_windows = tk.Toplevel(self)
+		self.com_chooser_windows.wm_title("Comport chooser")
+		self.com_chooser_windows.wm_attributes("-topmost", True)
+		self.com_chooser_windows.focus_force()
+
+		self.com_chooser_windows.grid_rowconfigure(0, weight=1)
+		self.com_chooser_windows.grid_columnconfigure(0, weight=1)
+
+		frame_comport = tk.Frame(self.com_chooser_windows)
+		frame_comport.pack(fill=tk.X)
+
+		serial_list = serial_scan()
+		self.serial_value = tk.StringVar(self.com_chooser_windows)
+		self.serial_value.set("")
+
+		lbl_ports = tk.Label(frame_comport, text="Ports", width=8)
+		lbl_ports.pack(side=tk.LEFT, padx=5, pady=5)
+		dropdown_ports = tk.OptionMenu(frame_comport, self.serial_value, "")
+		dropdown_ports = apply(tk.OptionMenu, (frame_comport, self.serial_value) + tuple(serial_list))
+		dropdown_ports.pack()
+
+		btn_serial_exit = tk.Button(self.com_chooser_windows, text="Back",
+							command=self.SerialOnClose)
+		btn_serial_exit.pack(side=tk.RIGHT, padx=5, pady=5)
+
+		self.btn_serial_connect = tk.Button(self.com_chooser_windows, text="Connect",
+							command=self.SerialConnect)
+		self.btn_serial_connect.pack(side=tk.RIGHT, padx=5, pady=5)
+
+		# if test_connection("192.168.100.15") == True:
+			# mbox.showinfo("Connection Result", "Connect ok")
+			# frame = self.show_frame("StartPage")
+			# frame._enable_test()
+		# else:
+			# mbox.showerror("Connection Result", "Connect fail, please try again !!!")
+	def SerialConnect(self):
+		print "serial port = "
+		print self.serial_value.get()
+		serial_port.Connect(self.serial_value.get())
+		if serial_port.isConnected == True:
 			mbox.showinfo("Connection Result", "Connect ok")
 			frame = self.show_frame("StartPage")
 			frame._enable_test()
+			self.com_chooser_windows.destroy()
 		else:
 			mbox.showerror("Connection Result", "Connect fail, please try again !!!")
+
+	def SerialOnClose(self):
+		self.com_chooser_windows.destroy()
 
 	def show_frame(self, page_name):
 		'''Show a frame for the given page name'''
