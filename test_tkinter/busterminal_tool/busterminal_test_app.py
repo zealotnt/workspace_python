@@ -445,13 +445,18 @@ class UI(tk.Tk):
 		frame_comport.pack(fill=tk.X)
 
 		serial_list = serial_scan()
+		if serial_list == []:
+			serial_list.append(r'<no comport available>')
+
 		self.serial_value = tk.StringVar(self.com_chooser_windows)
 		self.serial_value.set("")
 
 		lbl_ports = tk.Label(frame_comport, text="Ports", width=8)
 		lbl_ports.pack(side=tk.LEFT, padx=5, pady=5)
-		dropdown_ports = tk.OptionMenu(frame_comport, self.serial_value, "")
-		dropdown_ports = apply(tk.OptionMenu, (frame_comport, self.serial_value) + tuple(serial_list))
+		dropdown_ports = tk.OptionMenu(frame_comport,
+									self.serial_value,
+									*serial_list,
+									command=self.ComConnectSelectEvent)
 		dropdown_ports.pack()
 
 		btn_serial_exit = tk.Button(self.com_chooser_windows, text="Back",
@@ -461,10 +466,16 @@ class UI(tk.Tk):
 		self.btn_serial_connect = tk.Button(self.com_chooser_windows, text="Connect",
 							command=self.SerialConnect)
 		self.btn_serial_connect.pack(side=tk.RIGHT, padx=5, pady=5)
+		self.btn_serial_connect.config(state=tk.DISABLED)
+
+	def ComConnectSelectEvent(self, event):
+		if self.serial_value.get() == r'<no comport available>':
+			self.serial_value.set("")
+			return
+
+		self.btn_serial_connect.config(state=tk.NORMAL)
 
 	def SerialConnect(self):
-		print "serial port = "
-		print self.serial_value.get()
 		serial_port.Connect(self.serial_value.get())
 		if serial_port.isConnected == True:
 			mbox.showinfo("Connection Result", "Connect ok")
