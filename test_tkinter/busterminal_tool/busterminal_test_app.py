@@ -130,7 +130,7 @@ class SshSession():
 	def CreateSshSession(self, argument, app_name):
 		# self.app_name = app_name
 		# thread.start_new_thread(self.CallSshScript, (argument, ))
-		serial_port.Write(argument + "\r\n")
+		serial_port.Write("START_CMD" + argument + "\r\n")
 
 ssh_session = SshSession()
 
