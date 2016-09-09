@@ -8,6 +8,7 @@ import tkMessageBox as mbox
 from ttk import Frame, Button, Style, Entry
 import inspect
 import thread
+import threading
 import signal
 import time
 import glob
@@ -441,23 +442,29 @@ class UI(tk.Tk):
 		self.com_chooser_windows.grid_rowconfigure(0, weight=1)
 		self.com_chooser_windows.grid_columnconfigure(0, weight=1)
 
-		frame_comport = tk.Frame(self.com_chooser_windows)
-		frame_comport.pack(fill=tk.X)
+		self.frame_comport = tk.Frame(self.com_chooser_windows)
+		self.frame_comport.pack(fill=tk.X)
 
-		serial_list = serial_scan()
-		if serial_list == []:
-			serial_list.append(r'<no comport available>')
+		self.serial_list = serial_scan()
+		if self.serial_list == []:
+			self.serial_list.append(r'<no comport available>')
+		self.serial_list_old = self.serial_list
+		print self.serial_list_old
+		# self.serial_pinger = thread.start_new_thread(self.SerialPinging, ())
+		self.isDoneSelectSerial = False
+		self.serial_pinger = threading.Thread(name='serial_pinger', target=self.SerialPinging)
+		self.serial_pinger.start()
 
 		self.serial_value = tk.StringVar(self.com_chooser_windows)
 		self.serial_value.set("")
 
-		lbl_ports = tk.Label(frame_comport, text="Ports", width=8)
+		lbl_ports = tk.Label(self.frame_comport, text="Ports", width=8)
 		lbl_ports.pack(side=tk.LEFT, padx=5, pady=5)
-		dropdown_ports = tk.OptionMenu(frame_comport,
+		self.dropdown_ports = tk.OptionMenu(self.frame_comport,
 									self.serial_value,
-									*serial_list,
+									*self.serial_list,
 									command=self.ComConnectSelectEvent)
-		dropdown_ports.pack()
+		self.dropdown_ports.pack()
 
 		btn_serial_exit = tk.Button(self.com_chooser_windows, text="Back",
 							command=self.SerialOnClose)
@@ -475,18 +482,51 @@ class UI(tk.Tk):
 
 		self.btn_serial_connect.config(state=tk.NORMAL)
 
+	def SerialPinging(self):
+		print "Start thread !!!"
+		while self.isDoneSelectSerial == False:
+			time.sleep(1)
+			print self.isDoneSelectSerial
+			self.serial_list = serial_scan()
+			if self.serial_list == []:
+				self.serial_list.append(r'<no comport available>')
+				self.serial_value.set("")
+				self.btn_serial_connect.config(state=tk.DISABLED)
+
+				# Update the optionmenu of serial ports
+				self.dropdown_ports['menu'].delete(0, 'end')
+				for serial in self.serial_list:
+					self.dropdown_ports['menu'].add_command(label=serial, command=tk._setit(self.serial_value, serial))
+
+				continue
+
+			if cmp(self.serial_list_old, self.serial_list) != 0:
+				self.serial_list_old = self.serial_list
+				print self.serial_list_old
+
+				# Update the optionmenu of serial ports
+				self.dropdown_ports['menu'].delete(0, 'end')
+				for serial in self.serial_list:
+					self.dropdown_ports['menu'].add_command(label=serial, command=tk._setit(self.serial_value, serial))
+
+		print "Exit thread !!!"
+
 	def SerialConnect(self):
 		serial_port.Connect(self.serial_value.get())
 		if serial_port.isConnected == True:
 			mbox.showinfo("Connection Result", "Connect ok")
 			frame = self.show_frame("StartPage")
 			frame._enable_test()
-			self.com_chooser_windows.destroy()
+			self.isDoneSelectSerial = True
+			self.com_chooser_windows.withdraw()
 		else:
 			mbox.showerror("Connection Result", "Connect fail, please try again !!!")
 
 	def SerialOnClose(self):
-		self.com_chooser_windows.destroy()
+		print self.isDoneSelectSerial
+		self.isDoneSelectSerial = True
+		self.com_chooser_windows.withdraw()
+		# self.com_chooser_windows.destroy()
 
 	def show_frame(self, page_name):
 		'''Show a frame for the given page name'''
