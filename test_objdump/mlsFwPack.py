@@ -27,7 +27,7 @@ def getRodata(path):
 def packJson(name, metadata, binary):
 	fileBase64 = base64.standard_b64encode(binary)
 	fileMd5 = md5.new()
-	fileMd5.update(fileBase64)
+	fileMd5.update(binary)
 	return json.dumps({ str(name + "_metadata"): metadata,
 						str(name + "_md5"): fileMd5.hexdigest(),
 						str(name + "_fw"): fileBase64 })
