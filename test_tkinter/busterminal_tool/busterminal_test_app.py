@@ -50,19 +50,20 @@ Tel: +84 8 62917497 Fax: +84 8 62917498
 TITLE_FONT = ("Helvetica", 18, "bold")
 BTN_WIDTH = 20
 
-# ENABLE_ARGUMENT = False
-# ZEBRA_SCANNER_APP = "/home/root/post/ledindicator 1 5"
-# WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
-# GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
-# CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
-
-ENABLE_ARGUMENT = True
+ENABLE_ARGUMENT = False
 RUN_SCRIPT = ""
-ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
-WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
-GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
-WIFI_DOWN = "/sbin/ifconfig eth0 down"
-CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
+ZEBRA_SCANNER_APP = "/home/root/post/ledindicator 1 5"
+WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
+GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
+CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
+
+# ENABLE_ARGUMENT = True
+# RUN_SCRIPT = ""
+# ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
+# WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
+# GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
+# WIFI_DOWN = "/sbin/ifconfig eth0 down"
+# CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
 
 class SerialPort():
 	def __init__(self):
