@@ -52,10 +52,15 @@ BTN_WIDTH = 20
 
 ENABLE_ARGUMENT = False
 RUN_SCRIPT = ""
-ZEBRA_SCANNER_APP = "/home/root/post/ledindicator 1 5"
-WIFI_TEST_APP = "/home/root/post/ledindicator 2 5"
-GPS_3G_TEST_APP = "/home/root/post/ledindicator 3 5"
-CEPAS_TEST_APP = "/home/root/post/ledindicator 4 5"
+ZEBRA_SCANNER_APP = "/home/root/post/ledindicator"
+WIFI_DOWN = "/sbin/ifconfig eth0 down"
+WIFI_TEST_APP = "/home/root/post/ledindicator"
+GPS_3G_TEST_APP = "/home/root/post/ledindicator"
+CEPAS_TEST_APP = "/home/root/post/ledindicator"
+LED_ZEBRA = " 1 5"
+LED_WIFI = " 2 5"
+LED_GPS3G = " 3 5"
+LED_CEPAS = " 4 5"
 
 # ENABLE_ARGUMENT = True
 # RUN_SCRIPT = ""
@@ -125,7 +130,7 @@ class SshSession():
 	def CreateSshSession(self, argument, app_name):
 		# self.app_name = app_name
 		# thread.start_new_thread(self.CallSshScript, (argument, ))
-		serial_port.Write(argument + " \r\n")
+		serial_port.Write(argument + "\r\n")
 
 ssh_session = SshSession()
 
@@ -224,7 +229,12 @@ class Test_ZebraScanner(tk.Frame):
 		print "ZebraScannerTest"
 		self.btn_test.config(state=tk.DISABLED)
 		KillApplication(GetApplicationName(ZEBRA_SCANNER_APP))
-		ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP, ZEBRA_SCANNER_APP)
+
+		App_Argument = ""
+		if ENABLE_ARGUMENT == False:
+			App_Argument = LED_ZEBRA
+
+		ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP + App_Argument, ZEBRA_SCANNER_APP)
 		self.btn_test.config(state=tk.NORMAL)
 
 class Test_Wifi(tk.Frame):
@@ -286,6 +296,8 @@ class Test_Wifi(tk.Frame):
 			App_Argument += " -t wifi -s " + self.entry_ssid.get() + \
 						" -p " + self.entry_password.get() + \
 						" -l " + self.entry_url.get()
+		else:
+			App_Argument = LED_WIFI
 		print RUN_SCRIPT + WIFI_TEST_APP + App_Argument
 
 		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_TEST_APP + App_Argument, WIFI_TEST_APP)
@@ -355,6 +367,8 @@ class Test_GPS3G(tk.Frame):
 				App_Argument += " -u " + self.entry_username.get()
 			if len(self.entry_password.get()) > 0:
 				App_Argument += " -p " + self.entry_password.get()
+		else:
+			App_Argument = LED_GPS3G
 		print RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument
 
 		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_DOWN, WIFI_DOWN)
@@ -385,7 +399,12 @@ class Test_Cepas(tk.Frame):
 
 	def CepasTest(self):
 		print "CepasTest"
-		ssh_session.CreateSshSession(RUN_SCRIPT + CEPAS_TEST_APP, CEPAS_TEST_APP)
+
+		App_Argument = ""
+		if ENABLE_ARGUMENT == False:
+			App_Argument = LED_CEPAS
+
+		ssh_session.CreateSshSession(RUN_SCRIPT + CEPAS_TEST_APP + App_Argument, CEPAS_TEST_APP)
 		self.btn_test.config(state=tk.DISABLED)
 
 class UI(tk.Tk):
@@ -487,7 +506,6 @@ class UI(tk.Tk):
 		print "Start thread !!!"
 		while self.isDoneSelectSerial == False:
 			time.sleep(1)
-			print self.isDoneSelectSerial
 			self.serial_list = serial_scan()
 			if self.serial_list == []:
 				self.serial_list.append(r'<no comport available>')
