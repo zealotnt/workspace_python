@@ -14,6 +14,11 @@ import time
 import glob
 import serial
 
+def CompareList(list1, list2):
+    for val in list1:
+        if val in list2:
+            return 0
+    return -1
 
 def serial_scan():
 	"""
@@ -75,12 +80,22 @@ class SerialPort():
 		self.isConnected = False
 
 	def Connect(self, port_name):
-		self._port = serial.Serial(port=port_name, baudrate=9600, timeout=0.1)
+		try:
+			self._port = serial.Serial(port=port_name, baudrate=9600, timeout=0.1)
+		except Exception, e:
+			mbox.showerror("Error", e)
+			return
+
 		if self._port.isOpen() == True:
 			self.isConnected = True
 
 	def Write(self, data):
-		self._port.write(data)
+		try:
+			self._port.write(data)
+			return 0
+		except Exception, e:
+			mbox.showerror("Error", e)
+			return -1
 
 # serial_port = serial.Serial(port="COM46", baudrate=9600, timeout=0.1)
 serial_port = SerialPort()
@@ -91,15 +106,6 @@ def GetApplicationName(argument):
 		result = re.findall(r'/(\w+)$', argument)
 		return result[0]
 	return result[0]
-
-def KillApplication(name):
-	return
-
-def KillAllApp():
-	KillApplication(GetApplicationName(ZEBRA_SCANNER_APP))
-	KillApplication(GetApplicationName(WIFI_TEST_APP))
-	KillApplication(GetApplicationName(GPS_3G_TEST_APP))
-	KillApplication(GetApplicationName(CEPAS_TEST_APP))
 
 def RunApplication(command):
 	return
@@ -112,7 +118,6 @@ class SshSession():
 		if self.running == True:
 			self.pSsh.terminate()
 			self.pSsh.kill()
-			KillApplication(self._last_application)
 			self.running = False
 
 	def CallSshScript(self, argument):
@@ -120,7 +125,6 @@ class SshSession():
 			mbox.showerror("Error", "Empty ssh argument call")
 			return
 		self.running = True
-		# os.system("echo y | " + CURRENT_DIR + "\plink.exe -ssh -2 -pw 123 root@192.168.100.15 " + argument);
 		self.pSsh = RunApplication(argument)
 		self._last_application = GetApplicationName(self.app_name)
 		output, err = self.pSsh.communicate()
@@ -128,9 +132,7 @@ class SshSession():
 		print output
 
 	def CreateSshSession(self, argument, app_name):
-		# self.app_name = app_name
-		# thread.start_new_thread(self.CallSshScript, (argument, ))
-		serial_port.Write("START_CMD" + argument + "\r\n")
+		return serial_port.Write("START_CMD" + argument + "\r\n")
 
 ssh_session = SshSession()
 
@@ -171,7 +173,6 @@ class StartPage(Frame):
 			text="Wifi Connection Demo",
 			command=lambda: controller.show_frame("Test_Wifi"), width=BTN_WIDTH)
 		self.btn_wifi.grid(row=1, column=0)
-		# self.btn_wifi.config(height=BTN_HEIGHT, width=BTN_WIDTH)
 
 		self.btn_gps_3g = Button(self,
 			text="3G + GPS Demo",
@@ -221,21 +222,15 @@ class Test_ZebraScanner(tk.Frame):
 
 		self.btn_test = tk.Button(self, text="Scan", command=self.ZebraScannerTest)
 		self.btn_test.pack(side=tk.RIGHT, padx=5, pady=5)
+
 	def OnClose(self):
 		self.btn_test.config(state=tk.NORMAL)
 		self.controller.show_frame("StartPage")
 
 	def ZebraScannerTest(self):
 		print "ZebraScannerTest"
-		self.btn_test.config(state=tk.DISABLED)
-		KillApplication(GetApplicationName(ZEBRA_SCANNER_APP))
-
-		App_Argument = ""
-		if ENABLE_ARGUMENT == False:
-			App_Argument = LED_ZEBRA
-
-		ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP + App_Argument, ZEBRA_SCANNER_APP)
-		self.btn_test.config(state=tk.NORMAL)
+		if ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP, ZEBRA_SCANNER_APP) != 0:
+			return self.OnClose()
 
 class Test_Wifi(tk.Frame):
 	_title = "Wifi Demo"
@@ -300,7 +295,9 @@ class Test_Wifi(tk.Frame):
 			App_Argument = LED_WIFI
 		print RUN_SCRIPT + WIFI_TEST_APP + App_Argument
 
-		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_TEST_APP + App_Argument, WIFI_TEST_APP)
+		if ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_TEST_APP + App_Argument, WIFI_TEST_APP) != 0:
+			return self.OnClose()
+
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_GPS3G(tk.Frame):
@@ -371,9 +368,16 @@ class Test_GPS3G(tk.Frame):
 			App_Argument = LED_GPS3G
 		print RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument
 
-		ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_DOWN, WIFI_DOWN)
+		# Force eth0 down, in order to connect 3g correctly
+		if ssh_session.CreateSshSession(RUN_SCRIPT + WIFI_DOWN, WIFI_DOWN) != 0:
+			return self.OnClose()
+
+		# Wait for eth0 has been down
 		time.sleep(2)
-		ssh_session.CreateSshSession(RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument, GPS_3G_TEST_APP)
+
+		if ssh_session.CreateSshSession(RUN_SCRIPT + GPS_3G_TEST_APP + App_Argument, GPS_3G_TEST_APP) != 0:
+			return self.OnClose()
+
 		self.btn_test.config(state=tk.DISABLED)
 
 class Test_Cepas(tk.Frame):
@@ -404,7 +408,9 @@ class Test_Cepas(tk.Frame):
 		if ENABLE_ARGUMENT == False:
 			App_Argument = LED_CEPAS
 
-		ssh_session.CreateSshSession(RUN_SCRIPT + CEPAS_TEST_APP + App_Argument, CEPAS_TEST_APP)
+		if ssh_session.CreateSshSession(RUN_SCRIPT + CEPAS_TEST_APP + App_Argument, CEPAS_TEST_APP) != 0:
+			return self.OnClose()
+
 		self.btn_test.config(state=tk.DISABLED)
 
 class UI(tk.Tk):
@@ -495,51 +501,53 @@ class UI(tk.Tk):
 		self.btn_serial_connect.pack(side=tk.RIGHT, padx=5, pady=5)
 		self.btn_serial_connect.config(state=tk.DISABLED)
 
+	def SerialPortUpdateList(self, list_serial):
+		self.dropdown_ports['menu'].delete(0, 'end')
+		for serial in list_serial:
+			self.dropdown_ports['menu'].add_command(label=serial, command=tk._setit(self.serial_value, serial))
+		self.dropdown_ports['menu'].bind('<Unmap>', self.ComConnectSelectEvent)
+
 	def ComConnectSelectEvent(self, event):
-		if self.serial_value.get() == r'<no comport available>':
+		if r'<no comport available>' in self.serial_list:
 			self.serial_value.set("")
+			self.btn_serial_connect.config(state=tk.DISABLED)
+			self.SerialPortUpdateList(self.serial_list)
 			return
 
 		self.btn_serial_connect.config(state=tk.NORMAL)
 
 	def SerialPinging(self):
 		print "Start thread !!!"
-		while self.isDoneSelectSerial == False:
+		while self.isDoneSelectSerial == False and self.com_chooser_windows.winfo_exists() == 1:
 			time.sleep(1)
 			self.serial_list = serial_scan()
 			if self.serial_list == []:
+				self.serial_list_old = []
 				self.serial_list.append(r'<no comport available>')
 				self.serial_value.set("")
 				self.btn_serial_connect.config(state=tk.DISABLED)
 
 				# Update the optionmenu of serial ports
-				self.dropdown_ports['menu'].delete(0, 'end')
-				for serial in self.serial_list:
-					self.dropdown_ports['menu'].add_command(label=serial, command=tk._setit(self.serial_value, serial))
-
+				self.SerialPortUpdateList(self.serial_list)
 				continue
 
-			if cmp(self.serial_list_old, self.serial_list) != 0:
+			if CompareList(self.serial_list_old, self.serial_list) != 0:
 				self.serial_list_old = self.serial_list
-				print self.serial_list_old
 
 				# Update the optionmenu of serial ports
-				self.dropdown_ports['menu'].delete(0, 'end')
-				for serial in self.serial_list:
-					self.dropdown_ports['menu'].add_command(label=serial, command=tk._setit(self.serial_value, serial))
+				self.SerialPortUpdateList(self.serial_list)
 
 		print "Exit thread !!!"
 
 	def SerialConnect(self):
 		serial_port.Connect(self.serial_value.get())
+
 		if serial_port.isConnected == True:
 			mbox.showinfo("Connection Result", "Connect ok")
 			frame = self.show_frame("StartPage")
 			frame._enable_test()
 			self.isDoneSelectSerial = True
 			self.com_chooser_windows.withdraw()
-		else:
-			mbox.showerror("Connection Result", "Connect fail, please try again !!!")
 
 	def SerialOnClose(self):
 		print self.isDoneSelectSerial
