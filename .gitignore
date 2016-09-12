@@ -6,3 +6,5 @@
 *.pem
 *.pyc
 *.tar.xz
+
+test_bluefinserial/serial

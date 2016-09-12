@@ -1,6 +1,6 @@
 /*
  *  sender.c
- *  
+ *
  *  drops a message into a #defined queue, creating it if user
  *  requested. The message is associated a priority still user
  *  defined
@@ -39,13 +39,13 @@ int main(int argc, char *argv[]) {
     int create_queue = 0;
     int ch;            /* for getopt() */
     time_t currtime;
-    
+
     /* opening the queue        --  mq_open() */
     msgq_id = mq_open(MSGQOBJ_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRWXU | S_IRWXG, NULL);
     if (msgq_id < 0)
     {
         /* mq_open() for opening an existing queue */
-        msgq_id = mq_open(MSGQOBJ_NAME, O_RDWR);        
+        msgq_id = mq_open(MSGQOBJ_NAME, O_RDWR);
     }
 
     if (msgq_id == (mqd_t)-1) {
@@ -55,9 +55,9 @@ int main(int argc, char *argv[]) {
 
     /* producing the message */
     snprintf(msgcontent, MAX_MSG_LEN, "Hello from process %u (at %s).", my_pid, ctime(&currtime));
-    
+
     /* sending the message      --  mq_send() */
     mq_send(msgq_id, msgcontent, strlen(msgcontent)+1, msgprio);
-    
+
     return 0;
 }
