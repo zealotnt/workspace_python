@@ -48,8 +48,11 @@ class SerialSession():
 	def StopSerialSession(self):
 		if self.running == True:
 			print "Going to kill " + self._last_application
-			self.pSsh.terminate()
-			self.pSsh.kill()
+			try:
+				self.pSsh.terminate()
+				self.pSsh.kill()
+			except Exception, e:
+				print e
 			self.running = False
 			os.system("killall " + self._last_application)
 
@@ -84,12 +87,13 @@ while True:
 
 	if "\r" in read_bytes:
 		idx = GetCommandIndex(packet)
-		print packet[idx+len(CMD_PREFIX):]
-		packet = packet[idx+len(CMD_PREFIX):]
 		if idx == -1:
 			print "Invalid command"
 			packet = ""
 			continue
+
+		print packet[idx+len(CMD_PREFIX):]
+		packet = packet[idx+len(CMD_PREFIX):]
 
 		forker.StopSerialSession()
 		forker.CreateSerialSession(packet)

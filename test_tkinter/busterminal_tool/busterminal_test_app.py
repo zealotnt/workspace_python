@@ -15,10 +15,10 @@ import glob
 import serial
 
 def CompareList(list1, list2):
-    for val in list1:
-        if val in list2:
-            return 0
-    return -1
+	for val in list1:
+		if val in list2:
+			return 0
+	return -1
 
 def serial_scan():
 	"""
@@ -69,11 +69,11 @@ LED_CEPAS = " 4 5"
 
 # ENABLE_ARGUMENT = True
 # RUN_SCRIPT = ""
-# ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner"
-# WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient"
-# GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal"
-# WIFI_DOWN = "/sbin/ifconfig eth0 down"
-# CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader"
+# ZEBRA_SCANNER_APP = "/home/root/busterminal_demo/mlsScaner "
+# WIFI_TEST_APP = "/home/root/busterminal_demo/mlsNetWorkClient "
+# GPS_3G_TEST_APP = "/home/root/busterminal_demo/BusTerminal "
+# WIFI_DOWN = "/sbin/ifconfig eth0 down "
+# CEPAS_TEST_APP = "/home/root/busterminal_demo/CEPASReader "
 
 class SerialPort():
 	def __init__(self):
@@ -84,10 +84,12 @@ class SerialPort():
 			self._port = serial.Serial(port=port_name, baudrate=9600, timeout=0.1)
 		except Exception, e:
 			mbox.showerror("Error", e)
-			return
+			return False
 
 		if self._port.isOpen() == True:
 			self.isConnected = True
+			return True
+		return False
 
 	def Write(self, data):
 		try:
@@ -229,7 +231,11 @@ class Test_ZebraScanner(tk.Frame):
 
 	def ZebraScannerTest(self):
 		print "ZebraScannerTest"
-		if ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP, ZEBRA_SCANNER_APP) != 0:
+		App_Argument = ""
+		if ENABLE_ARGUMENT == False:
+			App_Argument = LED_ZEBRA
+
+		if ssh_session.CreateSshSession(RUN_SCRIPT + ZEBRA_SCANNER_APP + App_Argument, ZEBRA_SCANNER_APP) != 0:
 			return self.OnClose()
 
 class Test_Wifi(tk.Frame):
@@ -540,9 +546,7 @@ class UI(tk.Tk):
 		print "Exit thread !!!"
 
 	def SerialConnect(self):
-		serial_port.Connect(self.serial_value.get())
-
-		if serial_port.isConnected == True:
+		if serial_port.Connect(self.serial_value.get()) == True:
 			mbox.showinfo("Connection Result", "Connect ok")
 			frame = self.show_frame("StartPage")
 			frame._enable_test()
