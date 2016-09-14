@@ -21,7 +21,7 @@ from utils import *
 
 #---- CONSTANT
 BLUEFINSERIAL_BAUDRATE = 115200
-BLUEFINSERIAL_DEFAULT_SERIAL_PORT = "/dev/ttyUSB0"
+BLUEFINSERIAL_DEFAULT_SERIAL_PORT = "/dev/ttyUSB1"
 
 #---- CLASSES
 
@@ -30,9 +30,17 @@ class BluefinserialCommand():
 	Bluefinserial command class
 	"""
 	pkt = ''
-	def __init__(self):
+	TARGET_APPLICATION = 0xC5
+	TARGET_RF = 0x35
+
+	def __init__(self, target):
 		"""
 		"""
+		if target != self.TARGET_RF and target != self.TARGET_APPLICATION:
+			print_err("Target is not valid")
+			return
+
+		self.target = target
 		self.DATA_EXCEPT_CMD = 510
 		self.DATA_CMD_MAX_LEN = 512
 
@@ -55,7 +63,7 @@ class BluefinserialCommand():
 			print_err("Packet build error, packet length too long " + str(pkt_len) + " - maximum: " + str(self.DATA_CMD_MAX_LEN))
 			return ""
 
-		self.pkt = struct.pack('<BBHB', 0x00, 0x35, pkt_len, self.LCS(pkt_len)) + CmdCode + CtrCode + Data
+		self.pkt = struct.pack('<BBHB', 0x00, self.target, pkt_len, self.LCS(pkt_len)) + CmdCode + CtrCode + Data
 
 		# Checksum is calculated from LEN TO END
 		self.pkt += self.CheckSum(self.pkt[2:])
