@@ -81,7 +81,7 @@ class BluefinserialSend():
 	ACK_RETRY = 3
 	ACK_TIMEOUT = 500
 	RESPONSE_TIMEOUT = 6000
-	NACK_PACKET = '\x00\x35\x01\xff\xfe'
+	NACK_PACKET = '\x00\xCA\x01\xff\xfe'
 	def __init__(self, port, baud):
 		"""
 		:Parameter port: serial port to use (/dev/tty* or COM*)
@@ -165,7 +165,7 @@ class BluefinserialSend():
 
 	def GetACK(self):
 		partial_packet = ""
-		ACK_PACKET = "\x00\x3a\x00\xff\xff"
+		ACK_PACKET = "\x00\xCA\x00\xff\xff"
 		time_start = float(time.time() * 1000)
 		while True:
 			time_check = float(time.time() * 1000)
@@ -192,7 +192,7 @@ class BluefinserialSend():
 	def GetResponse(self, remain):
 		partial_packet = remain
 		pkt_len = 0
-		FI_HDR = "\x00\x3a"
+		FI_HDR = "\x00\xCA"
 		STATE = 0
 		pkt_frame_len = ""
 		pkt_frame_data = ""
