@@ -1,0 +1,3 @@
+[submodule "test_network/discovery/mdns/netdisco"]
+	path = test_network/discovery/mdns/netdisco
+	url = https://github.com/home-assistant/netdisco
