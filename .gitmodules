@@ -1,0 +1,6 @@
+[submodule "test_network/discovery/mdns/netdisco"]
+	path = test_network/discovery/mdns/netdisco
+	url = https://github.com/home-assistant/netdisco
+[submodule "test_dbus/dbus-python"]
+	path = test_dbus/dbus-python
+	url = https://anongit.freedesktop.org/git/dbus/dbus-python.git
