@@ -44,18 +44,18 @@ if __name__ == "__main__":
 
 	parser = OptionParser()
 
-	parser.add_option(  "-s", "--serial", 
-						dest="serial", 
-						type="string", 
+	parser.add_option(  "-s", "--serial",
+						dest="serial",
+						type="string",
 						help="define the serial port to use")
-	parser.add_option(  "-v", "--verbose", 
-						action="count", 
-						dest="verbose", 
+	parser.add_option(  "-v", "--verbose",
+						action="count",
+						dest="verbose",
 						help="enable verbose mode")
-	parser.add_option(  "-l", "--list-serial", 
-						action="store_true", 
-						dest="list_serial", 
-						default=False, 
+	parser.add_option(  "-l", "--list-serial",
+						action="store_true",
+						dest="list_serial",
+						default=False,
 						help="display available serial ports")
 
 	(options, args) = parser.parse_args()
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 		print 'Open serial port: ' + port_name
 	comm = BluefinserialSend(port_name, 460800)
 
-	pkt = BluefinserialCommand()
+	pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
 	cmd = pkt.Packet('\x8b', '\x00', '\x03')
 
 	rsp = ''

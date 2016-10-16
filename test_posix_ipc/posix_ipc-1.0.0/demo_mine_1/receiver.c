@@ -1,6 +1,6 @@
 /*
  *  takeone.c
- *  
+ *
  *  simply request a message from a queue, and displays queue
  *  attributes.
  *
@@ -35,8 +35,8 @@ int main(int argc, char *argv[]) {
     int msgsz;
     unsigned int sender;
     struct mq_attr msgq_attr;
-    
-    
+
+
     /* opening the queue        --  mq_open() */
     msgq_id = mq_open(MSGQOBJ_NAME, O_RDWR);
     if (msgq_id == (mqd_t)-1) {
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
     /* getting the attributes from the queue        --  mq_getattr() */
     mq_getattr(msgq_id, &msgq_attr);
-    printf("Queue \"%s\":\n\t- stores at most %ld messages\n\t- large at most %ld bytes each\n\t- currently holds %ld messages\n", 
+    printf("Queue \"%s\":\n\t- stores at most %ld messages\n\t- large at most %ld bytes each\n\t- currently holds %ld messages\n",
         MSGQOBJ_NAME, msgq_attr.mq_maxmsg, msgq_attr.mq_msgsize, msgq_attr.mq_curmsgs);
 
     /* getting a message */
@@ -56,6 +56,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     printf("Received message (%d bytes) from %d: %s\n", msgsz, sender, msgcontent);
-    
+
     return 0;
 }

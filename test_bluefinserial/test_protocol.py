@@ -59,9 +59,9 @@ while idx < cmd_len:
 	send_buff += pos_val
 	idx += 1
 
-comm = BluefinserialSend("/dev/ttyUSB0", 460800)
+comm = BluefinserialSend("/dev/ttyUSB1", 115200)
 
-pkt = BluefinserialCommand()
+pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
 cmd = pkt.Packet('\x8b', '\x70', send_buff)
 rsp = ''
 

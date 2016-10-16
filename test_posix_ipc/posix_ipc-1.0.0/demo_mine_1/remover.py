@@ -1,7 +1,7 @@
 # 3rd party modules
 import posix_ipc
 from demo_global import *
- 
+
 print "Remover programm, remove the message queue"
 
 # Create the message queue.
