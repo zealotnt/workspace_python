@@ -1,6 +1,17 @@
-# To run socat
+# socat Testing
+
+## To run socat
 ```bash
 sudo socat -d -d pty,link=/dev/ttyv1,echo=0 pty,link=/dev/ttyv2,echo=0
+```
+
+## Prerequisities
+- xmsdk must be running
+
+## Test
+```
+cd /home/root/TestSerial
+python test_getversion.py
 ```
 
 # To run `util_time.py`
