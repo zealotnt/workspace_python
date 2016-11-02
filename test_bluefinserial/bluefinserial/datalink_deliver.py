@@ -132,6 +132,7 @@ class BluefinserialSend():
 		retry = 0
 		ret = False
 		while ret == False and retry < self.ACK_RETRY:
+			self._port.flushInput()
 			self._port.write(packet)
 			ret = self.GetACK()
 			if ret is False:
