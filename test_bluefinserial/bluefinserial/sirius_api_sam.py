@@ -21,7 +21,7 @@ class SiriusAPISam():
 	"""
 	SiriusAPISam class, implement SAM API of Sirius
 	"""
-	MAX_SAM_SLOT = 9
+	MAX_SAM_SLOT = 8
 
 	def __init__(self, bluefin_serial):
 		"""
@@ -30,7 +30,7 @@ class SiriusAPISam():
 
 	def ActivateSam(self, slot):
 		if slot > self.MAX_SAM_SLOT:
-			print_err("SAM slot invalid, please input SAM slot < " + str(self.MAX_SAM_SLOT))
+			print_err("SAM slot invalid, please input SAM slot <= " + str(self.MAX_SAM_SLOT))
 			return ""
 
 		pkt = ""
@@ -50,5 +50,5 @@ class SiriusAPISam():
 			print_err("Invalid SAM Activate API response")
 			return None
 
-		dump_hex(rsp[4:len(rsp)-1], "SAM slot " + str(slot) + " with ATR = ")
-		return rsp[4:]
+		dump_hex(rsp[4:len(rsp)-1], "SAM " + str(slot) + " ATR = ")
+		return rsp[4:len(rsp)-1]

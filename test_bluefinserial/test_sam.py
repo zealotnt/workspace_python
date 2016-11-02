@@ -43,9 +43,15 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
+	try:
+		comm = BluefinserialSend(options.serial, int(options.baud))
+	except Exception, e:
+		print e
+		parser.print_help()
+		sys.exit(-1)
+
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 	print_ok("Try activate SAM slot " + str(options.sam_slot))
 
-	comm = BluefinserialSend(options.serial, int(options.baud))
 	sirius_sam = SiriusAPISam(comm)
 	sirius_sam.ActivateSam(int(options.sam_slot))

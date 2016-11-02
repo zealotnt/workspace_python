@@ -42,9 +42,15 @@ if __name__ == "__main__":
 	else:
 		port_baud = BLUEFINSERIAL_BAUDRATE
 
+	try:
+		comm = BluefinserialSend(port_name, port_baud)
+	except Exception, e:
+		print e
+		parser.print_help()
+		sys.exit(-1)
+
 	print_ok("Use " + port_name + " with baudrate = " + str(port_baud))
 
-	comm = BluefinserialSend(port_name, port_baud)
 	sirius_system = SiriusAPISystem(comm)
 	sirius_system.GetXmsdkVersion()
 	sirius_system.GetSvcVersion()
