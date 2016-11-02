@@ -21,10 +21,19 @@ from scan import scan
 from utils import *
 
 # ---- CONSTANTS
-DEFAULT_APP_SVC_FILE = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB/Release-Board-Service/svc.json.tar.xz"
-DEFAULT_APP_FW_FILE = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB/Release-Board-Slave/xmsdk.json.tar.xz"
-DEFAULT_RF_FW_FILE = "/home/zealot/workspace_test/surisdk_local/Debug_deploy/surisdk_local.json.tar.xz"
-DEFAULT_RF_BL_FILE = "/home/zealot/miscTest/suribootloader/Debug_deploy/suribootloader.json.tar.xz"
+if os.getenv("APP_PRJ", "") != "":
+	DEFAULT_APP_PRJ = os.environ["APP_PRJ"]
+else:
+	DEFAULT_APP_PRJ = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB"
+DEFAULT_APP_SVC_FILE = DEFAULT_APP_PRJ + "/Release-Board-Service/svc.json.tar.xz"
+DEFAULT_APP_FW_FILE = DEFAULT_APP_PRJ + "/Release-Board-Slave/xmsdk.json.tar.xz"
+
+if os.getenv("RF_PRJ", "") != "":
+	DEFAULT_RF_PRJ = os.environ["RF_PRJ"]
+else:
+	DEFAULT_RF_PRJ = "/home/zealot/workspace_test/surisdk_local"
+DEFAULT_RF_FW_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/surisdk_local.json.tar.xz"
+DEFAULT_RF_BL_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/suribootloader.json.tar.xz"
 
 if __name__ == "__main__":
 
@@ -44,6 +53,11 @@ if __name__ == "__main__":
 						dest="firmware_type",
 						type="string",
 						help="define the firmware type to upgrade")
+	parser.add_option(  "-l", "--loop",
+						dest="download_loop",
+						default=False,
+						help="choose upgrade operation to loop forever or not")
+
 	(options, args) = parser.parse_args()
 
 	if options.serial is not None:
@@ -84,7 +98,9 @@ if __name__ == "__main__":
 	sirius_fw_upgrade = SiriusAPIFwUpgrade(comm)
 
 	count = 0
-	while True:
+	# To execute at least 1 time, we give an or condition to (count == 0)
+	# then, if it does not require looping, the program ends
+	while (options.download_loop) or (count == 0):
 		sirius_fw_upgrade.UpgradeFirmware(file_type, file_path)
 		count += 1
 		print "Success %d times" % count
