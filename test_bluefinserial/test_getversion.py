@@ -48,3 +48,6 @@ if __name__ == "__main__":
 	sirius_system = SiriusAPISystem(comm)
 	sirius_system.GetXmsdkVersion()
 	sirius_system.GetSvcVersion()
+	sirius_system.GetSurisdkVersion()
+	sirius_system.GetSuriblVersion()
+

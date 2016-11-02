@@ -23,8 +23,8 @@ class SiriusAPISystem():
 	"""
 	XMSDK_VERSION = 0x73ab
 	SVC_VERSION = 0x0500
-	SURISDK_VERSION = 0x00
-	SURIBL_VERSION = 0x00
+	SURISDK_VERSION = 0x03
+	SURIBL_VERSION = 0x02
 
 	def __init__(self, bluefin_serial):
 		"""
@@ -39,9 +39,8 @@ class SiriusAPISystem():
 		return firmware_version_str
 
 	def GetXmsdkVersion(self):
-		# Build the packet
 		pkt = ""
-		pkt = BluefinserialCommand(0xC5)
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_APPLICATION)
 		getVersionPacket = struct.pack('<BH', 1, self.XMSDK_VERSION)
 		cmd = pkt.Packet('\x10', '\xD2', getVersionPacket)
 
@@ -56,9 +55,8 @@ class SiriusAPISystem():
 		return firmware_version_str
 
 	def GetSvcVersion(self):
-		# Build the packet
 		pkt = ""
-		pkt = BluefinserialCommand(0xC5)
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_APPLICATION)
 		getVersionPacket = struct.pack('<BH', 1, self.SVC_VERSION)
 		cmd = pkt.Packet('\x10', '\xD2', getVersionPacket)
 
@@ -73,7 +71,33 @@ class SiriusAPISystem():
 		return firmware_version_str
 
 	def GetSurisdkVersion(self):
-		return ""
+		pkt = ""
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		getVersionPacket = struct.pack('<B', self.SURISDK_VERSION)
+		cmd = pkt.Packet('\x8B', '\x00', getVersionPacket)
+
+		rsp = ''
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("Firmware version check fail")
+			return None
+		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
+		firmware_version_str = self.parse_version(u32_firmware_version)
+		print_ok("Surisdk version: " + str(firmware_version_str))
+		return firmware_version_str
 
 	def GetSuriblVersion(self):
-		return ""
+		pkt = ""
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		getVersionPacket = struct.pack('<B', self.SURIBL_VERSION)
+		cmd = pkt.Packet('\x8B', '\x00', getVersionPacket)
+
+		rsp = ''
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("Firmware version check fail")
+			return None
+		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
+		firmware_version_str = self.parse_version(u32_firmware_version)
+		print_ok("Surisdk version: " + str(firmware_version_str))
+		return firmware_version_str
