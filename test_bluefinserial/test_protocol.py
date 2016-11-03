@@ -23,11 +23,43 @@ USAGE = u"""Usage:
 test_protocol <len-to-send> <len-expected-to-receive>
 """
 
+PROTOCOL_TEST_HDR = "[Protocol test] "
+
 def increase_str_by_one(value):
 	int_val = ord(value)
 	int_val += 1
 	int_val &= 0xFF
 	return chr(int_val)
+
+def validate_response(count, exp_resp_len, resp):
+	if len(resp) != (exp_resp_len):
+		print_err("Invalid response len: " + str(len(resp)) + " should be " + str(exp_resp_len))
+		return False
+	if ord(resp[2]) + (ord(resp[3]) << 8) + (ord(resp[4]) << 16) + (ord(resp[5]) << 24) != count:
+		print_err("Count value mismatch")
+		return False
+
+	idx = 0
+	pos_val = '\x06'
+	while idx < (exp_resp_len - 6): # exp_resp_len = 6 byte [header + tail] + payload
+		if resp[idx + 6] != pos_val:
+			print_err("Response buffer mismatch: " + format(ord(resp[idx + 5]), '02x') + " should be " + format(ord(pos_val), '02x'))
+			return False
+		pos_val = increase_str_by_one(pos_val)
+		idx += 1
+	return True
+
+def prepare_buffer(cmd_len, rsp_len, count):
+	# Prepare the sending buffer
+	send_buff = struct.pack('<II', count, rsp_len)
+
+	idx = 0
+	pos_val = '\x00'
+	while idx < cmd_len:
+		pos_val = increase_str_by_one(pos_val)
+		send_buff += pos_val
+		idx += 1
+	return send_buff
 
 if __name__ == "__main__":
 	parser = OptionParser()
@@ -48,7 +80,7 @@ if __name__ == "__main__":
 	parser.add_option(  "-t", "--target",
 						dest="protocol_test_target",
 						default="RF",
-						help="define the target to test protocol")
+						help="define the target to test protocol, any of: RF/APP")
 
 	(options, args) = parser.parse_args()
 
@@ -89,29 +121,23 @@ if __name__ == "__main__":
 
 	# Init the com port
 	comm = BluefinserialSend(options.serial, options.baud)
-
-	# Prepare the sending buffer
-	send_buff = struct.pack('<II', cmd_len, rsp_len)
-
-	idx = 0
-	pos_val = '\x00'
-	while idx < cmd_len:
-		pos_val = increase_str_by_one(pos_val)
-		send_buff += pos_val
-		idx += 1
-
 	pkt = BluefinserialCommand(target)
-	cmd = pkt.Packet(cmd_code, ctr_code, send_buff)
-	rsp = ''
 
 	# Start testing
 	times = 1
 	while True:
+		# Update sending package
+		send_buff = prepare_buffer(cmd_len, rsp_len, times)
+		cmd = pkt.Packet(cmd_code, ctr_code, send_buff)
+
 		# dump_hex(cmd, "Command: ")
 		start = int(round(time.time() * 1000))
 		rsp = comm.Exchange(cmd)
 		if rsp is None:
-			print_err("Transmit fail")
+			print_err(PROTOCOL_TEST_HDR + "Transmit fail")
+			sys.exit(-1)
+		if validate_response(times, rsp_len, rsp) != True:
+			print_err(PROTOCOL_TEST_HDR + "Response fail")
 			sys.exit(-1)
 
 		# dump_hex(rsp, "Response: ")
