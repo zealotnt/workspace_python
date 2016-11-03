@@ -4,3 +4,6 @@
 [submodule "test_dbus/dbus-python"]
 	path = test_dbus/dbus-python
 	url = https://anongit.freedesktop.org/git/dbus/dbus-python.git
+[submodule "test_dbus/python-networkmanager"]
+	path = test_dbus/python-networkmanager
+	url = https://github.com/seveas/python-networkmanager
