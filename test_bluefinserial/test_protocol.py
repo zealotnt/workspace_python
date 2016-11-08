@@ -81,7 +81,6 @@ if __name__ == "__main__":
 						dest="protocol_test_target",
 						default="RF",
 						help="define the target to test protocol, any of: RF/APP")
-
 	(options, args) = parser.parse_args()
 
 	if options.protocol_test_target == "RF":
@@ -95,12 +94,14 @@ if __name__ == "__main__":
 	else:
 		print_err("Invalid target to send")
 		print_err("Only support target RF/APP with flag -t")
+		parser.print_help()
 		sys.exit(-1)
 
 	params = options.packages_size.split(',')
 	if len(params) != 2:
 		print_err("Please specify the Command len + Expected response len with format:")
 		print_err("\t python test_protocol.py -p <Command_len>,<Expected_len>")
+		parser.print_help()
 		sys.exit(-1)
 
 	cmd_len = int(params[0])
@@ -120,7 +121,13 @@ if __name__ == "__main__":
 		sys.exit(-1)
 
 	# Init the com port
-	comm = BluefinserialSend(options.serial, options.baud)
+	try:
+		comm = BluefinserialSend(options.serial, options.baud)
+	except Exception, e:
+		print e
+		parser.print_help()
+		sys.exit(-1)
+	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 	pkt = BluefinserialCommand(target)
 
 	# Start testing
@@ -131,7 +138,7 @@ if __name__ == "__main__":
 		cmd = pkt.Packet(cmd_code, ctr_code, send_buff)
 
 		# dump_hex(cmd, "Command: ")
-		start = int(round(time.time() * 1000))
+		start = int(time.time() * 1000)
 		rsp = comm.Exchange(cmd)
 		if rsp is None:
 			print_err(PROTOCOL_TEST_HDR + "Transmit fail")
@@ -141,7 +148,7 @@ if __name__ == "__main__":
 			sys.exit(-1)
 
 		# dump_hex(rsp, "Response: ")
-		end = int(round(time.time() * 1000))
-		print "Send %d times, %.2gms" % (times, ((end-start)*1000))
+		end = int(time.time() * 1000)
+		print "Send %d times, %.2fms" % (times, (end-start))
 		times += 1
 
