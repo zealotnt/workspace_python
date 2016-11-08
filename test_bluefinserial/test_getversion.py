@@ -22,34 +22,25 @@ from utils import *
 if __name__ == "__main__":
 
 	parser = OptionParser()
-
 	parser.add_option(  "-s", "--serial",
 						dest="serial",
 						type="string",
-						help="define the serial port to use")
+						default=BLUEFINSERIAL_DEFAULT_SERIAL_PORT,
+						help="define the serial port to use, default = " + BLUEFINSERIAL_DEFAULT_SERIAL_PORT)
 	parser.add_option(  "-b", "--baud",
 						dest="baud",
 						type="string",
-						help="define the serial baudrate to use")
+						default=BLUEFINSERIAL_BAUDRATE,
+						help="define the serial baudrate to use, default = "+str(BLUEFINSERIAL_BAUDRATE))
 	(options, args) = parser.parse_args()
 
-	if options.serial is not None:
-		port_name = options.serial
-	else:
-		port_name = BLUEFINSERIAL_DEFAULT_SERIAL_PORT
-	if  options.baud is not None:
-		port_baud = options.baud
-	else:
-		port_baud = BLUEFINSERIAL_BAUDRATE
-
 	try:
-		comm = BluefinserialSend(port_name, port_baud)
+		comm = BluefinserialSend(options.serial, options.baud)
 	except Exception, e:
 		print e
 		parser.print_help()
 		sys.exit(-1)
-
-	print_ok("Use " + port_name + " with baudrate = " + str(port_baud))
+	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 
 	sirius_system = SiriusAPISystem(comm)
 	sirius_system.GetXmsdkVersion()
