@@ -10,3 +10,6 @@
 [submodule "test_expect/pexpect"]
 	path = test_expect/pexpect
 	url = git@github.com:pexpect/pexpect.git
+[submodule "test_serial/grabserial"]
+	path = test_serial/grabserial
+	url = git@github.com:tbird20d/grabserial.git
