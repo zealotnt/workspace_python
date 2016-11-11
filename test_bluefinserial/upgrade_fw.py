@@ -21,10 +21,24 @@ from scan import scan
 from utils import *
 
 # ---- CONSTANTS
-DEFAULT_APP_SVC_FILE = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB/Release-Board-Service/svc.json.tar.xz"
-DEFAULT_APP_FW_FILE = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB/Release-Board-Slave/xmsdk.json.tar.xz"
-DEFAULT_RF_FW_FILE = "/home/zealot/workspace_test/surisdk_local/Debug_deploy/surisdk_local.json.tar.xz"
-DEFAULT_RF_BL_FILE = "/home/zealot/miscTest/suribootloader/Debug_deploy/suribootloader.json.tar.xz"
+if os.getenv("APP_PRJ", "") != "":
+	DEFAULT_APP_PRJ = os.environ["APP_PRJ"]
+else:
+	DEFAULT_APP_PRJ = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB"
+DEFAULT_APP_SVC_FILE = DEFAULT_APP_PRJ + "/Release-Board-Service/svc.json.tar.xz"
+DEFAULT_APP_FW_FILE = DEFAULT_APP_PRJ + "/Release-Board-Slave/xmsdk.json.tar.xz"
+
+if os.getenv("RF_PRJ", "") != "":
+	DEFAULT_RF_PRJ = os.environ["RF_PRJ"]
+else:
+	DEFAULT_RF_PRJ = "/home/zealot/workspace_test/surisdk_local"
+DEFAULT_RF_FW_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/surisdk_local.json.tar.xz"
+DEFAULT_RF_BL_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/suribootloader.json.tar.xz"
+
+TYPE_RF_FW = "rf_fw"
+TYPE_RF_BL = "rf_bl"
+TYPE_APP_FW = "app_fw"
+TYPE_APP_SVC = "app_svc"
 
 if __name__ == "__main__":
 
@@ -35,7 +49,13 @@ if __name__ == "__main__":
 	parser.add_option(  "-s", "--serial",
 						dest="serial",
 						type="string",
-						help="define the serial port to use")
+						default=BLUEFINSERIAL_DEFAULT_SERIAL_PORT,
+						help="define the serial port to use, default = " + BLUEFINSERIAL_DEFAULT_SERIAL_PORT)
+	parser.add_option(  "-b", "--baud",
+						dest="baud",
+						type="string",
+						default=BLUEFINSERIAL_BAUDRATE,
+						help="define the serial baudrate to use, default = " + str(BLUEFINSERIAL_BAUDRATE))
 	parser.add_option(  "-f", "--file",
 						dest="firmware_file",
 						type="string",
@@ -43,49 +63,50 @@ if __name__ == "__main__":
 	parser.add_option(  "-t", "--type",
 						dest="firmware_type",
 						type="string",
-						help="define the firmware type to upgrade")
-	(options, args) = parser.parse_args()
+						help="define the firmware type to upgrade (%s/%s/%s/%s)" % (TYPE_APP_SVC, TYPE_APP_FW, TYPE_RF_BL, TYPE_RF_FW))
+	parser.add_option(  "-l", "--loop",
+						dest="download_loop",
+						default=False,
+						help="choose upgrade operation to loop forever or not, default = False")
 
-	if options.serial is not None:
-		serial = options.serial
-	else:
-		serial = BLUEFINSERIAL_DEFAULT_SERIAL_PORT
-		print_ok("No serial port specified, use " +
-			BLUEFINSERIAL_DEFAULT_SERIAL_PORT +
-			" with baudrate = " +
-			str(BLUEFINSERIAL_BAUDRATE) +
-			" as default")
+	(options, args) = parser.parse_args()
 
 	if options.firmware_type is None:
 		print_err("Please specify firmware_type by -t or --type flag")
+		parser.print_help()
 		sys.exit(-1)
 
-	if options.firmware_type == "rf_fw":
+	if options.firmware_type == TYPE_RF_FW:
 		file = DEFAULT_RF_FW_FILE
-	elif options.firmware_type == "rf_bl":
+	elif options.firmware_type == TYPE_RF_BL:
 		file = DEFAULT_RF_BL_FILE
-	elif options.firmware_type == "app_fw":
+	elif options.firmware_type == TYPE_APP_FW:
 		file = DEFAULT_APP_FW_FILE
-	elif options.firmware_type == "app_svc":
+	elif options.firmware_type == TYPE_APP_SVC:
 		file = DEFAULT_APP_SVC_FILE
 	else:
 		print_err("Invalid firmware_type")
+		parser.print_help()
 		sys.exit(-2)
 
 	if options.firmware_file is not None:
 		file = options.firmware_file
 
-	file_path = file
-	port_name = serial
-	file_type = options.firmware_type
+	try:
+		comm = BluefinserialSend(options.serial, options.baud)
+	except Exception, e:
+		print e
+		parser.print_help()
+		sys.exit(-1)
 
-	comm = BluefinserialSend(port_name, BLUEFINSERIAL_BAUDRATE)
-
+	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 	sirius_fw_upgrade = SiriusAPIFwUpgrade(comm)
 
 	count = 0
-	while True:
-		sirius_fw_upgrade.UpgradeFirmware(file_type, file_path)
+	# To execute at least 1 time, we give an or condition to (count == 0)
+	# then, if it does not require looping, the program ends
+	while (options.download_loop) or (count == 0):
+		sirius_fw_upgrade.UpgradeFirmware(options.firmware_type, options.firmware_file)
 		count += 1
 		print "Success %d times" % count
 

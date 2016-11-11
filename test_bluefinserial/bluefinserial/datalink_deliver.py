@@ -81,17 +81,29 @@ class BluefinserialSend():
 	ACK_RETRY = 3
 	ACK_TIMEOUT = 500
 	RESPONSE_TIMEOUT = 6000
-	NACK_PACKET = '\x00\xCA\x01\xff\xfe'
-	def __init__(self, port, baud):
+	HEADER_APPLICATION_REP = '\xCA'
+	HEADER_RF_REP = '\x3A'
+
+	def __init__(self, port, baud, target=BluefinserialCommand.TARGET_APPLICATION):
 		"""
 		:Parameter port: serial port to use (/dev/tty* or COM*)
 		"""
 		# worst-case latency timer should be 100ms (actually 20ms)
+		if target != BluefinserialCommand.TARGET_RF and target != BluefinserialCommand.TARGET_APPLICATION:
+			print_err("Target is not valid")
+			return
+
 		self._timeout = 0.1
-		self.__full_packet = ""
 		self._response = ""
 		self._ack_remain = ""
+		self._target = target
 		self._port = serial.Serial(port=port, baudrate=baud, timeout=self._timeout)
+
+	def getRepHeader(self, target):
+		if target == BluefinserialCommand.TARGET_RF:
+			return self.HEADER_RF_REP
+		else:
+			return self.HEADER_APPLICATION_REP
 
 	def WaitTillFinishRcv(self):
 		time_start = float(time.time() * 1000)
@@ -104,6 +116,15 @@ class BluefinserialSend():
 				return
 
 	def Exchange(self, packet):
+		if packet[1] == chr(BluefinserialCommand.TARGET_RF):
+			self._target = BluefinserialCommand.TARGET_RF
+		elif packet[1] == chr(BluefinserialCommand.TARGET_APPLICATION):
+			self._target = BluefinserialCommand.TARGET_APPLICATION
+		else:
+			print_err("Invalid command header")
+			return None
+
+		self.NACK_PACKET = '\x00' + self.getRepHeader(self._target) + '\x01\xff\xfe'
 		self._ack_remain = ""
 		self._response = ""
 		self._full_packet = ""
@@ -111,6 +132,7 @@ class BluefinserialSend():
 		retry = 0
 		ret = False
 		while ret == False and retry < self.ACK_RETRY:
+			self._port.flushInput()
 			self._port.write(packet)
 			ret = self.GetACK()
 			if ret is False:
@@ -165,7 +187,7 @@ class BluefinserialSend():
 
 	def GetACK(self):
 		partial_packet = ""
-		ACK_PACKET = "\x00\xCA\x00\xff\xff"
+		ACK_PACKET = "\x00" + self.getRepHeader(self._target) + "\x00\xff\xff"
 		time_start = float(time.time() * 1000)
 		while True:
 			time_check = float(time.time() * 1000)
@@ -192,7 +214,7 @@ class BluefinserialSend():
 	def GetResponse(self, remain):
 		partial_packet = remain
 		pkt_len = 0
-		FI_HDR = "\x00\xCA"
+		FI_HDR = "\x00" + self.getRepHeader(self._target)
 		STATE = 0
 		pkt_frame_len = ""
 		pkt_frame_data = ""
