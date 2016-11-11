@@ -7,3 +7,6 @@
 [submodule "test_dbus/python-networkmanager"]
 	path = test_dbus/python-networkmanager
 	url = https://github.com/seveas/python-networkmanager
+[submodule "test_expect/pexpect"]
+	path = test_expect/pexpect
+	url = git@github.com:pexpect/pexpect.git
