@@ -55,4 +55,4 @@ if __name__ == "__main__":
 
 	sirius_sam = SiriusAPISam(comm)
 	sirius_sam.ActivateSam(int(options.sam_slot))
-	sirius_sam.ExchangeAPDU('\x00')
+	sirius_sam.ExchangeAPDU(int(options.sam_slot), '\x00')
