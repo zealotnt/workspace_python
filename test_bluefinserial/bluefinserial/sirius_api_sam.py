@@ -50,8 +50,8 @@ class SiriusAPISam():
 			print_err("Invalid SAM Activate API response")
 			return None
 
-		dump_hex(rsp[4:len(rsp)-1], "SAM " + str(slot) + " ATR = ")
-		return rsp[4:len(rsp)-1]
+		dump_hex(rsp[4:len(rsp)], "SAM %d ATR = " % (slot))
+		return rsp[4:len(rsp)]
 
 	def ExchangeAPDU(self, slot, apdu):
 		if slot > self.MAX_SAM_SLOT:
@@ -77,5 +77,5 @@ class SiriusAPISam():
 			return None
 
 		dump_hex(rsp, "Rcv %d bytes " % (len(rsp)))
-		dump_hex(rsp[5:len(rsp)], "SAM " + str(slot) + " R-APDU = ")
+		dump_hex(rsp[5:len(rsp)], "SAM %d R-APDU = " % (slot))
 		return rsp[5:len(rsp)]
