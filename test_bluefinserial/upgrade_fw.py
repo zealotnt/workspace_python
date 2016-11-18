@@ -59,7 +59,9 @@ if __name__ == "__main__":
 	parser.add_option(  "-f", "--file",
 						dest="firmware_file",
 						type="string",
-						help="define the file path to firmware")
+						help="- define the file path to firmware \
+						- note: user can export env_var APP_PRJ point to the project folder \
+						- example: /home/zealot/workspace_sirius/xmsdk")
 	parser.add_option(  "-t", "--type",
 						dest="firmware_type",
 						type="string",
@@ -99,6 +101,7 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
+	print_ok("Upgrade %s with %s" % (options.firmware_type, file))
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 	sirius_fw_upgrade = SiriusAPIFwUpgrade(comm)
 
@@ -106,7 +109,7 @@ if __name__ == "__main__":
 	# To execute at least 1 time, we give an or condition to (count == 0)
 	# then, if it does not require looping, the program ends
 	while (options.download_loop) or (count == 0):
-		sirius_fw_upgrade.UpgradeFirmware(options.firmware_type, options.firmware_file)
+		sirius_fw_upgrade.UpgradeFirmware(options.firmware_type, file)
 		count += 1
 		print "Success %d times" % count
 
