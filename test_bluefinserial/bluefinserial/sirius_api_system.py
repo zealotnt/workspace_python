@@ -47,7 +47,7 @@ class SiriusAPISystem():
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
 		if rsp is None:
-			print_err("Firmware version check fail")
+			print_err("Xmsdk firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16) + (ord(rsp[8]) << 24)
 		firmware_version_str = self.parse_version(u32_firmware_version)
@@ -62,8 +62,8 @@ class SiriusAPISystem():
 
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
-		if rsp is None:
-			print_err("Firmware version check fail")
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Svc firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16) + (ord(rsp[8]) << 24)
 		firmware_version_str = self.parse_version(u32_firmware_version)
@@ -78,8 +78,8 @@ class SiriusAPISystem():
 
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
-		if rsp is None:
-			print_err("Firmware version check fail")
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Surisdk firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
@@ -94,8 +94,8 @@ class SiriusAPISystem():
 
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
-		if rsp is None:
-			print_err("Firmware version check fail")
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Suribl firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
