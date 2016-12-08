@@ -24,15 +24,15 @@ from utils import *
 if os.getenv("APP_PRJ", "") != "":
 	DEFAULT_APP_PRJ = os.environ["APP_PRJ"]
 else:
-	DEFAULT_APP_PRJ = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB"
+	DEFAULT_APP_PRJ = "/home/zealot/workspace_sirius/xmsdk/"
 DEFAULT_APP_SVC_FILE = DEFAULT_APP_PRJ + "/Release-Board-Service/svc.json.tar.xz"
 DEFAULT_APP_FW_FILE = DEFAULT_APP_PRJ + "/Release-Board-Slave/xmsdk.json.tar.xz"
 
 if os.getenv("RF_PRJ", "") != "":
 	DEFAULT_RF_PRJ = os.environ["RF_PRJ"]
 else:
-	DEFAULT_RF_PRJ = "/home/zealot/workspace_test/surisdk_local"
-DEFAULT_RF_FW_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/surisdk_local.json.tar.xz"
+	DEFAULT_RF_PRJ = "/home/zealot/workspace_sirius/surisdk/"
+DEFAULT_RF_FW_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/surisdk.json.tar.xz"
 DEFAULT_RF_BL_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/suribootloader.json.tar.xz"
 
 TYPE_RF_FW = "rf_fw"
@@ -60,8 +60,9 @@ if __name__ == "__main__":
 						dest="firmware_file",
 						type="string",
 						help="- define the file path to firmware \
-						- note: user can export env_var APP_PRJ point to the project folder \
-						- example: /home/zealot/workspace_sirius/xmsdk")
+						- note: user can export env_var APP_PRJ/RF_PRJ point to the project folder \
+						- example:  export APP_PRJ=/home/zealot/workspace_sirius/xmsdk \
+						- example2: export APP_PRJ=/home/zealot/workspace_sirius/surisdk")
 	parser.add_option(  "-t", "--type",
 						dest="firmware_type",
 						type="string",

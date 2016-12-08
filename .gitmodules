@@ -13,3 +13,6 @@
 [submodule "test_serial/grabserial"]
 	path = test_serial/grabserial
 	url = git@github.com:tbird20d/grabserial.git
+[submodule "test_pyusb/pyusb"]
+	path = test_pyusb/pyusb
+	url = git@github.com:walac/pyusb.git
