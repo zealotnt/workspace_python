@@ -18,6 +18,7 @@ from datalink_deliver import *
 
 #---- CLASSES
 class ExampleAPDU():
+	INVALID_APDU_1 = "\x00"
 	SECURE_MEM_APDU_1 = "\x00\xa4\x04\x00\x07\xa0\x00\x00\x01\x51\x00\x00"
 
 class PPSBaudrate():

@@ -39,10 +39,16 @@ if __name__ == "__main__":
 						type="string",
 						help="define the SAM slot to test (required)")
 	parser.add_option(  "-l", "--loop",
-						dest="download_loop",
+						dest="run_loop",
 						action="store_true",
 						default=False,
 						help="choose upgrade operation to loop forever or not, default = False")
+	parser.add_option(  "-f", "--flow",
+						dest="run_flow",
+						default="0",
+						help="choose run flow for SAM test\
+						- flow=0: Loop[activate -> pps -> exchange -> deactivate]\
+						- flow=1: activate -> pps -> Loop[exchange]")
 	(options, args) = parser.parse_args()
 
 	if options.sam_slot is None:
@@ -66,21 +72,48 @@ if __name__ == "__main__":
 	# Enable debug print of RF processor
 	system_api.RfDebugPrintEnable()
 
-	# To execute at least 1 time, we give an or condition to (count == 0)
-	# then, if it does not require looping, the program ends
-	ret = sirius_sam.ActivateSam(sam_slot)
-	if ret is None:
-		sys.exit(-1)
-
-	# SAM0 - secure memory is PPS automatically
-	ret = sirius_sam.PpsSam(sam_slot, PPSBaudrate.B115200)
-	if (sam_slot is not 0) and (ret is None):
-		sys.exit(-2)
+	# Let's see any debug print output
+	system_api.GetSurisdkVersion()
 
 	# Start stress testing
-	count = 0
-	while (options.download_loop) or (count == 0):
-		if sirius_sam.ExchangeAPDU(sam_slot, ExampleAPDU.SECURE_MEM_APDU_1) is None:
-			sys.exit(-3)
-		count += 1
-		print "Success %d times" % count
+	if options.run_flow == "0":
+		count = 0
+		while (options.run_loop) or (count == 0):
+			time.sleep(0.1)
+			# To execute at least 1 time, we give an or condition to (count == 0)
+			# then, if it does not require looping, the program ends
+			ret = sirius_sam.ActivateSam(sam_slot)
+			if ret is None:
+				sys.exit(-1)
+
+			# SAM0 - secure memory is PPS automatically
+			ret = sirius_sam.PpsSam(sam_slot, PPSBaudrate.B115200)
+			if (sam_slot is not 0) and (ret is None):
+				sys.exit(-2)
+
+			if sirius_sam.ExchangeAPDU(sam_slot, ExampleAPDU.SECURE_MEM_APDU_1) is None:
+				sys.exit(-3)
+			count += 1
+			print "Success %d times" % count
+
+			ret = sirius_sam.DeactivateSam(sam_slot)
+			if ret is None:
+				sys.exit(-2)
+	elif options.run_flow == "1":
+		# To execute at least 1 time, we give an or condition to (count == 0)
+		# then, if it does not require looping, the program ends
+		ret = sirius_sam.ActivateSam(sam_slot)
+		if ret is None:
+			sys.exit(-1)
+
+		# SAM0 - secure memory is PPS automatically
+		ret = sirius_sam.PpsSam(sam_slot, PPSBaudrate.B115200)
+		if (sam_slot is not 0) and (ret is None):
+			sys.exit(-2)
+
+		count = 0
+		while (options.run_loop) or (count == 0):
+			if sirius_sam.ExchangeAPDU(sam_slot, ExampleAPDU.SECURE_MEM_APDU_1) is None:
+				sys.exit(-3)
+			count += 1
+			print "Success %d times" % count
