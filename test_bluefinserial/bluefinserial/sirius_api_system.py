@@ -101,3 +101,13 @@ class SiriusAPISystem():
 		firmware_version_str = self.parse_version(u32_firmware_version)
 		print_ok("Surisdk version: " + str(firmware_version_str))
 		return firmware_version_str
+
+	def RfDebugPrintEnable(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		cmd = pkt.Packet('\x8B', '\x24', "\x01\x07")
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("RfDebugPrintEnable command fail")
+			return None
+		return True

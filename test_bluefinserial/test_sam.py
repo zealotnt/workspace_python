@@ -16,6 +16,7 @@ from optparse import OptionParser, OptionGroup
 sys.path.insert(0, 'bluefinserial')
 from datalink_deliver import *
 from sirius_api_sam import *
+from sirius_api_system import *
 from scan import scan
 from utils import *
 
@@ -37,6 +38,11 @@ if __name__ == "__main__":
 						dest="sam_slot",
 						type="string",
 						help="define the SAM slot to test (required)")
+	parser.add_option(  "-l", "--loop",
+						dest="download_loop",
+						action="store_true",
+						default=False,
+						help="choose upgrade operation to loop forever or not, default = False")
 	(options, args) = parser.parse_args()
 
 	if options.sam_slot is None:
@@ -54,5 +60,27 @@ if __name__ == "__main__":
 	print_ok("Try activate SAM slot " + str(options.sam_slot))
 
 	sirius_sam = SiriusAPISam(comm)
-	sirius_sam.ActivateSam(int(options.sam_slot))
-	sirius_sam.ExchangeAPDU(int(options.sam_slot), '\x00')
+	system_api = SiriusAPISystem(comm)
+	sam_slot = int(options.sam_slot)
+
+	# Enable debug print of RF processor
+	system_api.RfDebugPrintEnable()
+
+	# To execute at least 1 time, we give an or condition to (count == 0)
+	# then, if it does not require looping, the program ends
+	ret = sirius_sam.ActivateSam(sam_slot)
+	if ret is None:
+		sys.exit(-1)
+
+	# SAM0 - secure memory is PPS automatically
+	ret = sirius_sam.PpsSam(sam_slot, PPSBaudrate.B115200)
+	if (sam_slot is not 0) and (ret is None):
+		sys.exit(-2)
+
+	# Start stress testing
+	count = 0
+	while (options.download_loop) or (count == 0):
+		if sirius_sam.ExchangeAPDU(sam_slot, ExampleAPDU.SECURE_MEM_APDU_1) is None:
+			sys.exit(-3)
+		count += 1
+		print "Success %d times" % count
