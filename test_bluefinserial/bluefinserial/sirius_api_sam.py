@@ -17,6 +17,15 @@ from utils import *
 from datalink_deliver import *
 
 #---- CLASSES
+class PPSBaudrate():
+	B9600 = '\x00'
+	B19200 = '\x01'
+	B38400 = '\x02'
+	B76800 = '\x03'
+	B115200 = '\x04'
+	B230400 = '\x05'
+	B409600 = '\x06'
+
 class SiriusAPISam():
 	"""
 	SiriusAPISam class, implement SAM API of Sirius
@@ -33,11 +42,9 @@ class SiriusAPISam():
 			print_err("SAM slot invalid, please input SAM slot <= " + str(self.MAX_SAM_SLOT))
 			return ""
 
-		pkt = ""
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
 		cmd = pkt.Packet('\x89', '\x02', chr(slot))
 
-		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
 		if rsp is None:
 			print_err("Send Activate SAM command fail")
@@ -53,17 +60,53 @@ class SiriusAPISam():
 		dump_hex(rsp[4:len(rsp)], "SAM %d ATR = " % (slot))
 		return rsp[4:len(rsp)]
 
+	def DeactivateSam(self, slot):
+		if slot > self.MAX_SAM_SLOT:
+			print_err("SAM slot invalid, please input SAM slot <= " + str(self.MAX_SAM_SLOT))
+			return ""
+
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		cmd = pkt.Packet('\x89', '\x08', chr(slot))
+
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("Send deactivate SAM command fail")
+			return None
+
+		if rsp[2] != '\x00':
+			print_err("Deactivate SAM fail")
+			return None
+		return True
+
+	def PpsSam(self, slot, baudrate):
+		if slot > self.MAX_SAM_SLOT:
+			print_err("SAM slot invalid, please input SAM slot <= " + str(self.MAX_SAM_SLOT))
+			return ""
+
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		# Format:
+		# 0x89 0x04 slot baudrate atrlen [atr]
+		cmd = pkt.Packet('\x89', '\x04', chr(slot) + baudrate + '\x00')
+
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("Send pps SAM command fail")
+			return None
+
+		if rsp[2] != '\x00':
+			print_err("Pps SAM fail")
+			return None
+		return True
+
 	def ExchangeAPDU(self, slot, apdu):
 		if slot > self.MAX_SAM_SLOT:
 			print_err("SAM slot invalid, please input SAM slot <= " + str(self.MAX_SAM_SLOT))
 			return ""
 
-		pkt = ""
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
 		apdu_packet = struct.pack('<BH', slot, len(apdu)) + apdu
 		cmd = pkt.Packet('\x89', '\x06', apdu_packet)
 
-		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
 		if rsp is None:
 			print_err("Exchange SAM APDU command fail, no response")
@@ -76,6 +119,5 @@ class SiriusAPISam():
 			print_err("Invalid SAM Exchange APDU API response")
 			return None
 
-		dump_hex(rsp, "Rcv %d bytes " % (len(rsp)))
 		dump_hex(rsp[5:len(rsp)], "SAM %d R-APDU = " % (slot))
 		return rsp[5:len(rsp)]
