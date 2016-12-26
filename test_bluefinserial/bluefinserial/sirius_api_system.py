@@ -111,3 +111,20 @@ class SiriusAPISystem():
 			print_err("RfDebugPrintEnable command fail")
 			return None
 		return True
+
+	def SetRootPassword(self, password=""):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_APPLICATION)
+		# always has null character at the end
+		set_password_package = struct.pack('<BB', 4, len(password)) + password
+		cmd = pkt.Packet('\x20', '\x10', set_password_package)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("SetRootPassword execute fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("Set root password to '%s' successfully" % password)
+		return True
