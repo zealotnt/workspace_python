@@ -47,7 +47,7 @@ class SiriusAPISystem():
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
 		if rsp is None:
-			print_err("Firmware version check fail")
+			print_err("Xmsdk firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16) + (ord(rsp[8]) << 24)
 		firmware_version_str = self.parse_version(u32_firmware_version)
@@ -62,8 +62,8 @@ class SiriusAPISystem():
 
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
-		if rsp is None:
-			print_err("Firmware version check fail")
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Svc firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16) + (ord(rsp[8]) << 24)
 		firmware_version_str = self.parse_version(u32_firmware_version)
@@ -78,8 +78,8 @@ class SiriusAPISystem():
 
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
-		if rsp is None:
-			print_err("Firmware version check fail")
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Surisdk firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
@@ -94,10 +94,37 @@ class SiriusAPISystem():
 
 		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
-		if rsp is None:
-			print_err("Firmware version check fail")
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Suribl firmware version check fail")
 			return None
 		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
 		print_ok("Surisdk version: " + str(firmware_version_str))
 		return firmware_version_str
+
+	def RfDebugPrintEnable(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		cmd = pkt.Packet('\x8B', '\x24', "\x01\x07")
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("RfDebugPrintEnable command fail")
+			return None
+		return True
+
+	def SetRootPassword(self, password=""):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_APPLICATION)
+		# always has null character at the end
+		set_password_package = struct.pack('<BB', 4, len(password)) + password
+		cmd = pkt.Packet('\x20', '\x10', set_password_package)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("SetRootPassword execute fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("Set root password to '%s' successfully" % password)
+		return True

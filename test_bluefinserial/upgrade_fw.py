@@ -24,16 +24,16 @@ from utils import *
 if os.getenv("APP_PRJ", "") != "":
 	DEFAULT_APP_PRJ = os.environ["APP_PRJ"]
 else:
-	DEFAULT_APP_PRJ = "/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB"
+	DEFAULT_APP_PRJ = "/home/zealot/workspace_sirius/xmsdk/"
 DEFAULT_APP_SVC_FILE = DEFAULT_APP_PRJ + "/Release-Board-Service/svc.json.tar.xz"
 DEFAULT_APP_FW_FILE = DEFAULT_APP_PRJ + "/Release-Board-Slave/xmsdk.json.tar.xz"
 
 if os.getenv("RF_PRJ", "") != "":
-	DEFAULT_RF_PRJ = os.environ["RF_PRJ"]
+	DEFAULT_RF_WORKSPACE = os.environ["RF_PRJ"]
 else:
-	DEFAULT_RF_PRJ = "/home/zealot/workspace_test/surisdk_local"
-DEFAULT_RF_FW_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/surisdk_local.json.tar.xz"
-DEFAULT_RF_BL_FILE = DEFAULT_RF_PRJ + "/Debug_deploy/suribootloader.json.tar.xz"
+	DEFAULT_RF_WORKSPACE = "/home/zealot/workspace_sirius/"
+DEFAULT_RF_FW_FILE = DEFAULT_RF_WORKSPACE + "/surisdk/Debug_deploy/surisdk.json.tar.xz"
+DEFAULT_RF_BL_FILE = DEFAULT_RF_WORKSPACE + "/suribootloader/Debug_deploy/suribootloader.json.tar.xz"
 
 TYPE_RF_FW = "rf_fw"
 TYPE_RF_BL = "rf_bl"
@@ -41,9 +41,6 @@ TYPE_APP_FW = "app_fw"
 TYPE_APP_SVC = "app_svc"
 
 if __name__ == "__main__":
-
-	return_code = 0
-
 	parser = OptionParser()
 
 	parser.add_option(  "-s", "--serial",
@@ -59,7 +56,10 @@ if __name__ == "__main__":
 	parser.add_option(  "-f", "--file",
 						dest="firmware_file",
 						type="string",
-						help="define the file path to firmware")
+						help="- define the file path to firmware \
+						- note: user can export env_var APP_PRJ/RF_PRJ point to the project folder \
+						- example:  export APP_PRJ=/home/zealot/workspace_sirius/xmsdk \
+						- example2: export APP_PRJ=/home/zealot/workspace_sirius/surisdk")
 	parser.add_option(  "-t", "--type",
 						dest="firmware_type",
 						type="string",
@@ -99,6 +99,7 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
+	print_ok("Upgrade %s with %s" % (options.firmware_type, file))
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 	sirius_fw_upgrade = SiriusAPIFwUpgrade(comm)
 
@@ -106,7 +107,7 @@ if __name__ == "__main__":
 	# To execute at least 1 time, we give an or condition to (count == 0)
 	# then, if it does not require looping, the program ends
 	while (options.download_loop) or (count == 0):
-		sirius_fw_upgrade.UpgradeFirmware(options.firmware_type, options.firmware_file)
+		sirius_fw_upgrade.UpgradeFirmware(options.firmware_type, file)
 		count += 1
 		print "Success %d times" % count
 
