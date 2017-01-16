@@ -43,6 +43,10 @@ if __name__ == "__main__":
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 
 	sirius_system = SiriusAPISystem(comm)
+
+	# Enable debug print of RF processor
+	sirius_system.RfDebugPrintEnable()
+
 	sirius_system.GetXmsdkVersion()
 	sirius_system.GetSvcVersion()
 	sirius_system.GetSurisdkVersion()
