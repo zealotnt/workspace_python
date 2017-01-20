@@ -79,7 +79,7 @@ def CryptoAESTestMode(string, plaintext, key, iv, mode, fileOutName, secret = No
 		secret.reset()
 		decryption_suite = AES.new(key, mode, counter=secret.counter)
 	elif segment_size is not None:
-		decryption_suite = AES.new(key, mode, iv, segment_size=segment_size)		
+		decryption_suite = AES.new(key, mode, iv, segment_size=segment_size)
 	else:
 		decryption_suite = AES.new(key, mode)
 

@@ -35,7 +35,7 @@ def Conclusion(string, key, iv, plaintext, ciphertext):
 def CryptoTDESTestMode(string, plaintext, key, iv, mode, fileOutName, secret = None, segment_size = None):
 	print "\r\n\r\n"
 	print "\t" + string
-	
+
 	# Encryption
 	if iv is not None and secret is None and segment_size is None:
 		encryption_suite = DES3.new(key, mode, iv)
@@ -57,8 +57,8 @@ def CryptoTDESTestMode(string, plaintext, key, iv, mode, fileOutName, secret = N
 	if iv is not None and secret is None and segment_size is None:
 		decryption_suite = DES3.new(key, mode, iv)
 	elif segment_size is not None:
-		decryption_suite = DES3.new(key, mode, iv, segment_size=segment_size)		
-	else:	
+		decryption_suite = DES3.new(key, mode, iv, segment_size=segment_size)
+	else:
 		decryption_suite = DES3.new(key, mode)
 	plaintext_dec = decryption_suite.decrypt(cipher_text)
 	base64_enc = base64.b64encode(cipher_text)
