@@ -49,9 +49,10 @@ class SiriusAPISystem():
 		if rsp is None:
 			print_err("Xmsdk firmware version check fail")
 			return None
-		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16) + (ord(rsp[8]) << 24)
+		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
 		print_ok("Xmsdk version: " + str(firmware_version_str))
+		print_ok("Xmsdk type %s" % rsp[8])
 		return firmware_version_str
 
 	def GetSvcVersion(self):
@@ -65,9 +66,10 @@ class SiriusAPISystem():
 		if (rsp is None) or (rsp[2] != '\x00'):
 			print_err("Svc firmware version check fail")
 			return None
-		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16) + (ord(rsp[8]) << 24)
+		u32_firmware_version = ord(rsp[5]) + (ord(rsp[6]) << 8) + (ord(rsp[7]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
 		print_ok("Svc version: " + str(firmware_version_str))
+		print_ok("Svc type %s" % rsp[8])
 		return firmware_version_str
 
 	def GetSurisdkVersion(self):
