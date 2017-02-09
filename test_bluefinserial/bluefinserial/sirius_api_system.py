@@ -130,3 +130,38 @@ class SiriusAPISystem():
 
 		print_ok("Set root password to '%s' successfully" % password)
 		return True
+
+	def RfApiVerifyPassword(self, password):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		# always has null character at the end
+		cmd = pkt.Packet('\x8b', '\x74', password)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("RfApi Verify password  fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("Verify password successfully")
+		return True
+
+	def RfApiUpdatePassword(self, old_password, new_password):
+		if self.RfApiVerifyPassword(old_password) is None:
+			return None
+
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		# always has null character at the end
+		cmd = pkt.Packet('\x8b', '\x76', new_password)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("RfApi Update password fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("RfApi Set password to '%s' successfully" % new_password)
+		return True

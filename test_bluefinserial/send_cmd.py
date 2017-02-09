@@ -15,7 +15,9 @@ import struct
 from optparse import OptionParser, OptionGroup
 
 sys.path.insert(0, 'bluefinserial')
-from datalink_deliver import BluefinserialSend, BluefinserialCommand
+from datalink_deliver import *
+from sirius_api_sam import *
+from sirius_api_system import *
 from scan import scan
 from utils import *
 
@@ -52,11 +54,21 @@ if __name__ == "__main__":
 						action="count",
 						dest="verbose",
 						help="enable verbose mode")
+	parser.add_option(  "-b", "--baud",
+						dest="baud",
+						type="string",
+						default=BLUEFINSERIAL_BAUDRATE,
+						help="define the serial baudrate to use, default = " + str(BLUEFINSERIAL_BAUDRATE))
 	parser.add_option(  "-l", "--list-serial",
 						action="store_true",
 						dest="list_serial",
 						default=False,
 						help="display available serial ports")
+	parser.add_option(  "--loop",
+						dest="run_loop",
+						action="store_true",
+						default=False,
+						help="choose upgrade operation to loop forever or not, default = False")
 
 	(options, args) = parser.parse_args()
 
@@ -75,23 +87,25 @@ if __name__ == "__main__":
 	port_name = serial
 
 	if options.verbose >= VERBOSE:
-		print 'Open serial port: ' + port_name
-	comm = BluefinserialSend(port_name, 460800)
+		print 'Open serial port: ' + port_name + "with baudrate = " + str(options.baud)
+	comm = BluefinserialSend(port_name, int(options.baud))
 
 	pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
-	cmd = pkt.Packet('\x8b', '\x00', '\x03')
+	cmd = pkt.Packet('\xa9', '\x01', '\x00\x00\x01\x38\x30\x30\x30\x30\x31\x32\x30\x7c')
 
 	rsp = ''
 
 	while True:
 		dump_hex(cmd, "Command: ")
-		start = time.clock()
+		start = int(time.time() * 1000)
 		rsp = comm.Exchange(cmd)
 		if rsp is not None:
 			dump_hex(rsp, "Response: ")
 		else:
 			print_err("Transmit fail")
 			sys.exit(-1)
-		end = time.clock()
-		print "%.2gms" % ((end-start)*1000)
+		end = int(time.time() * 1000)
+		print "%.2fms" % (end-start)
 
+		if options.run_loop is False:
+			break
