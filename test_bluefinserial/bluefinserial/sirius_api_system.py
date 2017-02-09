@@ -133,8 +133,8 @@ class SiriusAPISystem():
 
 	def RfApiVerifyPassword(self, password):
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
-		# always has null character at the end
-		cmd = pkt.Packet('\x8b', '\x74', password)
+		verify_password_package = struct.pack('<BB', len(password), 0) + password
+		cmd = pkt.Packet('\x8b', '\x74', verify_password_package)
 
 		rsp = self._datalink.Exchange(cmd)
 		if (rsp is None):
@@ -148,12 +148,9 @@ class SiriusAPISystem():
 		return True
 
 	def RfApiUpdatePassword(self, old_password, new_password):
-		if self.RfApiVerifyPassword(old_password) is None:
-			return None
-
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
-		# always has null character at the end
-		cmd = pkt.Packet('\x8b', '\x76', new_password)
+		verify_password_package = struct.pack('<BB', len(old_password), len(new_password)) + old_password + new_password
+		cmd = pkt.Packet('\x8b', '\x74', verify_password_package)
 
 		rsp = self._datalink.Exchange(cmd)
 		if (rsp is None):
