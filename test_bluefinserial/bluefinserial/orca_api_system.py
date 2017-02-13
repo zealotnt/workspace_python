@@ -112,7 +112,7 @@ class OrcaAPISystem():
 		if HOST is not None:
 			info.AddVal('HOST', HOST)
 		if PORT is not None:
-			PORT_str = struct.pack('<I', PORT)
+			PORT_str = struct.pack('<H', PORT)
 			info.AddVal('PORT', PORT_str)
 
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=self.VERBOSE)
@@ -125,7 +125,25 @@ class OrcaAPISystem():
 			print_err("RfApi UpdateInfo fail, code 0x%02x" % ord(rsp[2]))
 			return None
 
+		print_ok("RfApi UpdateInfo successfully")
 		return True
+
+	def OrcaRfApiReadInfo(self, info_str):
+		tag = MlsInfoTlv.GetTagValStr(info_str)
+		if tag is None:
+			print_err("%s not regcognized" % info_str)
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=self.VERBOSE)
+		cmd = pkt.Packet('\x8b', '\x82', tag)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("RfApi ReadInfo fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("Read successfully %s: %s" % (info_str, MlsInfoTlv.ParseVal(info_str, rsp[3:])))
+		return rsp[3:]
 
 class MlsInfoTlv():
 	InfoDict = {
@@ -152,6 +170,42 @@ class MlsInfoTlv():
 
 	def Val(self):
 		return self.val
+
+	@staticmethod
+	def GetTagVal(tag_name):
+		if tag_name not in MlsInfoTlv.InfoDict:
+			return None
+		return MlsInfoTlv.InfoDict[tag]
+
+	@staticmethod
+	def GetTagValStr(tag_name):
+		if tag_name not in MlsInfoTlv.InfoDict:
+			return None
+		tag_val_str = struct.pack('<I', MlsInfoTlv.InfoDict[tag_name])
+		return tag_val_str
+
+	@staticmethod
+	def ParseVal(tag_name, value):
+		if tag_name not in MlsInfoTlv.InfoDict:
+			return None
+
+		string_tags = ['TID', 'MID', 'APN', 'HOST']
+		if tag_name in string_tags:
+			return value
+
+		number_tags = ['STAN', 'PORT']
+		if tag_name in number_tags:
+			num_val = 0
+			idx = 0
+			max_idx = len(value)
+			for i in value:
+				# for big endian number
+				# num_val += ord(i) << (8*(max_idx-idx))
+				num_val += ord(i) << (8*idx)
+				idx += 1
+			return str(num_val)
+
+		return None
 
 class MlsOrcaLeds():
 	BLUE=0x01

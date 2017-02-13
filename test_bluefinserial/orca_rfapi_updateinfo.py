@@ -35,6 +35,11 @@ if __name__ == "__main__":
 						type="string",
 						default=BLUEFINSERIAL_BAUDRATE,
 						help="define the serial baudrate to use, default = " + str(BLUEFINSERIAL_BAUDRATE))
+	parser.add_option(  "-w", "--write",
+						dest="enable_write",
+						action="store_true",
+						default=False,
+						help="tell the script to write new value to Maxim")
 	(options, args) = parser.parse_args()
 
 	try:
@@ -48,9 +53,14 @@ if __name__ == "__main__":
 
 	system_api = OrcaAPISystem(comm, verbose=True)
 
-	system_api.OrcaRfApiUpdateInfo(TID="123",
-							   MID="456",
-							   STAN=1234,
-							   APN="mpos-apn",
-							   HOST="google.com",
-							   PORT=12345)
+	if options.enable_write:
+		system_api.OrcaRfApiUpdateInfo(TID="123",
+								   MID="456",
+								   STAN=1234,
+								   APN="mpos-apn",
+								   HOST="google.com",
+								   PORT=12345)
+
+	read_tags = ["TID", "MID", "STAN", "APN", "HOST", "PORT"]
+	for tag in read_tags:
+		system_api.OrcaRfApiReadInfo(tag)
