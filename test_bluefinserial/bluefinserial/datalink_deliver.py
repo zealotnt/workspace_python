@@ -160,6 +160,7 @@ class BluefinserialSend():
 			return None
 
 		# Get respone packet
+		self._full_packet = ""
 		ret = self.GetResponse(self._ack_remain)
 
 		# If receive ACK, but not receive Response successfully,
@@ -272,7 +273,10 @@ class BluefinserialSend():
 			read_bytes = self._port.read(1 if waiting == 0 else waiting)
 
 			if read_bytes == '' and (time_check - time_start) > self.RESPONSE_TIMEOUT:
-				print_err_dump(self._full_packet, "Receive timeout, receive: ")
+				if (len(self._full_packet) == 0):
+					print_err("ACK received but not response after %d" % (self.RESPONSE_TIMEOUT))
+				else:
+					print_err_dump(self._full_packet, "Receive timeout after %d, receive: " % (self.RESPONSE_TIMEOUT))
 				return False
 
 			for b in read_bytes:
