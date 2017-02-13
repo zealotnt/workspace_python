@@ -98,7 +98,7 @@ class OrcaAPISystem():
 		return True
 
 	def OrcaRfApiUpdateInfo(self, TID=None, MID=None, STAN=None, APN=None, HOST=None, PORT=None):
-		info = MlsInfoTlv()
+		info = MlsInfoTlv(verbose=self.VERBOSE)
 		if TID is not None:
 			info.AddVal('TID', TID)
 		if MID is not None:
@@ -136,15 +136,19 @@ class MlsInfoTlv():
 		'HOST': 0x06,
 		'PORT': 0x07,
 	}
-	def __init__(self):
+	VERBOSE = False
+
+	def __init__(self, verbose=False):
 		self.val = ""
+		self.VERBOSE = verbose
 
 	def AddVal(self, tag, value):
 		if tag not in self.InfoDict:
 			print_err("Tag %s not regcognize" % tag)
 		TL = struct.pack('<BB', self.InfoDict[str(tag)], len(value))
 		self.val += TL + value
-		dump_hex(TL+value, tag + ": ")
+		if (self.VERBOSE):
+			dump_hex(TL+value, tag + ": ")
 
 	def Val(self):
 		return self.val
