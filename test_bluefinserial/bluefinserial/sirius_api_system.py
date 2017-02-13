@@ -25,11 +25,13 @@ class SiriusAPISystem():
 	SVC_VERSION = 0x0500
 	SURISDK_VERSION = 0x03
 	SURIBL_VERSION = 0x02
+	VERBOSE=False
 
-	def __init__(self, bluefin_serial):
+	def __init__(self, bluefin_serial, verbose=False):
 		"""
 		"""
 		self._datalink = bluefin_serial
+		self.VERBOSE = verbose
 
 	def parse_version(self, u32_version):
 		firmware_version_rev = u32_version % 100
@@ -129,36 +131,4 @@ class SiriusAPISystem():
 			return None
 
 		print_ok("Set root password to '%s' successfully" % password)
-		return True
-
-	def RfApiVerifyPassword(self, password):
-		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
-		verify_password_package = struct.pack('<BB', len(password), 0) + password
-		cmd = pkt.Packet('\x8b', '\x74', verify_password_package)
-
-		rsp = self._datalink.Exchange(cmd)
-		if (rsp is None):
-			print_err("Send fail")
-			return None
-		if rsp[2] != '\x00':
-			print_err("RfApi Verify password  fail, code 0x%02x" % ord(rsp[2]))
-			return None
-
-		print_ok("Verify password successfully")
-		return True
-
-	def RfApiUpdatePassword(self, old_password, new_password):
-		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
-		verify_password_package = struct.pack('<BB', len(old_password), len(new_password)) + old_password + new_password
-		cmd = pkt.Packet('\x8b', '\x74', verify_password_package)
-
-		rsp = self._datalink.Exchange(cmd)
-		if (rsp is None):
-			print_err("Send fail")
-			return None
-		if rsp[2] != '\x00':
-			print_err("RfApi Update password fail, code 0x%02x" % ord(rsp[2]))
-			return None
-
-		print_ok("RfApi Set password to '%s' successfully" % new_password)
 		return True

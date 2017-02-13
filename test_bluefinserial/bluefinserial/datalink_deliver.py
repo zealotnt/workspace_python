@@ -32,8 +32,9 @@ class BluefinserialCommand():
 	pkt = ''
 	TARGET_APPLICATION = 0xC5
 	TARGET_RF = 0x35
+	VERBOSE = False
 
-	def __init__(self, target):
+	def __init__(self, target, verbose=False):
 		"""
 		"""
 		if target != self.TARGET_RF and target != self.TARGET_APPLICATION:
@@ -43,6 +44,7 @@ class BluefinserialCommand():
 		self.target = target
 		self.DATA_EXCEPT_CMD = 510
 		self.DATA_CMD_MAX_LEN = 512
+		self.VERBOSE = verbose
 
 	def CheckSum(self, data):
 		crc = crc8()
@@ -54,6 +56,9 @@ class BluefinserialCommand():
 		return ord(len_parse[0]) ^ ord(len_parse[1])
 
 	def Packet(self, CmdCode, CtrCode, Data=""):
+		if self.VERBOSE:
+			dump_hex(CmdCode+CtrCode+Data, "Payload Sending: ")
+
 		# Packet format:
 		# FIl        FIm      Lenl        Lenm        LCS         Data        CRC8
 		# 0          1         2            3           4         5:x         x+1
@@ -83,8 +88,9 @@ class BluefinserialSend():
 	RESPONSE_TIMEOUT = 6000
 	HEADER_APPLICATION_REP = '\xCA'
 	HEADER_RF_REP = '\x3A'
+	VERBOSE = False
 
-	def __init__(self, port, baud, target=BluefinserialCommand.TARGET_APPLICATION):
+	def __init__(self, port, baud, target=BluefinserialCommand.TARGET_APPLICATION, verbose=False):
 		"""
 		:Parameter port: serial port to use (/dev/tty* or COM*)
 		"""
@@ -98,6 +104,7 @@ class BluefinserialSend():
 		self._ack_remain = ""
 		self._target = target
 		self._port = serial.Serial(port=port, baudrate=baud, timeout=self._timeout)
+		self.VERBOSE = verbose
 
 	def getRepHeader(self, target):
 		if target == BluefinserialCommand.TARGET_RF:
@@ -116,6 +123,9 @@ class BluefinserialSend():
 				return
 
 	def Exchange(self, packet):
+		if self.VERBOSE:
+			dump_hex(packet, "Sending: ")
+
 		if packet[1] == chr(BluefinserialCommand.TARGET_RF):
 			self._target = BluefinserialCommand.TARGET_RF
 		elif packet[1] == chr(BluefinserialCommand.TARGET_APPLICATION):
@@ -173,7 +183,7 @@ class BluefinserialSend():
 			print_err("Receive response fail")
 			return None
 		if self._response[0] != packet[5]:
-			print_err("Response's Command code not match, refuse response packet")
+			print_err("Response's Command code not match (0x%x != 0x%x), refuse response packet" % (self._response[0], ord(packet[5])))
 			return None
 		if ord(self._response[1]) != (ord(packet[6]) + 1):
 			if (self._response[0] == '\xFF'):
@@ -183,6 +193,10 @@ class BluefinserialSend():
 			else:
 				print_err("Not regconize response, refuse response packet")
 			return None
+
+		if self.VERBOSE:
+			dump_hex(self._response, "Response: ")
+
 		return self._response
 
 	def GetACK(self):

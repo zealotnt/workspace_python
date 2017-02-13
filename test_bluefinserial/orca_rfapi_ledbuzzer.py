@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# datalink_deliver.py
+# rfapi_setpassword.py
 
 
 # ---- IMPORTS
@@ -17,6 +17,7 @@ sys.path.insert(0, 'bluefinserial')
 from datalink_deliver import *
 from sirius_api_sam import *
 from sirius_api_system import *
+from orca_api_system import *
 from scan import scan
 from utils import *
 
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
-	system_api = SiriusAPISystem(comm)
+	system_api = OrcaAPISystem(comm)
 
 	if options.verify_password is None:
 		print_err("Verify password is missing")
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 		sys.exit(-1)
 	elif options.verify_password and options.new_password:
 		# Let's verify the root password
-		system_api.RfApiUpdatePassword(options.verify_password, options.new_password)
+		system_api.OrcaRfApiUpdatePassword(options.verify_password, options.new_password)
 	else:
 		# Let's verify the root password
-		system_api.RfApiVerifyPassword(options.verify_password)
+		system_api.OrcaRfApiVerifyPassword(options.verify_password)
