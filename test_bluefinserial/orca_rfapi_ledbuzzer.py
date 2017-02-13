@@ -40,6 +40,11 @@ if __name__ == "__main__":
 						type="string",
 						default="",
 						help="Specified to set R/G/B/O (red/green/blue/orange) led")
+	parser.add_option(  "-t",
+						dest="tunes",
+						type="string",
+						default="",
+						help="Specified to set buzzer frequency")
 
 	(options, args) = parser.parse_args()
 
@@ -52,6 +57,9 @@ if __name__ == "__main__":
 
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 
-	system_api = OrcaAPISystem(comm)
+	system_api = OrcaAPISystem(comm, verbose=True)
 
-	system_api.OrcaRfApiSetLed(MlsOrcaLeds.ParseString(options.color))
+	if options.color != "":
+		system_api.OrcaRfApiSetLed(MlsOrcaLeds.ParseString(options.color))
+	if options.tunes != "":
+		system_api.OrcaRfApiSetBuzzer(int(options.tunes))

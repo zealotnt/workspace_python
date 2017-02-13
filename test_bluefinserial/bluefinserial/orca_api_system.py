@@ -33,6 +33,22 @@ class OrcaAPISystem():
 		self._datalink = bluefin_serial
 		self.VERBOSE = verbose
 
+	def OrcaRfApiSetBuzzer(self, freq_val):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=self.VERBOSE)
+		freq_val_str = struct.pack('<H', freq_val)
+		cmd = pkt.Packet('\x8b', '\x1E', freq_val_str)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Set buzzer fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("Set buzzer successfully")
+		return True
+
 	def OrcaRfApiSetLed(self, led_val):
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=self.VERBOSE)
 		led_val_str = struct.pack('<B', led_val)
