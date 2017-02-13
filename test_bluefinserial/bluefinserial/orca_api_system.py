@@ -33,6 +33,22 @@ class OrcaAPISystem():
 		self._datalink = bluefin_serial
 		self.VERBOSE = verbose
 
+	def OrcaRfApiSetLed(self, led_val):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=self.VERBOSE)
+		led_val_str = struct.pack('<B', led_val)
+		cmd = pkt.Packet('\x8b', '\x1E', led_val_str)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Set led fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("Set led successfully")
+		return True
+
 	def OrcaRfApiVerifyPassword(self, password):
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=self.VERBOSE)
 		verify_password_package = struct.pack('<BB', len(password), 0) + password
@@ -116,3 +132,23 @@ class MlsInfoTlv():
 
 	def Val(self):
 		return self.val
+
+class MlsOrcaLeds():
+	BLUE=0x01
+	ORANGE=0x02
+	GREEN=0x04
+	RED=0x08
+
+	@staticmethod
+	def ParseString(value=""):
+		val = 0
+		value = value.upper()
+		if "B" in value:
+			val += MlsOrcaLeds.BLUE
+		if "O" in value:
+			val += MlsOrcaLeds.ORANGE
+		if "G" in value:
+			val += MlsOrcaLeds.GREEN
+		if "R" in value:
+			val += MlsOrcaLeds.RED
+		return val

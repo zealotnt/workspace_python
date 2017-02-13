@@ -44,6 +44,8 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
+	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
+
 	system_api = OrcaAPISystem(comm, verbose=True)
 
 	system_api.OrcaRfApiUpdateInfo(TID="123",

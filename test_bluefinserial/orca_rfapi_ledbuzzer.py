@@ -35,14 +35,12 @@ if __name__ == "__main__":
 						type="string",
 						default=BLUEFINSERIAL_BAUDRATE,
 						help="define the serial baudrate to use, default = " + str(BLUEFINSERIAL_BAUDRATE))
-	parser.add_option(  "-v", "--verify",
-						dest="verify_password",
+	parser.add_option(  "-c", "--color",
+						dest="color",
+						type="string",
 						default="",
-						help="password to verify with orcanfc board")
-	parser.add_option(  "-p", "--pass",
-						dest="new_password",
-						default="",
-						help="password to set to orcanfc board")
+						help="Specified to set R/G/B/O (red/green/blue/orange) led")
+
 	(options, args) = parser.parse_args()
 
 	try:
@@ -52,15 +50,8 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
+	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
+
 	system_api = OrcaAPISystem(comm)
 
-	if options.verify_password is None:
-		print_err("Verify password is missing")
-		parser.print_help()
-		sys.exit(-1)
-	elif options.verify_password and options.new_password:
-		# Let's verify the root password
-		system_api.OrcaRfApiUpdatePassword(options.verify_password, options.new_password)
-	else:
-		# Let's verify the root password
-		system_api.OrcaRfApiVerifyPassword(options.verify_password)
+	system_api.OrcaRfApiSetLed(MlsOrcaLeds.ParseString(options.color))

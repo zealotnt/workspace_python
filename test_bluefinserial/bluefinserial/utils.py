@@ -115,8 +115,9 @@ def get_fullpath(file_dir, file_name):
     if os.name == "nt":
         return file_dir + '\\' + file_name
 
-def dump_hex(data, desc_str = ""):
-    print desc_str + binascii.hexlify(data)
+def dump_hex(data, desc_str="", token=":"):
+    # print desc_str + binascii.hexlify(data)
+    print desc_str + token.join("{:02x}".format(ord(c)) for c in data)
 
 def GetFileContent(path):
     f = open(path, 'rb')
