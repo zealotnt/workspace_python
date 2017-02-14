@@ -11,6 +11,7 @@ import struct
 import binascii
 import time
 import sys
+import md5
 
 from crc8 import crc8
 from utils import *
@@ -159,6 +160,31 @@ class OrcaAPISystem():
 				raw_input("Enter to continue with %d: " % (ca_packet_idx))
 		# Upgrade successfully
 		print_ok("CaCert download successfully")
+		return True
+
+	def OrcaRfApiVerifyCaCert(self, CA_file):
+		ca_cmd_tag = MlsInfoTlv.GetTagVal("CA_FILE")
+		ca_contents = GetFileContent(CA_file)
+		ca_md5_hashed = md5.new(ca_contents).digest()
+		# Build the packet
+		pkt = ""
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		verify_package = struct.pack('<B', ca_cmd_tag)
+		cmd = pkt.Packet('\x8B', '\x82', verify_package)
+
+		rsp = ''
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("VerifyCACert request fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("VerifyCACert request fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		dump_hex(ca_md5_hashed, "MD5 Hashed file : ")
+		dump_hex(rsp[3:], 		"Hash from board : ")
+		if ca_md5_hashed == rsp[3:]:
+			print_ok("CA File verify OK, files %s are same with cert store in Maxim" % (CA_file))
 		return True
 
 	def OrcaRfApiUpdateInfo(self, TID=None, MID=None, STAN=None, APN=None, DEV_IP=None, HOST=None, PORT=None):

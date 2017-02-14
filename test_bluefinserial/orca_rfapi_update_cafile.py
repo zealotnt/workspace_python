@@ -63,4 +63,7 @@ if __name__ == "__main__":
 
 	system_api = OrcaAPISystem(comm, verbose=True)
 
-	system_api.OrcaRfApiUpdateCaCert(options.ca_file_path, debug=options.debug_enable)
+	ret = system_api.OrcaRfApiUpdateCaCert(options.ca_file_path, debug=options.debug_enable)
+
+	if ret == True:
+		system_api.OrcaRfApiVerifyCaCert(options.ca_file_path)
