@@ -26,6 +26,7 @@ class OrcaAPISystem():
 	SURISDK_VERSION = 0x03
 	SURIBL_VERSION = 0x02
 	VERBOSE=False
+	CERT_DOWNLOAD_PACKET_MAX_SIZE = 240
 
 	def __init__(self, bluefin_serial, verbose=False):
 		"""
@@ -97,6 +98,69 @@ class OrcaAPISystem():
 		print_ok("RfApi Set password to '%s' successfully" % new_password)
 		return True
 
+	def WriteMultiTLVPacket(self, tag, idx, max_idx, packet_data, debug=False):
+		if len(packet_data) > (self.CERT_DOWNLOAD_PACKET_MAX_SIZE * 2):
+			raise Exception("Packet data size should be less than " + str(self.CERT_DOWNLOAD_PACKET_MAX_SIZE))
+
+		# Build the packet
+		pkt = ""
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=debug)
+		download_packet = struct.pack('<BBBB', tag, len(packet_data)+2, idx, max_idx) + packet_data
+		cmd = pkt.Packet('\x8B', '\x80', download_packet)
+
+		rsp = ''
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("TLV Packet write request fail")
+			return None
+		sys.stdout.write("Progress: %.2f%%\r" % ((float)(idx)*100.0/(float)(max_idx)))
+		sys.stdout.flush()
+		return rsp
+
+	def OrcaRfApiUpdateCaCert(self, CA_file, debug=False):
+		def GetFileSize(path):
+			return os.path.getsize(path)
+
+		def GetNumOfPacket(path):
+			file_size = GetFileSize(path)
+			if file_size % self.CERT_DOWNLOAD_PACKET_MAX_SIZE == 0:
+				return (file_size / self.CERT_DOWNLOAD_PACKET_MAX_SIZE)
+			else:
+				return ((file_size / self.CERT_DOWNLOAD_PACKET_MAX_SIZE) + 1)
+
+		ca_cmd_tag = MlsInfoTlv.GetTagVal("CA_FILE")
+		ca_max_packet = GetNumOfPacket(CA_file)
+		ca_contents = GetFileContent(CA_file)
+		ca_packet_idx = 0
+
+		while ca_packet_idx <= (ca_max_packet - 1):
+			if ca_packet_idx != (ca_max_packet - 1):
+				first_idx = ca_packet_idx * self.CERT_DOWNLOAD_PACKET_MAX_SIZE
+				end_idx = ((ca_packet_idx + 1) * self.CERT_DOWNLOAD_PACKET_MAX_SIZE)
+				ret = self.WriteMultiTLVPacket(ca_cmd_tag,
+												ca_packet_idx,
+												ca_max_packet,
+												ca_contents[first_idx:end_idx],
+												debug)
+			else:
+				first_idx = ca_packet_idx * self.CERT_DOWNLOAD_PACKET_MAX_SIZE
+				ret = self.WriteMultiTLVPacket(ca_cmd_tag,
+												ca_packet_idx,
+												ca_max_packet,
+												ca_contents[first_idx:],
+												debug)
+			if ret is None:
+				print_err("CaCert donwload error")
+				return False
+
+			ca_packet_idx += 1
+
+			if debug == True:
+				raw_input("Enter to continue with %d: " % (ca_packet_idx))
+		# Upgrade successfully
+		print_ok("CaCert download successfully")
+		return True
+
 	def OrcaRfApiUpdateInfo(self, TID=None, MID=None, STAN=None, APN=None, DEV_IP=None, HOST=None, PORT=None):
 		info = MlsInfoTlv(verbose=self.VERBOSE)
 		if TID is not None:
@@ -153,9 +217,10 @@ class MlsInfoTlv():
 		'MID': 0x03,
 		'STAN': 0x04,
 		'APN': 0x05,
-		'DEV_IP': 0x08,
 		'HOST': 0x06,
 		'PORT': 0x07,
+		'DEV_IP': 0x08,
+		'CA_FILE': 0x09,
 	}
 	VERBOSE = False
 
@@ -178,7 +243,7 @@ class MlsInfoTlv():
 	def GetTagVal(tag_name):
 		if tag_name not in MlsInfoTlv.InfoDict:
 			return None
-		return MlsInfoTlv.InfoDict[tag]
+		return MlsInfoTlv.InfoDict[tag_name]
 
 	@staticmethod
 	def GetTagValStr(tag_name):
