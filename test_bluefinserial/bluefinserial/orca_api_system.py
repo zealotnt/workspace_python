@@ -97,7 +97,7 @@ class OrcaAPISystem():
 		print_ok("RfApi Set password to '%s' successfully" % new_password)
 		return True
 
-	def OrcaRfApiUpdateInfo(self, TID=None, MID=None, STAN=None, APN=None, HOST=None, PORT=None):
+	def OrcaRfApiUpdateInfo(self, TID=None, MID=None, STAN=None, APN=None, DEV_IP=None, HOST=None, PORT=None):
 		info = MlsInfoTlv(verbose=self.VERBOSE)
 		if TID is not None:
 			info.AddVal('TID', TID)
@@ -109,6 +109,8 @@ class OrcaAPISystem():
 			info.AddVal('STAN', STAN_str)
 		if APN is not None:
 			info.AddVal('APN', APN)
+		if DEV_IP is not None:
+			info.AddVal('DEV_IP', DEV_IP)
 		if HOST is not None:
 			info.AddVal('HOST', HOST)
 		if PORT is not None:
@@ -151,6 +153,7 @@ class MlsInfoTlv():
 		'MID': 0x03,
 		'STAN': 0x04,
 		'APN': 0x05,
+		'DEV_IP': 0x08,
 		'HOST': 0x06,
 		'PORT': 0x07,
 	}
@@ -189,7 +192,7 @@ class MlsInfoTlv():
 		if tag_name not in MlsInfoTlv.InfoDict:
 			return None
 
-		string_tags = ['TID', 'MID', 'APN', 'HOST']
+		string_tags = ['TID', 'MID', 'APN', 'DEV_IP', 'HOST']
 		if tag_name in string_tags:
 			return value
 

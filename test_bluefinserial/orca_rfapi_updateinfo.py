@@ -58,9 +58,10 @@ if __name__ == "__main__":
 								   MID="456",
 								   STAN=1234,
 								   APN="mpos-apn",
+								   DEV_IP="1.2.3.4",
 								   HOST="google.com",
 								   PORT=12345)
 
-	read_tags = ["TID", "MID", "STAN", "APN", "HOST", "PORT"]
+	read_tags = ["TID", "MID", "STAN", "APN", "DEV_IP", "HOST", "PORT"]
 	for tag in read_tags:
 		system_api.OrcaRfApiReadInfo(tag)
