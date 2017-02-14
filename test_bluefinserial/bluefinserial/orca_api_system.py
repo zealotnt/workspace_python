@@ -140,14 +140,14 @@ class OrcaAPISystem():
 				end_idx = ((ca_packet_idx + 1) * self.CERT_DOWNLOAD_PACKET_MAX_SIZE)
 				ret = self.WriteMultiTLVPacket(ca_cmd_tag,
 												ca_packet_idx,
-												ca_max_packet,
+												ca_max_packet-1,
 												ca_contents[first_idx:end_idx],
 												debug)
 			else:
 				first_idx = ca_packet_idx * self.CERT_DOWNLOAD_PACKET_MAX_SIZE
 				ret = self.WriteMultiTLVPacket(ca_cmd_tag,
 												ca_packet_idx,
-												ca_max_packet,
+												ca_max_packet-1,
 												ca_contents[first_idx:],
 												debug)
 			if ret is None:
@@ -185,6 +185,72 @@ class OrcaAPISystem():
 		dump_hex(rsp[3:], 		"Hash from board : ")
 		if ca_md5_hashed == rsp[3:]:
 			print_ok("CA File verify OK, files %s are same with cert store in Maxim" % (CA_file))
+		return True
+
+	def OrcaRfApiUpdateCaCertFromHeader(self, CA_header_file, array_name, debug=False):
+		def GetNumOfPacket(data):
+			file_size = len(data)
+			if file_size % self.CERT_DOWNLOAD_PACKET_MAX_SIZE == 0:
+				return (file_size / self.CERT_DOWNLOAD_PACKET_MAX_SIZE)
+			else:
+				return ((file_size / self.CERT_DOWNLOAD_PACKET_MAX_SIZE) + 1)
+
+		ca_contents = ParseHeaderFileValue(CA_header_file, array_name)
+		ca_cmd_tag = MlsInfoTlv.GetTagVal("CA_FILE")
+		ca_max_packet = GetNumOfPacket(ca_contents)
+		ca_packet_idx = 0
+
+		while ca_packet_idx <= (ca_max_packet - 1):
+			if ca_packet_idx != (ca_max_packet - 1):
+				first_idx = ca_packet_idx * self.CERT_DOWNLOAD_PACKET_MAX_SIZE
+				end_idx = ((ca_packet_idx + 1) * self.CERT_DOWNLOAD_PACKET_MAX_SIZE)
+				ret = self.WriteMultiTLVPacket(ca_cmd_tag,
+												ca_packet_idx,
+												ca_max_packet-1,
+												ca_contents[first_idx:end_idx],
+												debug)
+			else:
+				first_idx = ca_packet_idx * self.CERT_DOWNLOAD_PACKET_MAX_SIZE
+				ret = self.WriteMultiTLVPacket(ca_cmd_tag,
+												ca_packet_idx,
+												ca_max_packet-1,
+												ca_contents[first_idx:],
+												debug)
+			if ret is None:
+				print_err("CaCert donwload error")
+				return False
+
+			ca_packet_idx += 1
+
+			if debug == True:
+				raw_input("Enter to continue with %d: " % (ca_packet_idx))
+		# Upgrade successfully
+		print_ok("CaCert download successfully")
+		return True
+
+	def OrcaRfApiVerifyCaCertFromHeader(self, CA_header_file, array_name):
+		ca_cmd_tag = MlsInfoTlv.GetTagVal("CA_FILE")
+		data = ParseHeaderFileValue(CA_header_file, array_name)
+		ca_md5_hashed = md5.new(data).digest()
+		# Build the packet
+		pkt = ""
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		verify_package = struct.pack('<B', ca_cmd_tag)
+		cmd = pkt.Packet('\x8B', '\x82', verify_package)
+
+		rsp = ''
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("VerifyCACert request fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("VerifyCACert request fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		dump_hex(ca_md5_hashed, "MD5 Hashed file : ")
+		dump_hex(rsp[3:], 		"Hash from board : ")
+		if ca_md5_hashed == rsp[3:]:
+			print_ok("CA File verify OK, files %s are same with cert store in Maxim" % (CA_header_file))
 		return True
 
 	def OrcaRfApiUpdateInfo(self, TID=None, MID=None, STAN=None, APN=None, DEV_IP=None, HOST=None, PORT=None):

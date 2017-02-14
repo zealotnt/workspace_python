@@ -3,6 +3,7 @@ __author__ = 'zealotnt'
 import sys
 import os
 import binascii
+import re
 
 VERBOSE = 0
 EXTRA_VERBOSE = 0
@@ -122,3 +123,46 @@ def dump_hex(data, desc_str="", token=":"):
 def GetFileContent(path):
     f = open(path, 'rb')
     return f.read()
+
+def ParseHeaderFileValue(file_path, array_name):
+	if os.path.isfile(file_path) == False:
+		print "File doesn't exist ! (" + str(file_path) + ")"
+		return None
+
+	try:
+		fd = open(file_path, 'rU')
+	except IOError, err:
+		print "Can not open file ! %s " % err
+		return None
+
+	try:
+		data = fd.read()
+	except IOError, err:
+		print "Can not read file ! %s" % err
+		return None
+
+	fd.close()
+
+	re_search_str = array_name + r".*\n*{((\n.+)+)\n*};"
+	tmpList = re.findall(re_search_str, data)
+
+	if len(tmpList) == 0:
+		print "Can not parse data, Incorrect Format!"
+		return None
+
+	tmpStr = str(tmpList[0][0])
+
+	tmpStr = tmpStr.replace('\n', '')
+
+	tmpStr = tmpStr.replace(' ', '')
+	tmpStr = tmpStr.replace('\t', '')
+	tmpArr = tmpStr.split(',')
+	# print tmpArr
+
+	finalArr = []
+	for idx, value in enumerate(tmpArr):
+		finalArr.append((int(value, 16)))
+
+	new_file_val = ''.join(chr(x) for x in finalArr)
+
+	return new_file_val

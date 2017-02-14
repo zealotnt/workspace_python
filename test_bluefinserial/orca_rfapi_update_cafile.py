@@ -35,11 +35,21 @@ if __name__ == "__main__":
 						type="string",
 						default=BLUEFINSERIAL_BAUDRATE,
 						help="define the serial baudrate to use, default = " + str(BLUEFINSERIAL_BAUDRATE))
-	parser.add_option(  "-f", "--file",
-						dest="ca_file_path",
+	parser.add_option(  "-r", "--raw_file",
+						dest="ca_raw_file_path",
 						type="string",
 						default="",
-						help="specified to path of the ca_file (required)")
+						help="specified to path of the raw ca_file (required)")
+	parser.add_option(  "-f", "--header_file",
+						dest="ca_header_file_path",
+						type="string",
+						default="",
+						help="specified to path of the header ca_file (required)")
+	parser.add_option(  "-n", "--array_name",
+						dest="array_name",
+						type="string",
+						default="",
+						help="specified to path of the array-name of header ca_file to parse (required)")
 	parser.add_option(  "-d", "--debug",
 						dest="debug_enable",
 						action="store_true",
@@ -54,8 +64,8 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 
-	if options.ca_file_path is "":
-		print_err("ca_file_path is required")
+	if options.ca_raw_file_path is "" and options.ca_header_file_path is "":
+		print_err("ca_raw_file_path/ca_raw_header_file_path is required")
 		parser.print_help()
 		sys.exit(-1)
 
@@ -63,7 +73,18 @@ if __name__ == "__main__":
 
 	system_api = OrcaAPISystem(comm, verbose=True)
 
-	ret = system_api.OrcaRfApiUpdateCaCert(options.ca_file_path, debug=options.debug_enable)
+	if options.ca_raw_file_path != "":
+		ret = system_api.OrcaRfApiUpdateCaCert(options.ca_raw_file_path, debug=options.debug_enable)
 
-	if ret == True:
-		system_api.OrcaRfApiVerifyCaCert(options.ca_file_path)
+		if ret == True:
+			system_api.OrcaRfApiVerifyCaCert(options.ca_raw_file_path)
+
+	if options.ca_header_file_path != "":
+		if options.array_name == "":
+			print_err("Array name is required")
+			parser.print_help()
+			sys.exit(-1)
+		ret = system_api.OrcaRfApiUpdateCaCertFromHeader(options.ca_header_file_path, options.array_name, debug=options.debug_enable)
+
+		if ret == True:
+			system_api.OrcaRfApiVerifyCaCertFromHeader(options.ca_header_file_path, options.array_name)
