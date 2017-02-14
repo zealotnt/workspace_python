@@ -194,8 +194,9 @@ class OrcaAPISystem():
 		if MID is not None:
 			info.AddVal('MID', MID)
 		if STAN is not None:
-			STAN_str = struct.pack('<I', STAN)
-			STAN_str = STAN_str[:len(STAN_str)-1]
+			# STAN is stored as 3 bytes big endianess
+			STAN_str = struct.pack('>I', STAN)
+			STAN_str = STAN_str[1:]
 			info.AddVal('STAN', STAN_str)
 		if APN is not None:
 			info.AddVal('APN', APN)
@@ -248,6 +249,10 @@ class MlsInfoTlv():
 		'DEV_IP': 0x08,
 		'CA_FILE': 0x09,
 	}
+	InfoNumberEndianess = {
+		'STAN': "BE",
+		'PORT': "LE"
+	}
 	VERBOSE = False
 
 	def __init__(self, verbose=False):
@@ -291,11 +296,14 @@ class MlsInfoTlv():
 		if tag_name in number_tags:
 			num_val = 0
 			idx = 0
-			max_idx = len(value)
+			max_idx = len(value) - 1
 			for i in value:
-				# for big endian number
-				# num_val += ord(i) << (8*(max_idx-idx))
-				num_val += ord(i) << (8*idx)
+				if MlsInfoTlv.InfoNumberEndianess[tag_name] == "BE":
+					# for BE number
+					num_val += ord(i) << (8*(max_idx-idx))
+				else:
+					# for LE number
+					num_val += ord(i) << (8*idx)
 				idx += 1
 			return str(num_val)
 
