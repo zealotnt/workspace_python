@@ -27,3 +27,12 @@ if False: # from the Python 2.7.3 docs
 
 	# note that closing the SSLSocket will also close the underlying socket
 	ssl_sock.close()
+
+	print("Receive from server: ", data)
+else:
+	data = ssl_sock.read()
+
+	# note that closing the SSLSocket will also close the underlying socket
+	ssl_sock.close()
+
+	print("Receive from server: ", data)

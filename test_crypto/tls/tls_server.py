@@ -6,7 +6,8 @@ bindsocket.bind(('', 11111))
 bindsocket.listen(5)
 
 def do_something(connstream, data):
-	print("do_something:", data)
+	print("Get data:", data)
+	connstream.write(data.upper())
 	return False
 
 def deal_with_client(connstream):
