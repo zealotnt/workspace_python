@@ -10,11 +10,11 @@ ssl_sock = ssl.wrap_socket(s,
 
 ssl_sock.connect(('localhost', 11111))
 
-print repr(ssl_sock.getpeername())
-print ssl_sock.cipher()
-print pprint.pformat(ssl_sock.getpeercert())
+print(repr(ssl_sock.getpeername()))
+print(ssl_sock.cipher())
+print(pprint.pformat(ssl_sock.getpeercert()))
 
-ssl_sock.write("boo!")
+ssl_sock.write("boo!".encode('utf-8'))
 
 if False: # from the Python 2.7.3 docs
 	# Set a simple HTTP request -- use httplib in actual code.

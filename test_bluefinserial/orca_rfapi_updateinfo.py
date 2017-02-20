@@ -54,13 +54,13 @@ if __name__ == "__main__":
 	system_api = OrcaAPISystem(comm, verbose=True)
 
 	if options.enable_write:
-		system_api.OrcaRfApiUpdateInfo(TID="123",
-								   MID="456",
-								   STAN=1234,
-								   APN="mpos-apn",
+		system_api.OrcaRfApiUpdateInfo(TID="80000106",
+								   MID="1118000100",
+								   STAN=21813,
+								   APN="mptnet",
 								   DEV_IP="1.2.3.4",
-								   HOST="google.com",
-								   PORT=12345)
+								   HOST="118.201.98.194",
+								   PORT=19301)
 
 	read_tags = ["TID", "MID", "STAN", "APN", "DEV_IP", "HOST", "PORT"]
 	for tag in read_tags:
