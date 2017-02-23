@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# datalink_deliver.py
+# rfapi_setpassword.py
 
 
 # ---- IMPORTS
@@ -15,13 +15,16 @@ from optparse import OptionParser, OptionGroup
 
 sys.path.insert(0, 'bluefinserial')
 from datalink_deliver import *
+from sirius_api_sam import *
 from sirius_api_system import *
+from orca_api_system import *
 from scan import scan
 from utils import *
 
 if __name__ == "__main__":
 
 	parser = OptionParser()
+
 	parser.add_option(  "-s", "--serial",
 						dest="serial",
 						type="string",
@@ -31,24 +34,32 @@ if __name__ == "__main__":
 						dest="baud",
 						type="string",
 						default=BLUEFINSERIAL_BAUDRATE,
-						help="define the serial baudrate to use, default = "+str(BLUEFINSERIAL_BAUDRATE))
+						help="define the serial baudrate to use, default = " + str(BLUEFINSERIAL_BAUDRATE))
+	parser.add_option(  "-c", "--color",
+						dest="color",
+						type="string",
+						default="",
+						help="Specified to set R/G/B/O (red/green/blue/orange) led")
+	parser.add_option(  "-t",
+						dest="tunes",
+						type="string",
+						default="",
+						help="Specified to set buzzer frequency")
+
 	(options, args) = parser.parse_args()
 
 	try:
-		comm = BluefinserialSend(options.serial, options.baud)
+		comm = BluefinserialSend(options.serial, int(options.baud))
 	except Exception, e:
 		print e
 		parser.print_help()
 		sys.exit(-1)
+
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 
-	sirius_system = SiriusAPISystem(comm)
+	system_api = OrcaAPISystem(comm, verbose=True)
 
-	# Enable debug print of RF processor
-	sirius_system.RfDebugPrintEnable()
-
-	sirius_system.GetXmsdkVersion()
-	sirius_system.GetSvcVersion()
-	sirius_system.GetSurisdkVersion()
-	sirius_system.GetSuriblVersion()
-
+	if options.color != "":
+		system_api.OrcaRfApiSetLed(MlsOrcaLeds.ParseString(options.color))
+	if options.tunes != "":
+		system_api.OrcaRfApiSetBuzzer(int(options.tunes))
