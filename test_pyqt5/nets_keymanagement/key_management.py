@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
 	QFileDialog)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
+import mainwindow_gui_auto
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/'
 WINDOWS_TITLE = "STYL Key Management"
@@ -51,99 +52,26 @@ class ButtonPathChoose(QPushButton):
 	def GetEditWidget(self):
 		return self.edit
 
-class MainTabWidget(QWidget):
+class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 
-	def __init__(self, parent):
-		super(QWidget, self).__init__(parent)
-		self.layout = QVBoxLayout(self)
+	def __init__(self, MainWindow):
+		self.settings = programSettings()
+		self.settings.ReadFile('.config.json')
 
-		##################################################################################
-		# Initialize tab screen
-		##################################################################################
-		self.tabs = QTabWidget()
-		self.tabGenKey = QWidget()
-		self.tabSignFirmware = QWidget()
-		self.tabs.resize(300,200)
+		# Let the autogenerate script init the UI
+		self.setupUi(MainWindow)
 
-		##################################################################################
-		# Add tabs
-		##################################################################################
-		self.tabs.addTab(self.tabGenKey, "Key generation")
-		self.tabs.addTab(self.tabSignFirmware, "Key signing")
+		# Manual change the UI settings
+		self.MainWindow = MainWindow
+		self.MainWindow.setWindowTitle(WINDOWS_TITLE)
 
+		self.initHandler()
 
-		##################################################################################
-		# Create first tab
-		##################################################################################
-		self.titleKeyName = QLabel('Key name:')
-		self.titlePriKeyPassphrase = QLabel('Passphrase:')
-		self.titlePriKeyPassphraseConfirm = QLabel('Confirm Passphrase:')
-
-		self.editPriKeyName = QLineEdit()
-		self.editPriKeyPassphrase = QLineEdit()
-		self.editPriKeyPassphraseConfirm = QLineEdit()
-
-		self.btnGenKeys = QPushButton('Generate', self)
-		self.btnGenKeys.clicked.connect(self.signFirmware)
-
-		# Add them into the layout
-		self.tabGenKey.layout = QGridLayout()
-		self.tabGenKey.layout.setSpacing(4)
-
-		self.tabGenKey.layout.addWidget(self.titleKeyName, 1, 0)
-		self.tabGenKey.layout.addWidget(self.titlePriKeyPassphrase, 2, 0)
-		self.tabGenKey.layout.addWidget(self.titlePriKeyPassphraseConfirm, 3, 0)
-
-		self.tabGenKey.layout.addWidget(self.editPriKeyName, 1, 1)
-		self.tabGenKey.layout.addWidget(self.editPriKeyPassphrase, 2, 1)
-		self.tabGenKey.layout.addWidget(self.editPriKeyPassphraseConfirm, 3, 1)
-
-		self.tabGenKey.layout.addWidget(self.btnGenKeys, 4, 1)
-
-		self.tabGenKey.setLayout(self.tabGenKey.layout)
-
-		##################################################################################
-		# Create second tab
-		##################################################################################
-		self.titleSignKeyPath = QLabel('Private key:')
-		self.titleFirmwarePath = QLabel('Firmware :')
-
-		self.editSignKeyPath = QLineEdit()
-		self.editFirmwarePath = QLineEdit()
-
-		self.btnSignChoosePrivateKeyPath = ButtonPathChoose('Select', self)
-		self.btnSignChoosePrivateKeyPath.SetEditWidget(self.editSignKeyPath)
-		self.btnSignChoosePrivateKeyPath.clicked.connect(self.showFileDialog)
-
-		self.btnSignChooseFirmwarePath = ButtonPathChoose('Select', self)
-		self.btnSignChooseFirmwarePath.SetEditWidget(self.editFirmwarePath)
-		self.btnSignChooseFirmwarePath.clicked.connect(self.showFileDialog)
-
-		self.btnSignFirmware = QPushButton('Sign', self)
+	def initHandler(self):
 		self.btnSignFirmware.clicked.connect(self.signFirmware)
-
-		# Place it into windows
-		self.tabSignFirmware.layout = QGridLayout()
-		self.tabSignFirmware.layout.setSpacing(4)
-
-		self.tabSignFirmware.layout.addWidget(self.titleSignKeyPath, 1, 0)
-		self.tabSignFirmware.layout.addWidget(self.editSignKeyPath, 1, 1)
-		self.tabSignFirmware.layout.addWidget(self.btnSignChoosePrivateKeyPath, 1, 2)
-
-		self.tabSignFirmware.layout.addWidget(self.titleFirmwarePath, 2, 0)
-		self.tabSignFirmware.layout.addWidget(self.editFirmwarePath, 2, 1)
-		self.tabSignFirmware.layout.addWidget(self.btnSignChooseFirmwarePath, 2, 2)
-
-		self.tabSignFirmware.layout.addWidget(self.btnSignFirmware, 3, 2)
-
-		self.tabSignFirmware.setLayout(self.tabSignFirmware.layout)
-
-
-		##################################################################################
-		# Add tabs to widget
-		##################################################################################
-		self.layout.addWidget(self.tabs)
-		self.setLayout(self.layout)
+		self.btnSignChooseFirmwarePath.clicked.connect(self.showFileDialog)
+		self.btnSignChoosePrivateKeyPath.clicked.connect(self.showFileDialog)
+		self.btnGenKeys.clicked.connect(self.signFirmware)
 
 	def generateKey(self):
 		# validate the input
@@ -163,60 +91,39 @@ class MainTabWidget(QWidget):
 		return
 
 	def showFileDialog(self):
-		sending_button = self.sender()
-		fname = QFileDialog.getOpenFileName(self, 'Open file', './')
+		button_editline_maping = {
+			self.btnSignChooseFirmwarePath: self.editPriKeyName,
+			self.btnSignChoosePrivateKeyPath: self.editSignKeyPath
+		}
+		sending_button = self.MainWindow.sender()
+		fname = QFileDialog.getOpenFileName(self.MainWindow, 'Open file', './')
+
+		if not(sending_button in button_editline_maping):
+			return
 
 		if fname[0]:
-			edit_widget = sending_button.GetEditWidget()
+			edit_widget = button_editline_maping[sending_button]
 			edit_widget.setText(fname[0])
 			print (fname)
-
-class MainGui(QMainWindow):
-
-	def __init__(self):
-		super().__init__()
-
-		self.settings = programSettings()
-		self.settings.ReadFile('.config.json')
-
-		self.initUI()
-
-
-	def initUI(self):
-		self.table_widget = MainTabWidget(self)
-		self.setCentralWidget(self.table_widget)
-
-		settingAction = QAction(QIcon(self.settings.AbsoluteImagePath('setting.png')), 'Setting', self)
-		settingAction.setStatusTip('Open setting window')
-		settingAction.triggered.connect(self.OpenFile)
-
-		aboutAction = QAction(QIcon(self.settings.AbsoluteImagePath('About50.png')), 'About', self)
-		aboutAction.setStatusTip('About')
-		aboutAction.triggered.connect(self.AboutWindow)
-
-		self.statusBar()
-
-		menubar = self.menuBar()
-		fileMenu = menubar.addMenu('&File')
-		fileMenu.addAction(settingAction)
-		aboutMenu = menubar.addMenu('&Help')
-		aboutMenu.addAction(aboutAction)
-
-		self.setGeometry(300, 300, 1000, 500)
-		self.setWindowTitle(WINDOWS_TITLE)
-		self.show()
-
-	def OpenFile(self):
-		return
 
 	def AboutWindow(self):
 		return
 
 def main():
 	app = QApplication(sys.argv)
-	main_gui = MainGui()
+	MainWindow = QMainWindow()
+	auto_ui = MainGui(MainWindow)
+	MainWindow.show()
 	sys.exit(app.exec_())
 
+def main_test():
+	app = QApplication(sys.argv)
+	MainWindow = QMainWindow()
+	ui = mainwindow_gui_auto.Ui_MainWindow()
+	ui.setupUi(MainWindow)
+	MainWindow.show()
+	sys.exit(app.exec_())
 
 if __name__ == '__main__':
 	main()
+	# main_test()

@@ -9,5 +9,7 @@
 *.key
 *.crt
 **/.config.json
+*_gui_auto.py
+*.autosave
 
 !**/.example_config.json
