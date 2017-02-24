@@ -4,9 +4,25 @@ import sys
 import os
 import binascii
 import re
+import ctypes
 
 VERBOSE = 0
 EXTRA_VERBOSE = 0
+
+# This function get from
+# http://stackoverflow.com/questions/4358285/is-there-a-faster-way-to-convert-an-arbitrary-large-integer-to-a-big-endian-seque/4358429#4358429
+PyLong_AsByteArray = ctypes.pythonapi._PyLong_AsByteArray
+PyLong_AsByteArray.argtypes = [ctypes.py_object,
+							   ctypes.c_char_p,
+							   ctypes.c_size_t,
+							   ctypes.c_int,
+							   ctypes.c_int]
+
+def packl_ctypes(lnum):
+	a = ctypes.create_string_buffer(lnum.bit_length()//8 + 1)
+	PyLong_AsByteArray(lnum, a, len(a), 0, 1)
+	return a.raw
+
 
 # [Table get from](https://github.com/google/bzip2-rpc/blob/master/crctable.c)
 BZ2_crc32Table = [
@@ -78,51 +94,65 @@ BZ2_crc32Table = [
 
 # [CRC32_BZIP get from](http://stackoverflow.duapp.com/questions/4468605/calculate-validate-bz2-bzip2-crc32-in-python?rq=1)
 def CRC32_BZIP(dataIn):
-    # Init
-    crcVar = 0xffffffff
-    for cha in list(dataIn):
-        crcVar = crcVar & 0xffffffff # Unsigned
-        crcVar = ((crcVar << 8) ^ (BZ2_crc32Table[(crcVar >> 24) ^ (ord(cha))]))
+	# Init
+	crcVar = 0xffffffff
+	for cha in list(dataIn):
+		crcVar = crcVar & 0xffffffff # Unsigned
+		crcVar = ((crcVar << 8) ^ (BZ2_crc32Table[(crcVar >> 24) ^ (ord(cha))]))
 
-    # return hex(~crcVar & 0xffffffff)[2:-1].upper()
-    return (~crcVar & 0xffffffff)
+	# return hex(~crcVar & 0xffffffff)[2:-1].upper()
+	return (~crcVar & 0xffffffff)
 
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	ENDC = '\033[0m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
 
 
 def print_err(text):
-    print >> sys.stderr, bcolors.FAIL + text + bcolors.ENDC
+	print >> sys.stderr, bcolors.FAIL + text + bcolors.ENDC
 
 def print_err_dump(data, desc_str):
-    print >> sys.stderr, bcolors.FAIL + desc_str + " " + binascii.hexlify(data) + bcolors.ENDC
+	print >> sys.stderr, bcolors.FAIL + desc_str + " " + binascii.hexlify(data) + bcolors.ENDC
 
 def print_ok(text):
-    print bcolors.OKGREEN + text + bcolors.ENDC
+	print bcolors.OKGREEN + text + bcolors.ENDC
 
 
 def get_fullpath(file_dir, file_name):
-    if file_dir == "":
-        return file_name
-    if os.name == "posix":
-        return file_dir + '/' + file_name
-    if os.name == "nt":
-        return file_dir + '\\' + file_name
+	if file_dir == "":
+		return file_name
+	if os.name == "posix":
+		return file_dir + '/' + file_name
+	if os.name == "nt":
+		return file_dir + '\\' + file_name
 
-def dump_hex(data, desc_str="", token=":"):
-    # print desc_str + binascii.hexlify(data)
-    print desc_str + token.join("{:02x}".format(ord(c)) for c in data)
+def dump_hex(data, desc_str="", token=":", prefix="", wrap=0):
+	# print desc_str + binascii.hexlify(data)
+	if wrap == 0:
+		print desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data)
+	else:
+		count = 0
+
+		sys.stdout.write("%s = {\r\n\t\t" % (desc_str))
+		for c in data:
+			if (count % wrap == 0) and (count != 0):
+				sys.stdout.write("\r\n\t\t")
+			to_write = prefix + "{:02x}".format(ord(c)) + token
+			sys.stdout.write(to_write)
+			count += 1
+
+		sys.stdout.write("\r\n\t};\r\n\r\n")
+		sys.stdout.flush()
 
 def GetFileContent(path):
-    f = open(path, 'rb')
-    return f.read()
+	f = open(path, 'rb')
+	return f.read()
 
 def ParseHeaderFileValue(file_path, array_name):
 	if os.path.isfile(file_path) == False:
