@@ -8,3 +8,6 @@
 *.tar.xz
 *.key
 *.crt
+**/.config.json
+
+!**/.example_config.json
