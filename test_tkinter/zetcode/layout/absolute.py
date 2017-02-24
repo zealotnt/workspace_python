@@ -11,10 +11,13 @@ Author: Jan Bodnar
 Last modified: November 2015
 Website: www.zetcode.com
 """
-
 from PIL import Image, ImageTk
 from Tkinter import Tk, Label, BOTH
 from ttk import Frame, Style
+import os
+import inspect
+CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/'
+IMG_DIR = CURRENT_DIR + "../../../img/"
 
 class Example(Frame):
 
@@ -32,19 +35,19 @@ class Example(Frame):
 
         Style().configure("TFrame", background="#333")
 
-        bard = Image.open("bardejov.jpg")
+        bard = Image.open(IMG_DIR + "bardejov.jpg")
         bardejov = ImageTk.PhotoImage(bard)
         label1 = Label(self, image=bardejov)
         label1.image = bardejov
         label1.place(x=20, y=20)
 
-        rot = Image.open("rotunda.jpg")
+        rot = Image.open(IMG_DIR + "rotunda.jpg")
         rotunda = ImageTk.PhotoImage(rot)
         label2 = Label(self, image=rotunda)
         label2.image = rotunda
         label2.place(x=350, y=50)
 
-        minc = Image.open("mincol.jpg")
+        minc = Image.open(IMG_DIR + "mincol.jpg")
         mincol = ImageTk.PhotoImage(minc)
         label3 = Label(self, image=mincol)
         label3.image = mincol

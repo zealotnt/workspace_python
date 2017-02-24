@@ -17,7 +17,8 @@ from Tkinter import Tk, Frame, Label
 
 import os
 import inspect
-current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/'
+IMG_DIR = CURRENT_DIR + "../../../img/"
 
 class Example(Frame):
 
@@ -33,7 +34,7 @@ class Example(Frame):
 
         self.parent.title("Label")
 
-        self.img = Image.open(current_dir + "/../layout/mincol.jpg")
+        self.img = Image.open(IMG_DIR + "mincol.jpg")
         tatras = ImageTk.PhotoImage(self.img)
         label = Label(self, image=tatras)
 
