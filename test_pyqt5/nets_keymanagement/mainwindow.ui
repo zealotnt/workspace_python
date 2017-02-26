@@ -42,7 +42,7 @@
            </widget>
           </item>
           <item row="2" column="1" colspan="2">
-           <widget class="QLineEdit" name="titlePriKeyPassphraseConfirm">
+           <widget class="QLineEdit" name="editPriKeyPassphraseConfirm">
             <property name="echoMode">
              <enum>QLineEdit::Password</enum>
             </property>
@@ -66,7 +66,7 @@
            <widget class="QLineEdit" name="editPriKeyName"/>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="titlePriKeyPassphraseConfirm_2">
+           <widget class="QLabel" name="titlePriKeyPassphraseConfirm">
             <property name="text">
              <string>Confirm passphrase</string>
             </property>
