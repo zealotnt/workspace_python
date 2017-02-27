@@ -12,5 +12,6 @@
 *_gui_auto.py
 *.autosave
 **/.idea/*
+*.ini
 
 !**/.example_config.json
