@@ -163,7 +163,7 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	casign_ini_file['ca'] = firmwarePath
 	casign_ini_file['sca'] = FIRMWARE_SIGNED
 
-	with open(CASIGN_INI_FILE, "w") as f:
+	with open(CASIGN_INI_FILE, "w", newline='') as f:
 		for item in casign_ini_file:
 			print(item, casign_ini_file[item])
 			f.write("%s=%s\n" % (item, casign_ini_file[item]))
@@ -184,11 +184,11 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 
 	# Generate the SCP packets if the firmware is bootloader
 	if firmwareType == "SURIBL":
-		with open(SB_SCRIPT_FILE, "w") as f:
+		with open(SB_SCRIPT_FILE, "w", newline='') as f:
 			f.write("%s\n" % SB_SCRIPT_CONTENT)
 			f.close()
 
-		with open(SESSION_BUILD_INI_FILE, "w") as f:
+		with open(SESSION_BUILD_INI_FILE, "w", newline='') as f:
 			for item in session_ini_file:
 				print(item, session_ini_file[item])
 				f.write("%s=%s\n" % (item, session_ini_file[item]))
