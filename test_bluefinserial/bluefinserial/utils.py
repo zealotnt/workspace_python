@@ -132,6 +132,15 @@ def get_fullpath(file_dir, file_name):
 	if os.name == "nt":
 		return file_dir + '\\' + file_name
 
+def bytesToBigInt(bytes_list):
+	ret = 0
+	max_idx = len(bytes_list) - 1
+	idx = 0
+	for val in bytes_list:
+		ret += val << 8*(max_idx - idx)
+		idx += 1
+	return ret
+
 def bigIntToBytes(big_val):
 	# [Ref](http://stackoverflow.com/questions/21017698/converting-int-to-bytes-in-python-3)
 	bit_length = (big_val.bit_length() + 7) // 8

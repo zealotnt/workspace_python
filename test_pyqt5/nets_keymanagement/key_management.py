@@ -39,6 +39,7 @@ RAW_KEY_FILE			= CURRENT_DIR + "firmware_sign_key.raw"
 CASIGN_INI_FILE			= CURRENT_DIR + "ca_sign_build.ini"
 SESSION_BUILD_INI_FILE 	= CURRENT_DIR + "session_build.ini"
 SB_SCRIPT_FILE 			= CURRENT_DIR + "sb_script.txt"
+FIRMWARE_SIGNED			= CURRENT_DIR + "maxim.signed.bin"
 BINARY_S19_FILE_NAME	= "binary.s19"
 BINARY_S19_FILE 		= CURRENT_DIR + BINARY_S19_FILE_NAME
 SB_SCRIPT_CONTENT 		= "write-file %s" % (BINARY_S19_FILE_NAME)
@@ -124,7 +125,7 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 		"algo": "ecdsa",
 		"ecdsa_file": SRK_KEY_NAME,
 		"ca": "Casign/suribootloader.bin",
-		"sca": "Casign/suribootloader.signed.bin",
+		"sca": FIRMWARE_SIGNED,
 		"load_address": "10000000",
 		"jump_address": "10000020",
 		"arguments": "",
@@ -134,7 +135,7 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	session_ini_file = {
 		"session_mode": "SCP_ANGELA_ECDSA",
 		"verbose": "no",
-		"output_file": "%s/out" % (SCP_OUT_DIR),
+		"output_file": "%s/scp" % (SCP_OUT_DIR),
 		"pp": "ECDSA",
 		"addr_offset": "00000000",
 		"chunk_size": "4094",
@@ -148,6 +149,9 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	# Write the "ca_sign_build.ini" file
 	if firmwareType == "SURIBL":
 		casign_ini_file['header'] = 'yes'
+
+	casign_ini_file['ca'] = firmwarePath
+	casign_ini_file['sca'] = FIRMWARE_SIGNED
 
 	with open(CASIGN_INI_FILE, "w") as f:
 		for item in casign_ini_file:
@@ -180,7 +184,7 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 				f.write("%s=%s\n" % (item, session_ini_file[item]))
 			f.close()
 
-		genS19File(firmwarePath)
+		genS19File(FIRMWARE_SIGNED)
 
 		if not os.path.exists(SCP_OUT_DIR):
 			os.makedirs(SCP_OUT_DIR)
@@ -383,7 +387,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 
 	def showFileDialog(self):
 		button_editline_maping = {
-			self.btnSignChooseFirmwarePath: self.editPriKeyName,
+			self.btnSignChooseFirmwarePath: self.editFirmwarePath,
 			self.btnSignChoosePrivateKeyPath: self.editSignKeyPath
 		}
 		sending_button = self.MainWindow.sender()
