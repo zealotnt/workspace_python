@@ -14,3 +14,4 @@ clean:
 	rm -f maximtestcrk.key
 	rm -f sb_script.txt
 	rm -rf scp_out
+	rm -f bootloader.zip

@@ -6,6 +6,7 @@ import sys
 import json
 import os
 import inspect
+import zipfile
 
 # Qt packages
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
@@ -37,7 +38,18 @@ SB_SCRIPT_FILE 			= CURRENT_DIR + "sb_script.txt"
 BINARY_S19_FILE_NAME	= "binary.s19"
 BINARY_S19_FILE 		= CURRENT_DIR + BINARY_S19_FILE_NAME
 SB_SCRIPT_CONTENT 		= "write-file %s" % (BINARY_S19_FILE_NAME)
-SCP_OUT_DIR				= CURRENT_DIR + "scp_out"
+SCP_OUT_DIR_NAME		= "scp_out"
+SCP_OUT_DIR				= CURRENT_DIR + SCP_OUT_DIR_NAME
+BL_ZIP_OUT				= "bootloader.zip"
+
+
+def zipDir(folderPath, outputZip):
+	zipf = zipfile.ZipFile(outputZip, 'w', zipfile.ZIP_DEFLATED)
+	for root, dirs, files in os.walk(folderPath):
+		for file in files:
+			zipf.write(os.path.join(root, file))
+	zipf.close()
+	return True
 
 def genS19File(binPath):
 	command = 'objcopy -I binary -O srec --srec-forceS3 --srec-len=128 --adjust-vma 0x10000000 %s %s' % (binPath, BINARY_S19_FILE)
@@ -65,6 +77,7 @@ def signFirmware(keyPath, firmwarePath, firmwareType):
 		"script_file": "sb_script.txt",
 		"ecdsa_file": "session_build/maximtestcrk.key"
 	}
+
 	# Check the validity of private key
 
 	# Generate the raw value of private key
@@ -106,9 +119,10 @@ def signFirmware(keyPath, firmwarePath, firmwareType):
 			os.makedirs(SCP_OUT_DIR)
 
 		os.system('./session_build/session_build.exe')
-		return
 
-	# Generate the sign firmware if the firmware is surisdk
+		if not(zipDir(SCP_OUT_DIR_NAME, BL_ZIP_OUT)):
+			print("Can't generate zip")
+		return
 
 	return
 
