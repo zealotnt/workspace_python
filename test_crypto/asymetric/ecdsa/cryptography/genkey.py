@@ -31,7 +31,7 @@ public_key = private_key.public_key()
 serialized_private = private_key.private_bytes(
 	encoding=serialization.Encoding.PEM,
 	format=serialization.PrivateFormat.PKCS8,
-	# encryption_algorithm=serialization.BestAvailableEncryption(b'1234')
+	# encryption_algorithm=serialization.BestAvailableEncryption(str.encode('1234'))
 	encryption_algorithm=serialization.NoEncryption()
 	)
 with open("./private.pem", "wb") as f:

@@ -11,7 +11,7 @@ import zipfile
 # Qt packages
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
 	QAction, QTabWidget, QVBoxLayout, QLabel, QLineEdit, QGridLayout,
-	QFileDialog, QMessageBox)
+	QFileDialog, QMessageBox, QInputDialog)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
 
@@ -45,12 +45,34 @@ SB_SCRIPT_CONTENT 		= "write-file %s" % (BINARY_S19_FILE_NAME)
 SCP_OUT_DIR_NAME		= "scp_out"
 SCP_OUT_DIR				= CURRENT_DIR + SCP_OUT_DIR_NAME
 BL_ZIP_OUT				= "bootloader.zip"
+SRK_KEY_NAME			= "maximtestcrk.key"
+
+def checkPriKeyEncrypted(prikeyPath):
+	with open(prikeyPath, "r") as f:
+		serialized_private = f.read()
+		serialized_private_bytes = str.encode(serialized_private)
+		f.close()
+
+	try:
+		loaded_pri_key = serialization.load_pem_private_key(
+				serialized_private_bytes,
+				password=None,
+				backend=default_backend()
+			)
+	except Exception as inst:
+		if ("is encrypted" in str(inst)):
+			return True
+
+	return False
 
 def genRawMaximKey(pemPriKeyPath, keyPass, outFileName):
 	with open(pemPriKeyPath, "r") as f:
 		serialized_private = f.read()
 		serialized_private_bytes = str.encode(serialized_private)
 		f.close()
+
+	if keyPass is not None:
+		keyPass = str.encode(keyPass)
 
 	loaded_pri_key = serialization.load_pem_private_key(
 			serialized_private_bytes,
@@ -97,10 +119,10 @@ def genS19File(binPath):
 	command = 'objcopy -I binary -O srec --srec-forceS3 --srec-len=128 --adjust-vma 0x10000000 %s %s' % (binPath, BINARY_S19_FILE)
 	os.system(command)
 
-def signFirmware(keyPath, firmwarePath, firmwareType):
+def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	casign_ini_file = {
 		"algo": "ecdsa",
-		"ecdsa_file": "Casign/crk_ecdsa_angela_test.key",
+		"ecdsa_file": SRK_KEY_NAME,
 		"ca": "Casign/suribootloader.bin",
 		"sca": "Casign/suribootloader.signed.bin",
 		"load_address": "10000000",
@@ -117,14 +139,16 @@ def signFirmware(keyPath, firmwarePath, firmwareType):
 		"addr_offset": "00000000",
 		"chunk_size": "4094",
 		"script_file": "sb_script.txt",
-		"ecdsa_file": "session_build/maximtestcrk.key"
+		"ecdsa_file": SRK_KEY_NAME
 	}
 
-	# Check the validity of private key
-
-	# Generate the raw value of private key
+	# Check the validity of private key and Generate the raw value of private key
+	genRawMaximKey(keyPath, keyPass, SRK_KEY_NAME)
 
 	# Write the "ca_sign_build.ini" file
+	if firmwareType == "SURIBL":
+		casign_ini_file['header'] = 'yes'
+
 	with open(CASIGN_INI_FILE, "w") as f:
 		for item in casign_ini_file:
 			print(item, casign_ini_file[item])
@@ -138,6 +162,7 @@ def signFirmware(keyPath, firmwarePath, firmwareType):
 		pass
 	elif firmwareType == "SURISDK":
 		# Sign without the 32bytes header
+		os.system('./Casign/ca_sign_build.exe')
 		return
 	else:
 		msgBoxError("Error", "Unregcognize firmware type: %s" % firmwareType)
@@ -168,6 +193,11 @@ def signFirmware(keyPath, firmwarePath, firmwareType):
 
 	return
 
+def retKeyName(userInput):
+	if not(userInput.endswith('.pem')):
+		userInput += '.pem'
+	return userInput
+
 def generateECKey(keyname, keypass=""):
 	private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
 
@@ -185,13 +215,27 @@ def generateECKey(keyname, keypass=""):
 				encryption_algorithm=serialization.BestAvailableEncryption(str.encode(keypass))
 			)
 
-	if not(keyname.endswith('.pem')):
-		keyname += '.pem'
+	keyname = retKeyName(keyname)
 
 	with open(keyname, "wb") as f:
 		f.write(serialized_private)
 
 	return keyname
+
+def msgGetText(MainWindow, title, value):
+	text, ok = QInputDialog.getText(MainWindow, title, value)
+	if ok:
+		return text
+	return None
+
+def msgBoxQuestion(MainWindow, title, message):
+	reply = QMessageBox.question(MainWindow, title,
+					 message, QMessageBox.Yes, QMessageBox.No)
+
+	if reply == QMessageBox.Yes:
+		return True
+	else:
+		return False
 
 def msgBoxInfo(title, message):
 	msg = QMessageBox()
@@ -268,9 +312,9 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 		self.btnSignFirmware.clicked.connect(self.signFirmwareHandler)
 		self.btnSignChooseFirmwarePath.clicked.connect(self.showFileDialog)
 		self.btnSignChoosePrivateKeyPath.clicked.connect(self.showFileDialog)
-		self.btnGenKeys.clicked.connect(self.generateKey)
+		self.btnGenKeys.clicked.connect(self.generateKeyHandler)
 
-	def generateKey(self):
+	def generateKeyHandler(self):
 		# validate the input
 		if self.editPriKeyPassphrase.text() != self.editPriKeyPassphraseConfirm.text():
 			msgBoxError("Error", "Input error:", "Password mismatch")
@@ -278,6 +322,12 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 		if self.editPriKeyName == "":
 			msgBoxError("Error", "Input error:", "Private key name is required")
 			return
+		if os.path.isfile(retKeyName(self.editPriKeyName.text())):
+			if msgBoxQuestion(self.MainWindow,
+							"Warning",
+							'"%s" already exists, overwrite ?' % retKeyName(self.editPriKeyName.text())
+				) is False:
+				return
 
 		# generate the key
 		try:
@@ -303,8 +353,29 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 			msgBoxError("Error", 'Firmware "%s" not found' % self.editFirmwarePath.text())
 			return
 
+		keyPass = None
+		if checkPriKeyEncrypted(self.editSignKeyPath.text()) == True:
+			keyPass = msgGetText(self.MainWindow, "Warning", "Please enter private key's passphrase")
+			if keyPass is None:
+				msgBoxError("Error", "Private key's passphrase is required")
+				return
+
 		# sign the firmware
-		signFirmware(self.editSignKeyPath.text(), self.editFirmwarePath.text(), "SURIBL")
+		try:
+			signFirmware(self.editSignKeyPath.text(), keyPass, self.editFirmwarePath.text(), "SURIBL")
+		except Exception as inst:
+			# mapping exception from internal library for "human" language
+			error_mapping = {
+				"unserialize key data": "Passphrase is incorrect",
+			}
+			error = str(inst)
+			for key in error_mapping:
+				if str(inst).find(key) != -1:
+					error = error_mapping[key]
+
+			# Notify to user
+			msgBoxError("Error", "Sign firmware error:", error)
+			return
 
 		# response to UI
 		msgBoxInfo("Success", 'Firmware "%s" successfully signed' % self.editFirmwarePath.text())
