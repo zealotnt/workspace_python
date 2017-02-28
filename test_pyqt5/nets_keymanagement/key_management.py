@@ -7,6 +7,7 @@ import json
 import os
 import inspect
 import zipfile
+import glob
 
 # Qt packages
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
@@ -120,6 +121,14 @@ def genS19File(binPath):
 	command = 'objcopy -I binary -O srec --srec-forceS3 --srec-len=128 --adjust-vma 0x10000000 %s %s' % (binPath, BINARY_S19_FILE)
 	os.system(command)
 
+def genPacketDotList(scpOutPath):
+	list_files = glob.glob(scpOutPath + '/*.packet')
+	list_files = sorted(list_files)
+	with open(scpOutPath + '/packet.list', "w") as f:
+		for file in list_files:
+			f.write("%s\n" % file)
+		f.close()
+
 def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	casign_ini_file = {
 		"algo": "ecdsa",
@@ -190,6 +199,8 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 			os.makedirs(SCP_OUT_DIR)
 
 		os.system('./session_build/session_build.exe')
+
+		genPacketDotList(SCP_OUT_DIR)
 
 		if not(zipDir(SCP_OUT_DIR_NAME, BL_ZIP_OUT)):
 			print("Can't generate zip")
