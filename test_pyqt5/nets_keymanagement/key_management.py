@@ -32,6 +32,10 @@ import mainwindow_gui_auto
 #######################################################################
 # Constant declaration
 #######################################################################
+APP_VERSION_MAJOR		= 0
+APP_VERSION_MINOR		= 0
+APP_VERSION_REV			= 1
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
 WINDOWS_TITLE = "STYL Key Management"
 
@@ -329,6 +333,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 		self.btnSignChooseFirmwarePath.clicked.connect(self.showFileDialog)
 		self.btnSignChoosePrivateKeyPath.clicked.connect(self.showFileDialog)
 		self.btnGenKeys.clicked.connect(self.generateKeyHandler)
+		self.actionAbout.triggered.connect(self.AboutWindowHandler)
 
 	def generateKeyHandler(self):
 		# validate the input
@@ -413,7 +418,9 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 			edit_widget.setText(fname[0])
 			print (fname)
 
-	def AboutWindow(self):
+	def AboutWindowHandler(self):
+		app_version_str = '%d.%d.%d' % (APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_REV)
+		msgBoxInfo("Info", '%s\nVersion: %s' %(WINDOWS_TITLE, app_version_str))
 		return
 
 def main():
