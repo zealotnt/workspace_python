@@ -45,7 +45,8 @@ RAW_KEY_FILE			= CURRENT_DIR + "firmware_sign_key.raw"
 CASIGN_INI_FILE			= CURRENT_DIR + "ca_sign_build.ini"
 SESSION_BUILD_INI_FILE 	= CURRENT_DIR + "session_build.ini"
 SB_SCRIPT_FILE 			= CURRENT_DIR + "sb_script.txt"
-FIRMWARE_SIGNED			= CURRENT_DIR + "maxim.signed.bin"
+FIRMWARE_BL_SIGNED		= CURRENT_DIR + "suribl.signed.bin"
+FIRMWARE_SDK_SIGNED		= CURRENT_DIR + "surisdk.signed.bin"
 BINARY_S19_FILE_NAME	= "binary.s19"
 BINARY_S19_FILE 		= CURRENT_DIR + BINARY_S19_FILE_NAME
 SB_SCRIPT_CONTENT 		= "write-file %s" % (BINARY_S19_FILE_NAME)
@@ -139,7 +140,7 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 		"algo": "ecdsa",
 		"ecdsa_file": SRK_KEY_NAME,
 		"ca": "suribootloader.bin",
-		"sca": FIRMWARE_SIGNED,
+		"sca": FIRMWARE_BL_SIGNED,
 		"load_address": "10000000",
 		"jump_address": "10000020",
 		"arguments": "",
@@ -161,11 +162,12 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	genRawMaximKey(keyPath, keyPass, SRK_KEY_NAME)
 
 	# Write the "ca_sign_build.ini" file
+	casign_ini_file['ca'] = firmwarePath
 	if firmwareType == "SURIBL":
 		casign_ini_file['header'] = 'yes'
-
-	casign_ini_file['ca'] = firmwarePath
-	casign_ini_file['sca'] = FIRMWARE_SIGNED
+		casign_ini_file['sca'] = FIRMWARE_BL_SIGNED
+	else:
+		casign_ini_file['sca'] = FIRMWARE_SDK_SIGNED
 
 	with open(CASIGN_INI_FILE, "w", newline='') as f:
 		for item in casign_ini_file:
@@ -181,10 +183,10 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 	elif firmwareType == "SURISDK":
 		# Sign without the 32bytes header
 		os.system(CASIGN_EXE)
-		return
+		return (firmwarePath, FIRMWARE_SDK_SIGNED)
 	else:
 		msgBoxError("Error", "Unregcognize firmware type: %s" % firmwareType)
-		return
+		return None
 
 	# Generate the SCP packets if the firmware is bootloader
 	if firmwareType == "SURIBL":
@@ -198,7 +200,7 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 				f.write("%s=%s\n" % (item, session_ini_file[item]))
 			f.close()
 
-		genS19File(FIRMWARE_SIGNED)
+		genS19File(FIRMWARE_BL_SIGNED)
 
 		if not os.path.exists(SCP_OUT_DIR):
 			os.makedirs(SCP_OUT_DIR)
@@ -209,9 +211,9 @@ def signFirmware(keyPath, keyPass, firmwarePath, firmwareType):
 
 		if not(zipDir(SCP_OUT_DIR_NAME, BL_ZIP_OUT)):
 			print("Can't generate zip")
-		return
+		return (firmwarePath, BL_ZIP_OUT)
 
-	return
+	return (firmwarePath, FIRMWARE_BL_SIGNED)
 
 def retKeyName(userInput):
 	if not(userInput.endswith('.pem')):
@@ -366,6 +368,14 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 
 	def signFirmwareHandler(self):
 		# validate the input
+		if self.radBtnSuriBl.isChecked():
+			firmwareType = "SURIBL"
+		elif self.radBtnSurisdk.isChecked():
+			firmwareType = "SURISDK"
+		else:
+			msgBoxError("Error", 'Please choose one type of firmware')
+			return
+
 		if not(os.path.isfile(self.editSignKeyPath.text())):
 			msgBoxError("Error", 'Private key "%s" not found' % self.editSignKeyPath.text())
 			return
@@ -383,7 +393,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 
 		# sign the firmware
 		try:
-			signFirmware(self.editSignKeyPath.text(), keyPass, self.editFirmwarePath.text(), "SURIBL")
+			ret = signFirmware(self.editSignKeyPath.text(), keyPass, self.editFirmwarePath.text(), firmwareType)
 		except Exception as inst:
 			# mapping exception from internal library for "human" language
 			error_mapping = {
@@ -398,8 +408,11 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 			msgBoxError("Error", "Sign firmware error:", error)
 			return
 
+		if ret == None:
+			return
+
 		# response to UI
-		msgBoxInfo("Success", 'Firmware "%s" successfully signed' % self.editFirmwarePath.text())
+		msgBoxInfo("Success", 'Firmware "%s" successfully signed\n\nOutput: "%s"' % (os.path.basename(ret[0]), os.path.basename(ret[1])))
 		return
 
 	def showFileDialog(self):

@@ -109,6 +109,49 @@
        <layout class="QGridLayout" name="gridLayout_4">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_3">
+          <item row="2" column="2">
+           <widget class="QPushButton" name="btnSignFirmware">
+            <property name="text">
+             <string>Sign</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QGroupBox" name="groupBox">
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QRadioButton" name="radBtnSurisdk">
+             <property name="geometry">
+              <rect>
+               <x>150</x>
+               <y>10</y>
+               <width>100</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Surisdk</string>
+             </property>
+            </widget>
+            <widget class="QRadioButton" name="radBtnSuriBl">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>120</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>SuriBootloader</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QLineEdit" name="editSignKeyPath"/>
           </item>
@@ -143,13 +186,6 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="2">
-           <widget class="QPushButton" name="btnSignFirmware">
-            <property name="text">
-             <string>Sign</string>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="2">
            <spacer name="verticalSpacer">
             <property name="orientation">
@@ -163,18 +199,12 @@
             </property>
            </spacer>
           </item>
-          <item row="2" column="1">
-           <spacer name="horizontalSpacer_2">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Firmware type</string>
             </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
+           </widget>
           </item>
          </layout>
         </item>
@@ -227,7 +257,6 @@
   <tabstop>btnSignChoosePrivateKeyPath</tabstop>
   <tabstop>editFirmwarePath</tabstop>
   <tabstop>btnSignChooseFirmwarePath</tabstop>
-  <tabstop>btnSignFirmware</tabstop>
  </tabstops>
  <resources/>
  <connections/>
