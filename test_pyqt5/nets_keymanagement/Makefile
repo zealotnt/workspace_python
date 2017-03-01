@@ -1,7 +1,10 @@
 CASIGN_HOST_PATH				?= /home/zealot/workspace_sirius/secureROM/Host/casign/bin/linux
 SESSION_BUILD_HOST_PATH			?= /home/zealot/workspace_sirius/secureROM/Host/session_build/bin/linux
 
-all: gen_gui link_secure_folder
+all: gen_gui gen_key
+
+gen_key:
+	python3 maxim_2_pem.py Casign/crk_ecdsa_angela_test.key private.pem
 
 gen_gui:
 	pyuic5 -x mainwindow.ui -o mainwindow_gui_auto.py
@@ -20,3 +23,4 @@ clean:
 	rm -f bootloader.zip
 	rm -f *.bin
 	rm -f *.sig
+	rm -f *.pem
