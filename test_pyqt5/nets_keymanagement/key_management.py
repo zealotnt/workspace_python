@@ -74,12 +74,14 @@ def checkPriKeyEncrypted(prikeyPath):
 
 	return False
 
-def genRawMaximKey(pemPriKeyPath, keyPass, outFileName):
+def genRawMaximKey(pemPriKeyPath, keyPass, outFileName, outKeyType="PRI:PUB"):
 	with open(pemPriKeyPath, "r") as f:
 		serialized_private = f.read()
 		serialized_private_bytes = str.encode(serialized_private)
 		f.close()
 
+	if keyPass == "":
+		keyPass = None
 	if keyPass is not None:
 		keyPass = str.encode(keyPass)
 
@@ -100,17 +102,19 @@ def genRawMaximKey(pemPriKeyPath, keyPass, outFileName):
 	y_pub_bytes = bigIntToBytes(public_key.public_numbers().y)
 
 	with open(outFileName, "w") as f:
-		for c in pri_bytes:
-			f.write("%02x" % (c))
-		f.write("\n")
+		if "PRI" in outKeyType:
+			for c in pri_bytes:
+				f.write("%02x" % (c))
+			f.write("\n")
 
-		for c in x_pub_bytes:
-			f.write("%02x" % (c))
-		f.write("\n")
+		if "PUB" in outKeyType:
+			for c in x_pub_bytes:
+				f.write("%02x" % (c))
+			f.write("\n")
 
-		for c in y_pub_bytes:
-			f.write("%02x" % (c))
-		f.write("\n")
+			for c in y_pub_bytes:
+				f.write("%02x" % (c))
+			f.write("\n")
 
 		f.close()
 
@@ -359,9 +363,10 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 		outputFolder = str(QFileDialog.getExistingDirectory(self.MainWindow, "Select output Directory"))
 		if outputFolder == "":
 			return
-		outputFile = outputFolder + os.sep + os.path.basename(self.editPriKeyName.text())
-
-		if os.path.isfile(retKeyName(outputFile)):
+		outputFilePem = outputFolder + os.sep + os.path.basename(self.editPriKeyName.text())
+		outputFilePem = retKeyName(outputFilePem)
+		outputFileRaw = outputFolder + os.sep + "maxim_crk_pub.key"
+		if os.path.isfile(outputFilePem):
 			if msgBoxQuestion(self.MainWindow,
 							"Warning",
 							'"%s" already exists, overwrite ?' % retKeyName(self.editPriKeyName.text())
@@ -369,7 +374,8 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 				return
 
 		try:
-			keyname = generateECKey(outputFile, str(self.editPriKeyPassphrase.text()))
+			keyName = generateECKey(outputFilePem, str(self.editPriKeyPassphrase.text()))
+			genRawMaximKey(outputFilePem, str(self.editPriKeyPassphrase.text()), outputFileRaw, "PUB")
 		except Exception as inst:
 			print(sys.exc_info()[0])
 			print(type(inst))
@@ -378,7 +384,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 			return
 
 		# response to UI
-		msgBoxInfo("Success", 'Private key "%s" successfully generated' % keyname)
+		msgBoxInfo("Success", 'Private key "%s"generated\nPub_CRK "%s"\n generated' % (keyName, outputFileRaw))
 		return
 
 	def signFirmwareHandler(self):

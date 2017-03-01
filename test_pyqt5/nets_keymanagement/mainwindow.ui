@@ -104,7 +104,7 @@
       </widget>
       <widget class="QWidget" name="tabSignFirmware_2">
        <attribute name="title">
-        <string>Key signing</string>
+        <string>Firmware signing</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_4">
         <item row="0" column="0">
