@@ -10,3 +10,4 @@ session_build
 *.sig
 *.spec
 scp_out/*
+!windows_release/*

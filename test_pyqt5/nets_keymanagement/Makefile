@@ -25,3 +25,4 @@ clean:
 	rm -f *.sig
 	rm -f *.pem
 	rm -f *.spec
+	rm -f *.key
