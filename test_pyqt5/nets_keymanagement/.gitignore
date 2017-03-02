@@ -8,4 +8,5 @@ session_build
 *.zip
 *.txt
 *.sig
+*.spec
 scp_out/*

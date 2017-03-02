@@ -8,6 +8,7 @@ import os
 import inspect
 import zipfile
 import glob
+import shutil
 
 # Qt packages
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
@@ -211,8 +212,9 @@ def signFirmware(keyPath, keyPass, firmwarePath, outputZipDir, firmwareType):
 
 		genS19File(FIRMWARE_BL_SIGNED)
 
-		if not os.path.exists(SCP_OUT_DIR):
-			os.makedirs(SCP_OUT_DIR)
+		if os.path.exists(SCP_OUT_DIR):
+			shutil.rmtree(SCP_OUT_DIR)
+		os.makedirs(SCP_OUT_DIR)
 
 		os.system(SESSION_BUILD_EXE)
 
