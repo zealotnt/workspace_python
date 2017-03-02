@@ -24,4 +24,4 @@ clean:
 	rm -f *.bin
 	rm -f *.sig
 	rm -f *.pem
-	rm -r *.spec
+	rm -f *.spec

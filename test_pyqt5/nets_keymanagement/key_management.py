@@ -260,7 +260,7 @@ def generateECKey(keyname, keypass=""):
 	return keyname
 
 def msgGetText(MainWindow, title, value):
-	text, ok = QInputDialog.getText(MainWindow, title, value)
+	text, ok = QInputDialog.getText(MainWindow, title, value, QLineEdit.Password)
 	if ok:
 		return text
 	return None
@@ -357,7 +357,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 		if self.editPriKeyPassphrase.text() != self.editPriKeyPassphraseConfirm.text():
 			msgBoxError("Error", "Input error:", "Password mismatch")
 			return
-		if self.editPriKeyName == "":
+		if self.editPriKeyName.text() == "":
 			msgBoxError("Error", "Input error:", "Private key name is required")
 			return
 
@@ -409,7 +409,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 
 		keyPass = None
 		if checkPriKeyEncrypted(self.editSignKeyPath.text()) == True:
-			keyPass = msgGetText(self.MainWindow, "Warning", "Please enter private key's passphrase")
+			keyPass = msgGetText(self.MainWindow, "Information", "Please enter private key's passphrase")
 			if keyPass is None:
 				msgBoxError("Error", "Private key's passphrase is required")
 				return

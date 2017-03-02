@@ -131,7 +131,7 @@
               </rect>
              </property>
              <property name="text">
-              <string>Surisdk</string>
+              <string>Firmware</string>
              </property>
             </widget>
             <widget class="QRadioButton" name="radBtnSuriBl">
@@ -144,7 +144,7 @@
               </rect>
              </property>
              <property name="text">
-              <string>SuriBootloader</string>
+              <string>Bootloader</string>
              </property>
              <property name="checked">
               <bool>true</bool>
