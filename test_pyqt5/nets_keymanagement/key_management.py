@@ -131,7 +131,10 @@ def zipDir(folderPath, outputZip):
 
 def genS19File(binPath):
 	command = 'objcopy -I binary -O srec --srec-forceS3 --srec-len=128 --adjust-vma 0x10000000 %s %s' % (binPath, BINARY_S19_FILE)
-	os.system(command)
+	ret = os.system(command)
+	if ret != 0:
+		print("Objcopy error, code %d" % (ret))
+	return ret
 
 def genPacketDotList(scpOutPath):
 	list_files = glob.glob(scpOutPath + os.sep + '*.packet')
@@ -188,11 +191,15 @@ def signFirmware(keyPath, keyPass, firmwarePath, outputZipDir, firmwareType):
 	# Sign the firmware with Casign
 	if firmwareType == "SURIBL":
 		# Sign with full param
-		os.system(CASIGN_EXE)
+		ret = os.system(CASIGN_EXE)
+		if ret != 0:
+			raise Exception('Error when sign firmware, Casign failure code %d' % (ret))
 		pass
 	elif firmwareType == "SURISDK":
 		# Sign without the 32bytes header
-		os.system(CASIGN_EXE)
+		ret = os.system(CASIGN_EXE)
+		if ret != 0:
+			raise Exception('Error when sign firmware, Casign failure code %d' % (ret))
 		return (firmwarePath, outPutFIle)
 	else:
 		msgBoxError("Error", "Unregcognize firmware type: %s" % firmwareType)
@@ -210,18 +217,23 @@ def signFirmware(keyPath, keyPass, firmwarePath, outputZipDir, firmwareType):
 				f.write("%s=%s\n" % (item, session_ini_file[item]))
 			f.close()
 
-		genS19File(FIRMWARE_BL_SIGNED)
+		ret = genS19File(FIRMWARE_BL_SIGNED)
+		if ret != 0:
+			raise Exception('Objcopy generate fail, code %d, please check your cygwin setup' %(ret))
 
 		if os.path.exists(SCP_OUT_DIR):
 			shutil.rmtree(SCP_OUT_DIR)
 		os.makedirs(SCP_OUT_DIR)
 
-		os.system(SESSION_BUILD_EXE)
+		ret = os.system(SESSION_BUILD_EXE)
+		if ret != 0:
+			raise Exception('Error when sign firmware, session_build failure code %d' % (ret))
 
 		genPacketDotList(SCP_OUT_DIR)
 
 		if not(zipDir(SCP_OUT_DIR_NAME, outPutFIle)):
-			print("Can't generate zip")
+			raise Exception("Can't generate zip")
+
 		return (firmwarePath, outPutFIle)
 
 	return (firmwarePath, FIRMWARE_BL_SIGNED)
