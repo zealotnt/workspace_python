@@ -36,8 +36,8 @@ APP_VERSION_REV			= 1
 CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
 WINDOWS_TITLE = "STYL Key Management"
 
-CASIGN_EXE				= os.path.join(CURRENT_DIR, "Casign", "ca_sign_build.exe")
-SESSION_BUILD_EXE		= os.path.join(CURRENT_DIR, "session_build", "session_build.exe")
+CASIGN_EXE				= '"' + os.path.join(CURRENT_DIR, "Casign", "ca_sign_build.exe") + '"'
+SESSION_BUILD_EXE		= '"' + os.path.join(CURRENT_DIR, "session_build", "session_build.exe") + '"'
 RAW_KEY_FILE			= CURRENT_DIR + "firmware_sign_key.raw"
 CASIGN_INI_FILE			= CURRENT_DIR + "ca_sign_build.ini"
 SESSION_BUILD_INI_FILE 	= CURRENT_DIR + "session_build.ini"
