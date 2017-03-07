@@ -81,6 +81,11 @@ if __name__ == "__main__":
 						dest="protocol_test_target",
 						default="RF",
 						help="define the target to test protocol, any of: RF/APP")
+	parser.add_option(  "-d", "--delay",
+						dest="delay",
+						default="0",
+						help="the timing delay between transmission, for easier to read the result")
+
 	(options, args) = parser.parse_args()
 
 	if options.protocol_test_target == "RF":
@@ -138,7 +143,7 @@ if __name__ == "__main__":
 		cmd = pkt.Packet(cmd_code, ctr_code, send_buff)
 
 		# dump_hex(cmd, "Command: ")
-		start = int(time.time() * 1000)
+		start = time.time()
 		rsp = comm.Exchange(cmd)
 		if rsp is None:
 			print_err(PROTOCOL_TEST_HDR + "Transmit fail")
@@ -148,7 +153,8 @@ if __name__ == "__main__":
 			sys.exit(-1)
 
 		# dump_hex(rsp, "Response: ")
-		end = int(time.time() * 1000)
-		print "Send %d times, %.2fms" % (times, (end-start))
+		end = time.time()
+		print "Send %d times, %.8fms" % (times, (end-start)*1000)
 		times += 1
+		time.sleep(float(options.delay))
 
