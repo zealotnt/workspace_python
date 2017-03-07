@@ -19,7 +19,8 @@ from Tkinter import Tk, Frame, Canvas, ALL, NW
 
 import os
 import inspect
-current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/'
+IMG_DIR = CURRENT_DIR + "../../../img/"
 
 WIDTH = 300
 HEIGHT = 300
@@ -60,15 +61,15 @@ class Board(Canvas):
             y[i] = 50
 
         try:
-            self.idot = Image.open(current_dir + "/green.png")
+            self.idot = Image.open(IMG_DIR + "green.png")
             idot_cropped = self.idot.resize((DOT_SIZE, DOT_SIZE), Image.ANTIALIAS)
             self.dot = ImageTk.PhotoImage(idot_cropped)
 
-            self.ihead = Image.open(current_dir + "/red.jpg")
+            self.ihead = Image.open(IMG_DIR + "red.jpg")
             head_cropped = self.ihead.resize((DOT_SIZE, DOT_SIZE), Image.ANTIALIAS)
             self.head = ImageTk.PhotoImage(head_cropped)
 
-            self.iapple = Image.open(current_dir + "/apple.png")
+            self.iapple = Image.open(IMG_DIR + "apple.png")
             iapple_cropped = self.iapple.resize((DOT_SIZE, DOT_SIZE), Image.ANTIALIAS)
             self.apple = ImageTk.PhotoImage(iapple_cropped)
 

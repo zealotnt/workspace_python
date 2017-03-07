@@ -103,7 +103,7 @@ class SiriusAPISystem():
 			return None
 		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
 		firmware_version_str = self.parse_version(u32_firmware_version)
-		print_ok("Surisdk version: " + str(firmware_version_str))
+		print_ok("Suribl version: " + str(firmware_version_str))
 		return firmware_version_str
 
 	def RfDebugPrintEnable(self):

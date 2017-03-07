@@ -17,7 +17,8 @@ from Tkinter import Button, LEFT, TOP, X, FLAT, RAISED
 
 import os
 import inspect
-current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/'
+IMG_DIR = CURRENT_DIR + "../../../img/"
 
 class Example(Frame):
 
@@ -40,7 +41,7 @@ class Example(Frame):
 
         toolbar = Frame(self.parent, bd=1, relief=RAISED)
 
-        self.img = Image.open(current_dir + "/exit.png")
+        self.img = Image.open(IMG_DIR + "exit.png")
         cropped = self.img.resize((25, 25), Image.ANTIALIAS)
         eimg = ImageTk.PhotoImage(cropped)
 

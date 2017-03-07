@@ -8,3 +8,10 @@
 *.tar.xz
 *.key
 *.crt
+**/.config.json
+*_gui_auto.py
+*.autosave
+**/.idea/*
+*.ini
+
+!**/.example_config.json

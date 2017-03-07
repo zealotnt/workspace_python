@@ -32,6 +32,14 @@ if __name__ == "__main__":
 						type="string",
 						default=BLUEFINSERIAL_BAUDRATE,
 						help="define the serial baudrate to use, default = "+str(BLUEFINSERIAL_BAUDRATE))
+	parser.add_option(  "-l",
+						dest="loop",
+						action="store_true",
+						default=False)
+	parser.add_option(  "-t", "--target",
+						dest="target",
+						default="RF",
+						help="specify target to get version from, can be either (RF -- APP -- RF|APP)")
 	(options, args) = parser.parse_args()
 
 	try:
@@ -44,11 +52,18 @@ if __name__ == "__main__":
 
 	sirius_system = SiriusAPISystem(comm)
 
-	# Enable debug print of RF processor
-	sirius_system.RfDebugPrintEnable()
+	targets = options.target.split(',')
 
-	sirius_system.GetXmsdkVersion()
-	sirius_system.GetSvcVersion()
-	sirius_system.GetSurisdkVersion()
-	sirius_system.GetSuriblVersion()
+	while True:
+		if "RF" in targets:
+			# Enable debug print of RF processor
+			sirius_system.RfDebugPrintEnable()
+			sirius_system.GetSurisdkVersion()
+			sirius_system.GetSuriblVersion()
 
+		if "APP" in targets:
+			sirius_system.GetXmsdkVersion()
+			sirius_system.GetSvcVersion()
+
+		if options.loop == False:
+			break

@@ -1,0 +1,21 @@
+1. Install Python 3.5.x
+- Download and install Python3.5 (lastest version of 3.5 on python Homepage not 3.6)
+- Add Python3.5 path to Windows environment variable
+- Check python installation result using:
+    + "windows + R" to, open "cmd" command line of window
+    + type python -V, it should show version 3.5.x
+
+2. Install dependencies:
+- Install pip3: "python get-pip.py"
+- Install PyQt5: "pip3 install PyQt5"
+- Install cryptography: "pip3 install cryptography"
+Validation of this step:
+- Type: "python key_management.py", the UI should be showed, then this step is completed
+
+3. Install cygwin and check the result of application
+- (and some of cygwin dependencies, I really don't remember the dependencies)
+Validation of this step:
+- Generate any private key (gen key tab)
+- use that private key to second tab (sign firmware tab), input a test binary (attatched in the email), generate and check the result
+	+ "bootloader.zip" for the bootloader firmware
+	+ "surisdk.signed.bin" for the surisdk firmware

@@ -18,7 +18,8 @@ import ImageTk
 
 import os
 import inspect
-current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + '/'
+IMG_DIR = CURRENT_DIR + "../../../img/"
 
 class Example(Frame):
 
@@ -35,7 +36,7 @@ class Example(Frame):
         self.parent.title("High Tatras")
         self.pack(fill=BOTH, expand=1)
 
-        self.img = Image.open(current_dir + "/../layout/mincol.jpg")
+        self.img = Image.open(IMG_DIR + "mincol.jpg")
         self.tatras = ImageTk.PhotoImage(self.img)
 
         canvas = Canvas(self, width=self.img.size[0]+20,

@@ -1,0 +1,13 @@
+# Link folder
+Casign
+session_build
+
+# Auto generate files
+*.bin
+*.s19
+*.zip
+*.txt
+*.sig
+*.spec
+scp_out/*
+!windows_release/*
