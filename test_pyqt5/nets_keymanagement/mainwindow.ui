@@ -116,54 +116,6 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QGroupBox" name="groupBox">
-            <property name="title">
-             <string/>
-            </property>
-            <widget class="QRadioButton" name="radBtnSurisdk">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>150</x>
-               <y>5</y>
-               <width>100</width>
-               <height>21</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Firmware</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-            <widget class="QRadioButton" name="radBtnSuriBl">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>5</y>
-               <width>120</width>
-               <height>21</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Bootloader</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QLineEdit" name="editSignKeyPath"/>
           </item>
@@ -210,13 +162,6 @@
              </size>
             </property>
            </spacer>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Firmware type</string>
-            </property>
-           </widget>
           </item>
          </layout>
         </item>

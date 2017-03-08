@@ -403,13 +403,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 
 	def signFirmwareHandler(self):
 		# validate the input
-		if self.radBtnSuriBl.isChecked():
-			firmwareType = "SURIBL"
-		elif self.radBtnSurisdk.isChecked():
-			firmwareType = "SURISDK"
-		else:
-			msgBoxError("Error", 'Please choose one type of firmware')
-			return
+		firmwareType = "SURIBL"
 
 		if not(os.path.isfile(self.editSignKeyPath.text())):
 			msgBoxError("Error", 'Private key "%s" not found' % self.editSignKeyPath.text())
