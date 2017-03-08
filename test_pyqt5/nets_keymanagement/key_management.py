@@ -436,7 +436,7 @@ class MainGui(mainwindow_gui_auto.Ui_MainWindow):
 		except Exception as inst:
 			# mapping exception from internal library for "human" language
 			error_mapping = {
-				"unserialize key data": "Passphrase is incorrect",
+				# "unserialize key data": "Passphrase is incorrect",
 			}
 			error = str(inst)
 			for key in error_mapping:

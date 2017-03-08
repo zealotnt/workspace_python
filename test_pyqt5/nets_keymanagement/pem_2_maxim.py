@@ -17,10 +17,11 @@ if len(sys.argv) != 2:
 	print("%s <pri-pem-file>" % sys.argv[0])
 	sys.exit(-1)
 
-outputTemp = "/tmp/some_misc_file"
+outputTemp = "tmp.maxim.key.key"
 
 
 if key_management.checkPriKeyEncrypted(sys.argv[1]) == True:
+	print("Key has passphrase, please type the password:")
 	keyPass = input()
 	# TODO: use temp lib instead
 	key_management.genRawMaximKey(sys.argv[1], keyPass, outputTemp)

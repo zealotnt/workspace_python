@@ -122,6 +122,9 @@
              <string/>
             </property>
             <widget class="QRadioButton" name="radBtnSurisdk">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="geometry">
               <rect>
                <x>150</x>
@@ -133,8 +136,14 @@
              <property name="text">
               <string>Firmware</string>
              </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
             </widget>
             <widget class="QRadioButton" name="radBtnSuriBl">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -145,6 +154,9 @@
              </property>
              <property name="text">
               <string>Bootloader</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
              <property name="checked">
               <bool>true</bool>
