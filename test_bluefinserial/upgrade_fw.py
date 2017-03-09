@@ -66,6 +66,7 @@ if __name__ == "__main__":
 						help="define the firmware type to upgrade (%s/%s/%s/%s)" % (TYPE_APP_SVC, TYPE_APP_FW, TYPE_RF_BL, TYPE_RF_FW))
 	parser.add_option(  "-l", "--loop",
 						dest="download_loop",
+						action="store_true",
 						default=False,
 						help="choose upgrade operation to loop forever or not, default = False")
 
