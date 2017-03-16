@@ -132,3 +132,54 @@ class SiriusAPISystem():
 
 		print_ok("Set root password to '%s' successfully" % password)
 		return True
+
+	def RfCauseHardfault(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=True)
+		# always has null character at the end
+		cmd = pkt.Packet('\x8b', '\x72', "")
+		self._datalink.Exchange(cmd)
+
+	def RfCauseHangWhile(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF, verbose=True)
+		# always has null character at the end
+		cmd = pkt.Packet('\x8b', '\x74', "")
+		self._datalink.Exchange(cmd)
+
+	def RfWdtGetCount(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		# always has null character at the end
+		arg = struct.pack('<B', 0)
+		cmd = pkt.Packet('\x8b', '\x42', arg)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("RfWdtGetCount execute fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		count = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16) + (ord(rsp[6]) << 24)
+		print_ok("RfWdtGetCount execute successfully, count = %d" % count)
+		return True
+
+	def RfWdtClearCount(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		# always has null character at the end
+		arg = struct.pack('<B', 1)
+		cmd = pkt.Packet('\x8b', '\x42', arg)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("RfWdtClearCount execute fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		print_ok("RfWdtClearCount execute successfully")
+
+		# Print the value after clear for assurance
+		self.RfWdtGetCount()
+
+		return True

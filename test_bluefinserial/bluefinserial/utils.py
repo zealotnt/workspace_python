@@ -224,3 +224,25 @@ def ParseHeaderFileValue(file_path, array_name):
 	new_file_val = ''.join(chr(x) for x in finalArr)
 
 	return new_file_val
+
+def callMethodByString(object, name):
+	getattr(object, name)()
+
+def getKeysOfDict(dictionary, token="--", boundary="()"):
+	ret = ""
+	idx = 0
+
+	if len(boundary) != 2:
+		print_err("boundary should have 2 character, 1 for opening and 1 for ending")
+		return ""
+
+	for item in dictionary:
+		if idx == 0:
+			ret += boundary[0]
+		if idx != 0:
+			ret += " %s " % token
+		ret += item
+		if idx == len(dictionary) - 1:
+			ret += boundary[1]
+		idx += 1
+	return ret
