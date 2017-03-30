@@ -1,3 +1,8 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# @Author: zealotnt
+# @Date:   2017-03-30 21:03:10
+
 import os
 import sys
 import time
