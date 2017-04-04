@@ -13,5 +13,7 @@
 *.autosave
 **/.idea/*
 *.ini
+*.log
+*.log.*
 
 !**/.example_config.json
