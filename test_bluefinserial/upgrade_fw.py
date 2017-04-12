@@ -91,7 +91,10 @@ if __name__ == "__main__":
 		sys.exit(-2)
 
 	if options.firmware_file is not None:
+		fileProtocolPrefix = "file:///"
 		file = options.firmware_file
+		if file.startswith(fileProtocolPrefix):
+			file = file[len(fileProtocolPrefix)-1:]
 
 	try:
 		comm = BluefinserialSend(options.serial, options.baud)
