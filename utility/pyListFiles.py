@@ -60,7 +60,10 @@ if __name__ == "__main__":
 		if options.root is True:
 			# remove the prefix path
 			# the first character of path should be '/'
-			filename = '/' + filename[len(listPath):]
+			if filename[len(listPath):].startswith('/'):
+				filename = filename[len(listPath):]
+			else:
+				filename = '/' + filename[len(listPath):]
 		contentGenScript += "rm %s\n" % filename
 
 	if isGenScript:
