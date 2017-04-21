@@ -14,6 +14,7 @@ from optparse import OptionParser, OptionGroup
 
 # [Ref](http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-traceback)
 MYNAME = lambda: inspect.stack()[1][3]
+ENDLINE = "\r\n"
 
 class MardownTableGenerator():
 	def __init__(self):
@@ -25,20 +26,35 @@ class MardownTableGenerator():
 			print("%s(), listColumn is not a list" % MYNAME())
 			return None
 
+		# Create the column item
 		for column in listColumn:
 			self.text += "| %s " % column
-		self.text += "|\r\n"
+		self.text += "|" + ENDLINE
+
+		# Create the table marking for markdown
+		for idx, column in enumerate(listColumn):
+			if idx == 0:
+				self.text += "| --- "
+			elif idx == len(listColumn) - 1:
+				self.text += "| ---:"
+			else:
+				self.text += "| :---: "
+		self.text += "|" + ENDLINE
+
 		self.init = True
 		return True
 
 	def AddRow(self, listColumn):
+		if not type(listColumn) is list:
+			print("%s(), listColumn is not a list, it's %s" % (MYNAME(), str(type(listColumn))))
+			return None
 		if self.init != True:
 			print("%s(), table is not created yet" % MYNAME())
 			return None
 
 		for column in listColumn:
 			self.text += "| %s " % column
-		self.text += "|\r\n"
+		self.text += "|" + ENDLINE
 		return True
 
 	def Table(self):
@@ -173,32 +189,161 @@ def _demoUsage(fileContent):
 def main():
 	parser = OptionParser()
 
-	parser.add_option(  "-f", "--file",
-						dest="filePath",
+	parser.add_option(  "--fsoft",
+						dest="filePathSoft",
 						type="string",
 						default="",
-						help="point to path of result file to parse")
+						help="point to path of software result file to parse")
+	parser.add_option(  "--fhard",
+						dest="filePathHard",
+						type="string",
+						default="",
+						help="point to path of hardware result file to parse")
+	parser.add_option(  "-o", "--out",
+						dest="outFile",
+						type="string",
+						default="",
+						help="result markdown file to dump to")
+	parser.add_option(  "-d", "--dump",
+						dest="dump",
+						action="store_true",
+						default=False,
+						help="Dump result to stdout")
 	(options, args) = parser.parse_args()
 
+	#########################################################
+	# Process the input param
 	# Strip of file:// if any
 	fileProtocolPrefix = "file:///"
-	file = options.filePath
-	if file.startswith(fileProtocolPrefix):
-		file = file[len(fileProtocolPrefix)-1:]
+	fileSoft = options.filePathSoft
+	if fileSoft.startswith(fileProtocolPrefix):
+		fileSoft = fileSoft[len(fileProtocolPrefix)-1:]
+	fileHard = options.filePathHard
+	if fileHard.startswith(fileProtocolPrefix):
+		fileHard = fileHard[len(fileProtocolPrefix)-1:]
 
 	# Check file is invalid
-	if file == "":
-		print("Please specify file path with flag -f or --file")
+	if fileSoft == "":
+		print("Please specify software result file path with flag -fsoft")
+		sys.exit(1)
+	if fileHard == "":
+		print("Please specify hardware result file path with flag -fhard")
 		sys.exit(1)
 
-	if not os.path.isfile(file):
-		print("File path %s not found" % (file))
+	if not os.path.isfile(fileSoft):
+		print("File path %s not found" % (fileSoft))
+		sys.exit(1)
+	if not os.path.isfile(fileHard):
+		print("File path %s not found" % (fileHard))
 		sys.exit(1)
 
+	#########################################################
 	# Open and read the file
-	f = open(file, 'rb')
-	fileContent = f.read()
+	f = open(fileSoft, 'rb')
+	fileContentSoft = f.read()
+	f.close()
+	f = open(fileHard, 'rb')
+	fileContentHard = f.read()
+	f.close()
 
+	#########################################################
+	# Now create the result
+	nonPublicResultSoft = ResultParser.ParseNonPublicResult(fileContentSoft)
+	publicResultSoft = ResultParser.ParsePublicResult(fileContentSoft)
+	ecdhResultSoft = ResultParser.ParseECDHResult(fileContentSoft)
+
+	nonPublicResultHard = ResultParser.ParseNonPublicResult(fileContentHard)
+	publicResultHard = ResultParser.ParsePublicResult(fileContentHard)
+	ecdhResultHard = ResultParser.ParseECDHResult(fileContentHard)
+
+	#########################################################
+	# Now generate the tables
+	# Firstly, generate the nonPublicTable
+	nonPublicTableLayout =[
+		"Method",
+		"Block Size",
+		"Time Running",
+		"Actual Time Soft",
+		"Actual Time Hard",
+		"Result Times Soft",
+		"Result Times Hard"]
+	nonPublicTable = MardownTableGenerator()
+	nonPublicTable.CreateTable(nonPublicTableLayout)
+	for idx, item in enumerate(nonPublicResultSoft):
+		nonPublicTableRow = [
+			item["Method"],
+			item["BlockSize"],
+			item["TimeRunning"],
+			item["ActualTime"],
+			nonPublicResultHard[idx]["ActualTime"],
+			item["ResultTimes"],
+			nonPublicResultHard[idx]["ResultTimes"]]
+		nonPublicTable.AddRow(nonPublicTableRow)
+
+	# Secondly, generate the publicTable
+	publicTableLayout =[
+		"Method",
+		"Key Size",
+		"Time Running",
+		"Actual Time Soft",
+		"Actual Time Hard",
+		"Result Times Soft",
+		"Result Times Hard"]
+	publicTable = MardownTableGenerator()
+	publicTable.CreateTable(publicTableLayout)
+	for idx, item in enumerate(publicResultSoft):
+		publicTableRow = [
+			item["Method"],
+			item["KeySize"],
+			item["TimeRunning"],
+			item["ActualTime"],
+			publicResultHard[idx]["ActualTime"],
+			item["ResultTimes"],
+			publicResultHard[idx]["ResultTimes"]]
+		publicTable.AddRow(publicTableRow)
+
+	# Thirdly, generate the ecdhTable
+	ecdhTableLayout =[
+		"Method",
+		"Key Size",
+		"Time Running",
+		"Actual Time Soft",
+		"Actual Time Hard",
+		"Result Times Soft",
+		"Result Times Hard"]
+	ecdhTable = MardownTableGenerator()
+	ecdhTable.CreateTable(ecdhTableLayout)
+	for idx, item in enumerate(ecdhResultSoft):
+		ecdhTableRow = [
+			item["Method"],
+			item["KeySize"],
+			item["TimeRunning"],
+			item["ActualTime"],
+			ecdhResultHard[idx]["ActualTime"],
+			item["ResultTimes"],
+			ecdhResultHard[idx]["ResultTimes"]]
+		ecdhTable.AddRow(ecdhTableRow)
+
+	if options.dump == True:
+		print(nonPublicTable.Table())
+		print(publicTable.Table())
+		print(ecdhTable.Table())
+
+	if options.outFile != "":
+		contentFile = "# Non Public Key Cryptography" + ENDLINE + ENDLINE
+		contentFile += nonPublicTable.Table() + ENDLINE
+		contentFile += "# Public Key Cryptography" + ENDLINE + ENDLINE
+		contentFile += publicTable.Table() + ENDLINE
+		contentFile += "# ECDH Cryptography" + ENDLINE + ENDLINE
+		contentFile += ecdhTable.Table()
+
+		if not(options.outFile.endswith('.md')):
+			nameGenScript = options.outFile + '.md'
+		else:
+			nameGenScript = options.outFile
+		with open(nameGenScript, "w") as f:
+			f.write(contentFile)
+			f.close()
 
 if __name__ == "__main__":
 	main()
