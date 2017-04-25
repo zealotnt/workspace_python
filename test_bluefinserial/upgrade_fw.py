@@ -12,6 +12,7 @@ import time
 import sys
 import serial
 import struct
+import ntpath
 from optparse import OptionParser, OptionGroup
 
 sys.path.insert(0, 'bluefinserial')
@@ -69,6 +70,11 @@ if __name__ == "__main__":
 						action="store_true",
 						default=False,
 						help="choose upgrade operation to loop forever or not, default = False")
+	parser.add_option(  "-c", "--compress",
+						dest="compressFile",
+						action="store_true",
+						default=False,
+						help="this will try to compress the input file, default = False")
 
 	(options, args) = parser.parse_args()
 
@@ -95,6 +101,24 @@ if __name__ == "__main__":
 		file = options.firmware_file
 		if file.startswith(fileProtocolPrefix):
 			file = file[len(fileProtocolPrefix)-1:]
+
+	if options.compressFile is True:
+		jsonExtension = ".json"
+		jsonInputName = file
+		if jsonInputName.endswith(jsonExtension):
+			# strip the .json
+			fileOutName = jsonInputName[:len(jsonInputName) - len(jsonExtension)] + ".tar.xz"
+			tarCmd = "tar -cvf %s -C %s %s" % (fileOutName, os.path.dirname(jsonInputName), ntpath.basename(jsonInputName))
+			print(tarCmd)
+			# [Ref](http://stackoverflow.com/questions/18681595/tar-a-directory-but-dont-store-full-absolute-paths-in-the-archive)
+			ret = os.system(tarCmd)
+			if ret != 0:
+				print_err("Compress file error, quit")
+				sys.exit(-1)
+			# update the `file` variable point to the generated file
+			file = fileOutName
+		else:
+			print_err("Input file not .json, ignore compressing")
 
 	try:
 		comm = BluefinserialSend(options.serial, options.baud)
