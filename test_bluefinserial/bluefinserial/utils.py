@@ -153,7 +153,23 @@ def pythonVer():
 
 # If python 2, type(data) should be string
 # If python 3, type(data) should be bytes
-def dump_hex(data, desc_str="", token=":", prefix="", wrap=0):
+def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
+	"""
+	data: hex data to be dump
+	desc_str: description string, will be print first
+	token: the mark to seperated between bytes
+	prefix: prefix of bytes
+	wrap: number of bytes to be printed before create a new line
+	"""
+	if preFormat == "C" or preFormat == "c":
+		token = ", "
+		prefix = "0x"
+		wrap = 8
+	elif preFormat == "raw":
+		token = " "
+		prefix = ""
+		wrap = 0
+
 	# print desc_str + binascii.hexlify(data)
 	if wrap == 0:
 		print (desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data))
@@ -166,7 +182,7 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0):
 
 		sys.stdout.write("%s = {\r\n\t\t" % (desc_str))
 		for c in data:
-			if (count % wrap == 0) and (count != 0):
+			if (count % wrap == 0) and (count != 0) and (wrap != 0):
 				sys.stdout.write("\r\n\t\t")
 			if pythonVer() == 2:
 				to_write = prefix + "{:02x}".format(ord(c)) + token
