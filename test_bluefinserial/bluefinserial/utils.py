@@ -262,3 +262,52 @@ def getKeysOfDict(dictionary, token="--", boundary="()"):
 			ret += boundary[1]
 		idx += 1
 	return ret
+
+# This function calculate BigInt from list of bytes, Big Endian order
+def CalculateBigInt(bytes_list):
+	"""
+	bytes_list:
+	+ Count be list of number
+	+ Update 12/5/2017: could be bytes string (Py2.7)
+	"""
+	ret = 0
+	max_idx = len(bytes_list) - 1
+	idx = 0
+	for val in bytes_list:
+		if isinstance(val, str):
+			value = ord(val)
+		else:
+			value = val
+		ret += value << 8*(max_idx - idx)
+		idx += 1
+	return ret
+
+def TrimZeroesBytes(maxLen, inputBytes):
+	"""
+	Sometimes, the bignum return from function likes packl_ctypes() has some prefix zeroes
+	This function will trim down the zeroes
+	"""
+
+	# remove the prefix 0x00 of inputBytes
+	idxNotNull = 0
+	for idx, item in enumerate(inputBytes):
+		if item != '\x00':
+			idxNotNull = idx
+			break
+	inputBytes = inputBytes[idxNotNull: ]
+
+	if len(inputBytes) > maxLen:
+		print_err("len(inputBytes) > maxLen (%d > %d), can't prefixed, quit" % (len(inputBytes), maxLen))
+		return None
+	if len(inputBytes) == maxLen:
+		# len is enough, no need to prefix
+		return inputBytes
+
+	retVal = ''
+	lenPrefix = maxLen - len(inputBytes)
+	count = 0
+	while count < lenPrefix:
+		count += 1
+		retVal += '\x00'
+	retVal += inputBytes
+	return retVal
