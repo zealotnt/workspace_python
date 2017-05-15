@@ -63,6 +63,24 @@ class SiriusAPICrypto():
 	def getShaMethodStr():
 		return ', '.join(['%s' % (key) for (key, value) in SiriusAPICrypto.sha_dict.items()])
 
+	def Trng(self, target, numberOfBytes):
+		"""
+
+		"""
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+		pkt = BluefinserialCommand(sirius_target)
+		trng_package = struct.pack('<B', numberOfBytes)
+		cmd = pkt.Packet('\x8b', '\x0e', trng_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Trng serial API fail, code 0x%02x" % ord(rsp[2]))
+			return None
+
+		return rsp[3:]
+
 	def Sha(self, method, message, target):
 		"""
 		SHA digest API
