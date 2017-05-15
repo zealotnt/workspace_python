@@ -51,6 +51,19 @@ class SiriusAPICrypto():
 		"SHA256": 1,
 	}
 
+	cmac_operation = {
+		"TDES": 0,
+		"AES": 1,
+	}
+	cmac_key_length = {
+		"TDES": [8, 16, 24],
+		"AES": [16, 24, 32],
+	}
+	cmac_cipher_block = {
+		"TDES": 8,
+		"AES": 16,
+	}
+
 	def __init__(self, bluefin_serial, verbose=False):
 		"""
 		"""
@@ -297,6 +310,41 @@ class SiriusAPICrypto():
 		if verbose:
 			print("Verify status: %s" % ("ok" if ord(rsp[3]) == 0 else "failed"))
 		return True if ord(rsp[3]) == 0 else False
+
+	def Cmac(self, target, cipher, key, message):
+		"""
+		return:
+		CMAC, with corresponding cipher, key, message
+		"""
+		if cipher not in SiriusAPICrypto.cmac_operation:
+			print_err("Invalid cipher: %s" % cipher)
+			return None
+		if len(key) not in SiriusAPICrypto.cmac_key_length[cipher]:
+			print_err("Invalid key length: %d" % len(key))
+			return None
+		if len(message) % SiriusAPICrypto.cmac_cipher_block[cipher] != 0:
+			print_err("Invalid message length: %d" % len(message))
+			return None
+
+		numOfBlock = len(message) / SiriusAPICrypto.cmac_cipher_block[cipher]
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+
+		pkt = BluefinserialCommand(sirius_target, verbose=False)
+		cmac_package = struct.pack('<BBB',
+			SiriusAPICrypto.cmac_operation[cipher], # cipher type
+			numOfBlock, # number of 16-bytes AES or 8-bytess TDES block
+			len(key), # message len
+		) + message + key
+
+		cmd = pkt.Packet('\x8b', '\x44', cmac_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Cmac fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		return rsp[3:]
 
 class MlsKeyTlv():
 	KeyDict = {

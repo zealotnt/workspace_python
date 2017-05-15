@@ -193,6 +193,8 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 
 		sys.stdout.write("\r\n\t};\r\n\r\n")
 		sys.stdout.flush()
+# Register another name for the dump_hex function
+hex_dump = dump_hex
 
 def GetFileContent(path):
 	f = open(path, 'rb')
