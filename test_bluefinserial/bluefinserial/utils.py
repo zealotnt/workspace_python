@@ -288,7 +288,11 @@ def CalculateBigInt(bytes_list):
 def TrimZeroesBytes(maxLen, inputBytes):
 	"""
 	Sometimes, the bignum return from function likes packl_ctypes() has some prefix zeroes
-	This function will trim down the zeroes
+	-> This will make the array bigger than the actual limit size
+	-> This function will trim down the zeroes
+
+	This function will also prefix the array with 0x00, if the inputBytes is not enough bytes
+	if it is not enough bytes, it will be reject from the device
 	"""
 
 	# remove the prefix 0x00 of inputBytes

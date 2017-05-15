@@ -110,6 +110,16 @@ def main():
 		preFormat="C"
 	)
 	dump_hex(
+		packl_ctypes(private_key.private_numbers().p),
+		'p',
+		preFormat="C"
+	)
+	dump_hex(
+		packl_ctypes(private_key.private_numbers().q),
+		'q',
+		preFormat="C"
+	)
+	dump_hex(
 		ciphertext,
 		'ciphertext',
 		preFormat="C"

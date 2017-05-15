@@ -24,6 +24,8 @@ class SiriusAPICrypto():
 	SiriusAPICrypto class, implement crypto API of Sirius
 	"""
 	VERBOSE=False
+
+	# SHA
 	sha_dict = {
 		"SHA1": 0,
 		"SHA224": 1,
@@ -38,6 +40,8 @@ class SiriusAPICrypto():
 		"SHA384": hashes.SHA384(),
 		"SHA512": hashes.SHA512(),
 	}
+
+	# ECDSA
 	ecdsa_curve = {
 		"secp256k1": 0,
 	}
@@ -46,6 +50,7 @@ class SiriusAPICrypto():
 		"SHA256": 1,
 	}
 
+	# DSA
 	dsa_sha_functions = {
 		"SHA1": 0,
 		"SHA256": 1,
@@ -91,6 +96,12 @@ class SiriusAPICrypto():
 	cmac_cipher_block = {
 		"TDES": tdes_block_size,
 		"AES": aes_block_size,
+	}
+
+	# RSA
+	rsa_operations = {
+		"ENC": 0,
+		"DEC": 1,
 	}
 
 	def __init__(self, bluefin_serial, verbose=False):
@@ -187,6 +198,14 @@ class SiriusAPICrypto():
 			info.AddValList('ECDSA_y', ECDSA_y)
 		if ECDSA_pri is not None:
 			info.AddValList('ECDSA_pri', ECDSA_pri)
+		if RSA_n is not None:
+			info.AddValList('RSA_n', RSA_n)
+		if RSA_d is not None:
+			info.AddValList('RSA_d', RSA_d)
+		if RSA_e is not None:
+			# RSA_e should be a number
+			RSA_e_str = struct.pack('<I', RSA_e)
+			info.AddValList('RSA_e', RSA_e_str)
 
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
@@ -397,7 +416,7 @@ class SiriusAPICrypto():
 		numOfBlock = len(data) / SiriusAPICrypto.aes_block_size
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
-		pkt = BluefinserialCommand(sirius_target, verbose=True)
+		pkt = BluefinserialCommand(sirius_target, verbose=False)
 		aes_package = struct.pack('<BB',
 			numOfBlock, # number of 16-bytes AES or 8-bytess TDES block
 			len(key), # data len
@@ -435,7 +454,7 @@ class SiriusAPICrypto():
 		numOfBlock = len(data) / SiriusAPICrypto.tdes_block_size
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
-		pkt = BluefinserialCommand(sirius_target, verbose=True)
+		pkt = BluefinserialCommand(sirius_target, verbose=False)
 		tdes_package = struct.pack('<BB',
 			numOfBlock, # number of 16-bytes tdes or 8-bytess TDES block
 			len(key), # data len
@@ -448,6 +467,29 @@ class SiriusAPICrypto():
 			return None
 		if rsp[2] != '\x00':
 			print_err("Tdes fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		return rsp[3:]
+
+	def Rsa(self, target, operation, data):
+		"""
+		"""
+		if operation not in SiriusAPICrypto.rsa_operations:
+			print_err("Invalid operation %s" %(operation))
+			return None
+
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+
+		pkt = BluefinserialCommand(sirius_target, verbose=False)
+		rsa_package = struct.pack('<B',
+			SiriusAPICrypto.rsa_operations[operation], # rsa operation
+		) + data
+		cmd = pkt.Packet('\x8b', '\x4c', rsa_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Rsa fail, code 0x%02x" % ord(rsp[2]))
 			return None
 		return rsp[3:]
 
