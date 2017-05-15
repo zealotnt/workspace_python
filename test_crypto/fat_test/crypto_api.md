@@ -92,6 +92,10 @@ This document show instruction and API implementation, API guide for cryptograph
 | Status Response | 1 | Result code |
 | Output Bytes | Variable | MAC for input message |
 
+- References
+    + [Ref-1](https://gist.github.com/ecerulm/90653daf2b808aea0837)
+    + [Ref-2](http://stackoverflow.com/questions/28354844/how-to-calculate-aes-cmac-using-openssl)
+
 ## 5 Key Download
 
 #### 5.1 Command message
@@ -137,9 +141,10 @@ This document show instruction and API implementation, API guide for cryptograph
 | Operation | 1 | DSA operation<br>0x00: Sign<br>0x01: Verify |
 | Hash Algo | 1 | Hash algorithm<br>0x00: SHA1<br>0x01: SHA256 |
 | Input message length | 2 | Length of input message |
+| Signature length | 1 | Length of signature<br>Signature length always <= 40 bytes (verify only, if sign, this length = 0) |
 | Input message | Variable | Message to be signed/verified |
-| Signature length | 1 | Length of signature<br>Signature length must always double of Key size (verify only) |
-| Signature | Variable | Signature value (verify only) |
+| Signature | Variable | Signature value (if sign, this field is empty) |
+
 
 ### 6.2 Response message
 
@@ -149,6 +154,9 @@ This document show instruction and API implementation, API guide for cryptograph
 | Command Control Code | 1 | Fix value: 0x49 |
 | Status Response | 1 | Result code |
 | Signature/Verify | N | If signing: Signature for input message, N = double of DSA key<br>If verify: result in verify request, N = 1<br>0: valid<br>1: invalid |
+
+- References
+    + [DSA Sig len](https://groups.google.com/forum/#!topic/sci.crypt/4iGX27jDJu8)
 
 ## 7.  The Elliptic Curve Digital Signature Algorithm (ECDSA)
 
@@ -162,7 +170,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Curve Param | 1 | ECDSA curve params<br>0x00: SECP256R1 |
 | Hash Algo | 1 | Hash algorithm<br>0x00: SHA1<br>0x01: SHA256 |
 | Input message length | 2 | Length of input message (Max 300 bytes) |
-| Signature length | 1 | Length of signature<br>Signature length must always double of Key size (if sign, this length = 0) |
+| Signature length | 1 | Length of signature<br>Length equal to input text box |
 | Input message | Variable | Message to be signed/verified |
 | Signature | Variable | Signature value (if sign, this is not filled) |
 

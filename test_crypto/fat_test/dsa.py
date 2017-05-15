@@ -6,6 +6,7 @@
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dsa
+from cryptography.hazmat.primitives.asymmetric import utils
 
 import sys
 import git
@@ -55,6 +56,9 @@ def main():
 			hashes.SHA256()
 		)
 	)
+	r_s = utils.decode_dss_signature(signature)
+	sig_r = r_s[0]
+	sig_s = r_s[1]
 
 	# Dump hex value
 	print("\r\nHex value")
@@ -81,6 +85,26 @@ def main():
 	dump_hex(
 		packl_ctypes(private_key.private_numbers().x),
 		'x',
+		preFormat="C"
+	)
+	dump_hex(
+		data,
+		'data',
+		preFormat="C"
+	)
+	dump_hex(
+		signature,
+		'signature',
+		preFormat="C"
+	)
+	dump_hex(
+		packl_ctypes(sig_r),
+		'signature_r',
+		preFormat="C"
+	)
+	dump_hex(
+		packl_ctypes(sig_s),
+		'signature_s',
 		preFormat="C"
 	)
 

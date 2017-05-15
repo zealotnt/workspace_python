@@ -46,6 +46,11 @@ class SiriusAPICrypto():
 		"SHA256": 1,
 	}
 
+	dsa_sha_functions = {
+		"SHA1": 0,
+		"SHA256": 1,
+	}
+
 	def __init__(self, bluefin_serial, verbose=False):
 		"""
 		"""
@@ -121,7 +126,7 @@ class SiriusAPICrypto():
 
 	def KeyDownload(self, target, DSS_p=None, DSS_q=None, DSS_g=None, DSS_y=None, DSS_x=None,
 					ECDSA_x=None, ECDSA_y=None, ECDSA_pri=None,
-					RSA_n=None, RSA_d=None, RSA_e=None):
+					RSA_n=None, RSA_d=None, RSA_e=None, verbose=False):
 		info = MlsKeyTlv(verbose=self.VERBOSE)
 
 		if DSS_p is not None:
@@ -144,7 +149,7 @@ class SiriusAPICrypto():
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
 		for item in info.ValList():
-			pkt = BluefinserialCommand(sirius_target, verbose=False)
+			pkt = BluefinserialCommand(sirius_target, verbose=verbose)
 			cmd = pkt.Packet('\x8b', '\x46', item)
 			rsp = self._datalink.Exchange(cmd)
 			if (rsp is None):
@@ -155,7 +160,7 @@ class SiriusAPICrypto():
 				return None
 		return True
 
-	def EcdsaSign(self, target, curve, hashAlgo, message):
+	def EcdsaSign(self, target, curve, hashAlgo, message, verbose=False):
 		"""
 		return:
 		+ signature if success
@@ -165,12 +170,12 @@ class SiriusAPICrypto():
 			print_err("Invalid curve: %s" % curve)
 			return None
 		if hashAlgo not in SiriusAPICrypto.ecdsa_sha_functions:
-			print_err("Invalid hash: %s" % curve)
+			print_err("Invalid hash: %s" % hashAlgo)
 			return None
 
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
-		pkt = BluefinserialCommand(sirius_target, verbose=False)
+		pkt = BluefinserialCommand(sirius_target, verbose=verbose)
 		ecdsa_sign_package = struct.pack('<BBBHB',
 			0, # operation: sign
 			SiriusAPICrypto.ecdsa_curve[curve], # curve
@@ -187,7 +192,8 @@ class SiriusAPICrypto():
 		if rsp[2] != '\x00':
 			print_err("ECDSA sign fail, code 0x%02x" % ord(rsp[2]))
 			return None
-		dump_hex(rsp[3:], "signature: ")
+		if verbose:
+			dump_hex(rsp[3:], "signature: ")
 		return rsp[3:]
 
 	def EcdsaVerify(self, target, curve, hashAlgo, message, signature, verbose=False):
@@ -201,7 +207,7 @@ class SiriusAPICrypto():
 			print_err("Invalid curve: %s" % curve)
 			return None
 		if hashAlgo not in SiriusAPICrypto.ecdsa_sha_functions:
-			print_err("Invalid hash: %s" % curve)
+			print_err("Invalid hash: %s" % hashAlgo)
 			return None
 
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
@@ -221,7 +227,72 @@ class SiriusAPICrypto():
 			print_err("Send fail")
 			return None
 		if rsp[2] != '\x00':
-			print_err("ECDSA sign fail, code 0x%02x" % ord(rsp[2]))
+			print_err("ECDSA verify fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		if verbose:
+			print("Verify status: %s" % ("ok" if ord(rsp[3]) == 0 else "failed"))
+		return True if ord(rsp[3]) == 0 else False
+
+	def DsaSign(self, target, hashAlgo, message, verbose=False):
+		"""
+		return:
+		+ signature if success
+		+ None if fail
+		"""
+		if hashAlgo not in SiriusAPICrypto.dsa_sha_functions:
+			print_err("Invalid hash: %s" % curve)
+			return None
+
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+
+		pkt = BluefinserialCommand(sirius_target, verbose=False)
+		dsa_sign_package = struct.pack('<BBHB',
+			0, # operation: sign
+			SiriusAPICrypto.dsa_sha_functions[hashAlgo], # sha
+			len(message), # message len
+			0 # no signature
+		) + message
+
+		cmd = pkt.Packet('\x8b', '\x48', dsa_sign_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("DSA sign fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		if verbose:
+			dump_hex(rsp[3:], "signature: ")
+		return rsp[3:]
+
+	def DsaVerify(self, target, hashAlgo, message, signature, verbose=False):
+		"""
+		return:
+		+ True if verify ok
+		+ False if verify fail
+		+ None if communication error
+		"""
+		if hashAlgo not in SiriusAPICrypto.dsa_sha_functions:
+			print_err("Invalid hash: %s" % hashAlgo)
+			return None
+
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+
+		pkt = BluefinserialCommand(sirius_target, verbose=verbose)
+		dsa_verify_package = struct.pack('<BBHB',
+			1, # operation: verify
+			SiriusAPICrypto.dsa_sha_functions[hashAlgo], # sha
+			len(message), # message len
+			len(signature) # no signature
+		) + message + signature
+
+		cmd = pkt.Packet('\x8b', '\x48', dsa_verify_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Dsa verify fail, code 0x%02x" % ord(rsp[2]))
 			return None
 		if verbose:
 			print("Verify status: %s" % ("ok" if ord(rsp[3]) == 0 else "failed"))
