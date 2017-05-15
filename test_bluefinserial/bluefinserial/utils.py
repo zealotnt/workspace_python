@@ -169,6 +169,7 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 		token = " "
 		prefix = ""
 		wrap = 0
+		desc_str = desc_str + " "
 
 	# print desc_str + binascii.hexlify(data)
 	if wrap == 0:

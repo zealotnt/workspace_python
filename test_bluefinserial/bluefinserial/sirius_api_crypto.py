@@ -51,17 +51,46 @@ class SiriusAPICrypto():
 		"SHA256": 1,
 	}
 
+	# AES
+	aes_key_length = [16, 24, 32]
+	aes_mode = {
+		"ECB_EN":	0,
+		"ECB_DEC":	1,
+		"CBC_EN":	2,
+		"CBC_DEC":	3,
+		"OFB_EN":	4,
+		"OFB_DEC":	5,
+		"CFB_EN":	6,
+		"CFB_DEC":	7,
+	}
+	aes_block_size = 16
+
+	# TDES
+	tdes_key_length = [8, 16, 24]
+	tdes_mode = {
+		"ECB_EN":	0,
+		"ECB_DEC":	1,
+		"CBC_EN":	2,
+		"CBC_DEC":	3,
+		"OFB_EN":	4,
+		"OFB_DEC":	5,
+		"CFB_EN":	6,
+		"CFB_DEC":	7,
+	}
+	tdes_block_size = 8
+
+	# CMAC
 	cmac_operation = {
 		"TDES": 0,
 		"AES": 1,
 	}
 	cmac_key_length = {
-		"TDES": [8, 16, 24],
-		"AES": [16, 24, 32],
+		"TDES": tdes_key_length,
+		"AES": aes_key_length
 	}
 	cmac_cipher_block = {
-		"TDES": 8,
-		"AES": 16,
+		"TDES": tdes_block_size,
+		"AES": aes_block_size,
 	}
 
 	def __init__(self, bluefin_serial, verbose=False):
@@ -343,6 +372,82 @@ class SiriusAPICrypto():
 			return None
 		if rsp[2] != '\x00':
 			print_err("Cmac fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		return rsp[3:]
+
+	def Aes(self, target, en_dec, mode, iv, key, data):
+		"""
+		"""
+		en_dec = en_dec.upper()
+		mode = mode.upper()
+		aes_mode = mode + "_" + en_dec
+		if aes_mode not in SiriusAPICrypto.aes_mode:
+			print_err("Invalid mode: %s" % aes_mode)
+			return None
+		if len(key) not in SiriusAPICrypto.aes_key_length:
+			print_err("Invalid key length: %d" % len(key))
+			return None
+		if len(data) % SiriusAPICrypto.aes_block_size != 0:
+			print_err("Invalid data length: %d" % len(data))
+			return None
+		if len(iv) != SiriusAPICrypto.aes_block_size:
+			print_err("Invalid IV length: %d" % len(iv))
+			return None
+
+		numOfBlock = len(data) / SiriusAPICrypto.aes_block_size
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+
+		pkt = BluefinserialCommand(sirius_target, verbose=True)
+		aes_package = struct.pack('<BB',
+			numOfBlock, # number of 16-bytes AES or 8-bytess TDES block
+			len(key), # data len
+		) + data + key + iv + chr(SiriusAPICrypto.aes_mode[aes_mode])
+
+		cmd = pkt.Packet('\x8b', '\x0c', aes_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("AES fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		return rsp[3:]
+
+	def Tdes(self, target, en_dec, mode, iv, key, data):
+		"""
+		"""
+		en_dec = en_dec.upper()
+		mode = mode.upper()
+		tdes_mode = mode + "_" + en_dec
+		if tdes_mode not in SiriusAPICrypto.tdes_mode:
+			print_err("Invalid mode: %s" % tdes_mode)
+			return None
+		if len(key) not in SiriusAPICrypto.tdes_key_length:
+			print_err("Invalid key length: %d" % len(key))
+			return None
+		if len(data) % SiriusAPICrypto.tdes_block_size != 0:
+			print_err("Invalid data length: %d" % len(data))
+			return None
+		if len(iv) != SiriusAPICrypto.tdes_block_size:
+			print_err("Invalid IV length: %d" % len(iv))
+			return None
+
+		numOfBlock = len(data) / SiriusAPICrypto.tdes_block_size
+		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
+
+		pkt = BluefinserialCommand(sirius_target, verbose=True)
+		tdes_package = struct.pack('<BB',
+			numOfBlock, # number of 16-bytes tdes or 8-bytess TDES block
+			len(key), # data len
+		) + data + key + iv + chr(SiriusAPICrypto.tdes_mode[tdes_mode])
+
+		cmd = pkt.Packet('\x8b', '\x0a', tdes_package)
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("Tdes fail, code 0x%02x" % ord(rsp[2]))
 			return None
 		return rsp[3:]
 
