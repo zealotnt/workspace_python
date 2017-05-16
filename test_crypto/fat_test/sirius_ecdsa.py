@@ -79,9 +79,9 @@ def main():
 	ecdsaPubXStr = packl_ctypes(public_key.public_numbers().x)
 	ecdsaPubYStr = packl_ctypes(public_key.public_numbers().y)
 	ecdsaPriStr = packl_ctypes(private_key.private_numbers().private_value)
-	ecdsaPubXStr = TrimZeroesBytes(KEY_SIZE/8, ecdsaPubXStr)
-	ecdsaPubYStr = TrimZeroesBytes(KEY_SIZE/8, ecdsaPubYStr)
-	ecdsaPriStr = TrimZeroesBytes(KEY_SIZE/8, ecdsaPriStr)
+	ecdsaPubXStr = FixedBytes(KEY_SIZE/8, ecdsaPubXStr)
+	ecdsaPubYStr = FixedBytes(KEY_SIZE/8, ecdsaPubYStr)
+	ecdsaPriStr = FixedBytes(KEY_SIZE/8, ecdsaPriStr)
 
 	sirius_crypto.KeyDownload(target=options.target, ECDSA_x=ecdsaPubXStr, ECDSA_y=ecdsaPubYStr, ECDSA_pri=ecdsaPriStr)
 
@@ -106,8 +106,8 @@ def main():
 		ec.ECDSA(hashes.SHA256())
 	)
 	r_s = utils.decode_dss_signature(signature)
-	sig_r_str = TrimZeroesBytes(KEY_SIZE/8, packl_ctypes(r_s[0]))
-	sig_s_str = TrimZeroesBytes(KEY_SIZE/8, packl_ctypes(r_s[1]))
+	sig_r_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[0]))
+	sig_s_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[1]))
 	sigCombine = sig_r_str + sig_s_str
 	verifyStatus = sirius_crypto.EcdsaVerify(
 		target=options.target,

@@ -161,10 +161,23 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 	prefix: prefix of bytes
 	wrap: number of bytes to be printed before create a new line
 	"""
+	global gStr
+	gStr = ""
+	def concat_str(text):
+		global gStr
+		gStr += text
+	def write_and_concat_str(text):
+		concat_str(text)
+		sys.stdout.write(text)
+
+	varType = ""
+	varArray = ""
 	if preFormat == "C" or preFormat == "c":
 		token = ", "
 		prefix = "0x"
 		wrap = 8
+		varType = "uint8_t"
+		varArray = "[]"
 	elif preFormat == "raw":
 		token = " "
 		prefix = ""
@@ -181,19 +194,22 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 
 		count = 0
 
-		sys.stdout.write("%s = {\r\n\t\t" % (desc_str))
+		write_and_concat_str("%s %s%s = {\r\n\t\t" % (varType, desc_str, varArray))
 		for c in data:
 			if (count % wrap == 0) and (count != 0) and (wrap != 0):
-				sys.stdout.write("\r\n\t\t")
+				write_and_concat_str("\r\n\t\t")
 			if pythonVer() == 2:
 				to_write = prefix + "{:02x}".format(ord(c)) + token
 			else:
 				to_write = prefix + "{:02x}".format(c) + token
-			sys.stdout.write(to_write)
+			write_and_concat_str(to_write)
 			count += 1
 
-		sys.stdout.write("\r\n\t};\r\n\r\n")
+		write_and_concat_str("\r\n\t};\r\n\r\n")
 		sys.stdout.flush()
+	ret = gStr
+	del gStr
+	return ret
 # Register another name for the dump_hex function
 hex_dump = dump_hex
 
@@ -285,7 +301,7 @@ def CalculateBigInt(bytes_list):
 		idx += 1
 	return ret
 
-def TrimZeroesBytes(maxLen, inputBytes):
+def FixedBytes(maxLen, inputBytes):
 	"""
 	Sometimes, the bignum return from function likes packl_ctypes() has some prefix zeroes
 	-> This will make the array bigger than the actual limit size

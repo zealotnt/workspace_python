@@ -84,11 +84,11 @@ def main():
 	dsa_yStr = packl_ctypes(private_key.public_key().public_numbers().y)
 	dsa_xStr = packl_ctypes(private_key.private_numbers().x)
 
-	dsa_pStr = TrimZeroesBytes(KEY_SIZE/8, dsa_pStr)
-	dsa_qStr = TrimZeroesBytes(KEY_SIZE/8, dsa_qStr)
-	dsa_gStr = TrimZeroesBytes(KEY_SIZE/8, dsa_gStr)
-	dsa_yStr = TrimZeroesBytes(KEY_SIZE/8, dsa_yStr)
-	dsa_xStr = TrimZeroesBytes(KEY_SIZE/8, dsa_xStr)
+	dsa_pStr = FixedBytes(KEY_SIZE/8, dsa_pStr)
+	dsa_qStr = FixedBytes(KEY_SIZE/8, dsa_qStr)
+	dsa_gStr = FixedBytes(KEY_SIZE/8, dsa_gStr)
+	dsa_yStr = FixedBytes(KEY_SIZE/8, dsa_yStr)
+	dsa_xStr = FixedBytes(KEY_SIZE/8, dsa_xStr)
 
 	sirius_crypto.KeyDownload(
 		target=options.target,
@@ -122,8 +122,8 @@ def main():
 		hashes.SHA256()
 	)
 	r_s = utils.decode_dss_signature(signature)
-	sig_r_str = TrimZeroesBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[0]))
-	sig_s_str = TrimZeroesBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[1]))
+	sig_r_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[0]))
+	sig_s_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[1]))
 	sigCombine = sig_r_str + sig_s_str
 	verifyStatus = sirius_crypto.DsaVerify(
 		target=options.target,

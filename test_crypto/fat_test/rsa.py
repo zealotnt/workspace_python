@@ -37,6 +37,10 @@ def randomword(length):
 	return randomStr
 
 def main():
+	filePathSave = ""
+	if len(sys.argv) == 2:
+		filePathSave = sys.argv[1]
+
 	# Key generation
 	private_key = rsa.generate_private_key(public_exponent=65537, key_size=KEYLENGTH, backend=default_backend())
 	public_key = private_key.public_key()
@@ -94,41 +98,48 @@ def main():
 
 	# Dump hex value
 	print("\r\nHex value")
-	dump_hex(
+	dumpFileText = dump_hex(
 		packl_ctypes(private_key.private_numbers().public_numbers.n),
-		'n',
+		'rsa_n',
 		preFormat="C"
 	)
-	dump_hex(
+	dumpFileText += dump_hex(
 		hex(private_key.private_numbers().public_numbers.e),
-		'e',
+		'rsa_e',
 		preFormat="C"
 	)
-	dump_hex(
+	dumpFileText += dump_hex(
 		packl_ctypes(private_key.private_numbers().d),
-		'd',
+		'rsa_d',
 		preFormat="C"
 	)
-	dump_hex(
+	dumpFileText += dump_hex(
 		packl_ctypes(private_key.private_numbers().p),
-		'p',
+		'rsa_p',
 		preFormat="C"
 	)
-	dump_hex(
+	dumpFileText += dump_hex(
 		packl_ctypes(private_key.private_numbers().q),
-		'q',
+		'rsa_q',
 		preFormat="C"
 	)
-	dump_hex(
+	dumpFileText += dump_hex(
 		ciphertext,
 		'ciphertext',
 		preFormat="C"
 	)
-	dump_hex(
-		plaintext,
+	dumpFileText += dump_hex(
+		FixedBytes(KEYLENGTH/8, plaintext),
 		'plaintext',
 		preFormat="C"
 	)
+
+	if filePathSave != "":
+		dumpFileText = "#include <stdint.h>\r\n\r\n" + dumpFileText
+		f = open(filePathSave, "w")
+		f.write(dumpFileText)
+		f.close()
+		print_ok("Dump buffer data to " + filePathSave)
 
 if __name__ == "__main__":
 	main()

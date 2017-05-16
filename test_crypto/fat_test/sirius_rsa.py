@@ -82,8 +82,8 @@ def main():
 	rsa_n = packl_ctypes(private_key.private_numbers().public_numbers.n)
 	rsa_d = packl_ctypes(private_key.private_numbers().d)
 	rsa_e = private_key.private_numbers().public_numbers.e
-	rsa_n = TrimZeroesBytes(KEY_SIZE/8, rsa_n)
-	rsa_d = TrimZeroesBytes(KEY_SIZE/8, rsa_d)
+	rsa_n = FixedBytes(KEY_SIZE/8, rsa_n)
+	rsa_d = FixedBytes(KEY_SIZE/8, rsa_d)
 
 	sirius_crypto.KeyDownload(target=options.target, RSA_n=rsa_n, RSA_d=rsa_d, RSA_e=rsa_e)
 	sirius_crypto.Rsa(options.target, options.operation, options.message)
