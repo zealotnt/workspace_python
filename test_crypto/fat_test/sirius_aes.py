@@ -48,6 +48,11 @@ def main():
 						dest="target",
 						default="APP",
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
+	parser.add_option(  "-d", "--debug",
+						dest="debug",
+						default=0,
+						action="count",
+						help="Make the script more verbose")
 	(options, args) = parser.parse_args()
 
 	# Init the com port
@@ -64,9 +69,9 @@ def main():
 	iv = os.urandom(16)
 	key = os.urandom(16)
 	data = os.urandom(16)
-	ciphered = sirius_crypto.Aes(target=options.target, en_dec="EN", mode="CBC", iv=iv, key=key, data=data)
-	de_ciphered = sirius_crypto.Aes(target=options.target, en_dec="DEC", mode="CBC", iv=iv, key=key, data=ciphered)
-	dump_hex(ciphered, "ciphered: ")
+	ciphered = sirius_crypto.Aes(target=options.target, en_dec="ENC", mode="CFB", iv=iv, key=key, data=data)
+	de_ciphered = sirius_crypto.Aes(target=options.target, en_dec="DEC", mode="CFB", iv=iv, key=key, data=ciphered)
+	dump_hex(ciphered,    "ciphered   : ")
 	dump_hex(de_ciphered, "de_ciphered: ")
 	print(de_ciphered == data)
 

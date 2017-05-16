@@ -59,13 +59,13 @@ class SiriusAPICrypto():
 	# AES
 	aes_key_length = [16, 24, 32]
 	aes_mode = {
-		"ECB_EN":	0,
+		"ECB_ENC":	0,
 		"ECB_DEC":	1,
-		"CBC_EN":	2,
+		"CBC_ENC":	2,
 		"CBC_DEC":	3,
-		"OFB_EN":	4,
+		"OFB_ENC":	4,
 		"OFB_DEC":	5,
-		"CFB_EN":	6,
+		"CFB_ENC":	6,
 		"CFB_DEC":	7,
 	}
 	aes_block_size = 16
@@ -73,13 +73,13 @@ class SiriusAPICrypto():
 	# TDES
 	tdes_key_length = [8, 16, 24]
 	tdes_mode = {
-		"ECB_EN":	0,
+		"ECB_ENC":	0,
 		"ECB_DEC":	1,
-		"CBC_EN":	2,
+		"CBC_ENC":	2,
 		"CBC_DEC":	3,
-		"OFB_EN":	4,
+		"OFB_ENC":	4,
 		"OFB_DEC":	5,
-		"CFB_EN":	6,
+		"CFB_ENC":	6,
 		"CFB_DEC":	7,
 	}
 	tdes_block_size = 8

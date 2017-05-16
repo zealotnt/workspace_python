@@ -27,8 +27,7 @@ from scan import scan
 from utils import *
 from sirius_api_crypto import *
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
+from Crypto.Cipher import DES3
 
 VALID_TARGET = ["RF", "APP"]
 
@@ -48,6 +47,11 @@ def main():
 						dest="target",
 						default="APP",
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
+	parser.add_option(  "-d", "--debug",
+						dest="debug",
+						default=0,
+						action="count",
+						help="Make the script more verbose")
 	(options, args) = parser.parse_args()
 
 	# Init the com port
@@ -61,14 +65,55 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
-	iv = os.urandom(8)
-	key = os.urandom(24)
-	data = os.urandom(24)
-	ciphered = sirius_crypto.Tdes(target=options.target, en_dec="EN", mode="CBC", iv=iv, key=key, data=data)
-	de_ciphered = sirius_crypto.Tdes(target=options.target, en_dec="DEC", mode="CBC", iv=iv, key=key, data=ciphered)
-	dump_hex(ciphered, "ciphered: ")
-	dump_hex(de_ciphered, "de_ciphered: ")
-	print(de_ciphered == data)
+	cryptoMode = [DES3.MODE_ECB, DES3.MODE_CBC, DES3.MODE_OFB, DES3.MODE_CFB]
+	segmentSize = [None, None, None, 64]
+	modes = ["ECB", "CBC", "OFB", "CFB"]
+	keyLengths = [8, 16, 24]
+	for idx, mode in enumerate(modes):
+		for keyLen in keyLengths:
+			print("")
+			print_ok(">"*40)
+			print_ok("Testing TDES_%s with keylen=%d" % (mode, keyLen))
+			iv = os.urandom(8)
+			key = os.urandom(keyLen)
+			# PyCrypto lib only accept TDES 16bytes of 24bytes
+			# so with 1 key case EDE, we have to build it ourself
+			if keyLen == 8:
+				key = key*3
+			data = os.urandom(32)
+
+			if options.debug >= 2:
+				dump_hex(data, "data: ")
+				dump_hex(iv,   "iv  : ")
+				dump_hex(key,  "key : ")
+
+			# Try encrypt with sirius
+			ciphered = sirius_crypto.Tdes(target=options.target, en_dec="ENC", mode=mode, iv=iv, key=key, data=data)
+			# Check with our result
+			if segmentSize[idx] is not None:
+				encryption_suite = DES3.new(key, cryptoMode[idx], iv, segment_size=segmentSize[idx])
+			else:
+				encryption_suite = DES3.new(key, cryptoMode[idx], iv)
+			cipher_self = encryption_suite.encrypt(data)
+			if options.debug >= 1:
+				dump_hex(cipher_self, "cipher_self: ")
+			if cipher_self != ciphered:
+				print_err("Verify ciphered and cipher_self: fail")
+			else:
+				print("Verify ciphered and cipher_self: pass")
+
+			# Try decrypt with sirius
+			de_ciphered = sirius_crypto.Tdes(target=options.target, en_dec="DEC", mode=mode, iv=iv, key=key, data=ciphered)
+			if options.debug >= 1:
+				dump_hex(ciphered,    "ciphered   : ")
+				dump_hex(de_ciphered, "de_ciphered: ")
+			# If it same as input message, test case is pass
+			if de_ciphered != data:
+				print_err("Verify input data with the de_ciphered from sirius: fail")
+			else:
+				print("Verify input data with the de_ciphered from sirius: pass")
+			print_ok("<"*40)
+			print("")
 
 if __name__ == "__main__":
 	main()
