@@ -204,7 +204,7 @@ class SiriusAPICrypto():
 			info.AddValList('RSA_d', RSA_d)
 		if RSA_e is not None:
 			# RSA_e should be a number
-			RSA_e_str = struct.pack('<I', RSA_e)
+			RSA_e_str = struct.pack('>I', RSA_e)
 			info.AddValList('RSA_e', RSA_e_str)
 
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF

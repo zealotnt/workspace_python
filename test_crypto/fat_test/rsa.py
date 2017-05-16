@@ -8,6 +8,7 @@
 import sys
 import git
 import os
+import struct
 import inspect
 def get_git_root():
 	CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
@@ -103,8 +104,9 @@ def main():
 		'rsa_n',
 		preFormat="C"
 	)
+	e_str = struct.pack(">I", private_key.private_numbers().public_numbers.e)
 	dumpFileText += dump_hex(
-		hex(private_key.private_numbers().public_numbers.e),
+		e_str,
 		'rsa_e',
 		preFormat="C"
 	)
@@ -121,6 +123,21 @@ def main():
 	dumpFileText += dump_hex(
 		packl_ctypes(private_key.private_numbers().q),
 		'rsa_q',
+		preFormat="C"
+	)
+	dumpFileText += dump_hex(
+		packl_ctypes(private_key.private_numbers().dmp1),
+		'rsa_dmp1',
+		preFormat="C"
+	)
+	dumpFileText += dump_hex(
+		packl_ctypes(private_key.private_numbers().dmq1),
+		'rsa_dmq1',
+		preFormat="C"
+	)
+	dumpFileText += dump_hex(
+		packl_ctypes(private_key.private_numbers().iqmp),
+		'rsa_iqmp',
 		preFormat="C"
 	)
 	dumpFileText += dump_hex(

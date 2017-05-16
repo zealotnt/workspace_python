@@ -53,10 +53,6 @@ def main():
 						dest="target",
 						default="APP",
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
-	parser.add_option(  "-o", "--operation",
-						dest="operation",
-						default="ENC",
-						help="Choose rsa operation type")
 	parser.add_option(  "-m", "--message",
 						dest="message",
 						default="",
@@ -74,10 +70,12 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
+	#######################################
 	# Key generation
 	private_key = rsa.generate_private_key(public_exponent=65537, key_size=KEY_SIZE, backend=default_backend())
 	public_key = private_key.public_key()
 
+	#######################################
 	# Key download
 	rsa_n = packl_ctypes(private_key.private_numbers().public_numbers.n)
 	rsa_d = packl_ctypes(private_key.private_numbers().d)
@@ -86,7 +84,24 @@ def main():
 	rsa_d = FixedBytes(KEY_SIZE/8, rsa_d)
 
 	sirius_crypto.KeyDownload(target=options.target, RSA_n=rsa_n, RSA_d=rsa_d, RSA_e=rsa_e)
-	sirius_crypto.Rsa(options.target, options.operation, options.message)
+
+	#######################################
+	# Doing with rsa
+	# encrypt
+	plain_input = FixedBytes(KEY_SIZE/8, options.message)
+	ciphered = sirius_crypto.Rsa(options.target, "ENC", plain_input)
+	ciphered = FixedBytes(KEY_SIZE/8, ciphered)
+	dump_hex(ciphered, "ciphered: ")
+
+	# decrypt
+	plain_ret = sirius_crypto.Rsa(options.target, "DEC", ciphered)
+	plain_ret = FixedBytes(KEY_SIZE/8, plain_ret)
+
+	# print result
+	dump_hex(plain_ret,   "plain_ret  : ")
+	dump_hex(plain_input, "plain_input: ")
+	print("Check the plaintext return from board, with our input plaintext: ",
+		plain_ret == plain_input)
 
 if __name__ == "__main__":
 	main()
