@@ -152,7 +152,7 @@ class SiriusAPICrypto():
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 		pkt = BluefinserialCommand(sirius_target)
 		sha_package = struct.pack('<B', SiriusAPICrypto.sha_dict[method]) + message
-		cmd = pkt.Packet('\x8b', '\x4d', sha_package)
+		cmd = pkt.Packet('\x8b', '\x4e', sha_package)
 		rsp = self._datalink.Exchange(cmd)
 		if (rsp is None):
 			print_err("Send fail")
@@ -179,7 +179,7 @@ class SiriusAPICrypto():
 
 	def KeyDownload(self, target, DSS_p=None, DSS_q=None, DSS_g=None, DSS_y=None, DSS_x=None,
 					ECDSA_x=None, ECDSA_y=None, ECDSA_pri=None,
-					RSA_n=None, RSA_d=None, RSA_e=None, verbose=False):
+					RSA_p=None, RSA_q=None, RSA_n=None, RSA_d=None, RSA_e=None, verbose=False):
 		info = MlsKeyTlv(verbose=self.VERBOSE)
 
 		if DSS_p is not None:
@@ -202,6 +202,10 @@ class SiriusAPICrypto():
 			info.AddValList('RSA_n', RSA_n)
 		if RSA_d is not None:
 			info.AddValList('RSA_d', RSA_d)
+		if RSA_p is not None:
+			info.AddValList('RSA_p', RSA_p)
+		if RSA_q is not None:
+			info.AddValList('RSA_q', RSA_q)
 		if RSA_e is not None:
 			# RSA_e should be a number
 			RSA_e_str = struct.pack('>I', RSA_e)
@@ -506,6 +510,8 @@ class MlsKeyTlv():
 		'RSA_n': 0x09,
 		'RSA_d': 0x0A,
 		'RSA_e': 0x0B,
+		'RSA_p': 0x0C,
+		'RSA_q': 0x0D,
 	}
 	VERBOSE = False
 

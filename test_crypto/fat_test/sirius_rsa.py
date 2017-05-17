@@ -57,6 +57,11 @@ def main():
 						dest="message",
 						default="",
 						help="the input message to be hashed")
+	parser.add_option(  "-d", "--debug",
+						dest="debug",
+						default=0,
+						action="count",
+						help="Make the script more verbose")
 	(options, args) = parser.parse_args()
 
 	# Init the com port
@@ -70,38 +75,49 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
-	#######################################
-	# Key generation
-	private_key = rsa.generate_private_key(public_exponent=65537, key_size=KEY_SIZE, backend=default_backend())
-	public_key = private_key.public_key()
+	KEY_SIZE = [512, 1024, 2048, 3072]
 
-	#######################################
-	# Key download
-	rsa_n = packl_ctypes(private_key.private_numbers().public_numbers.n)
-	rsa_d = packl_ctypes(private_key.private_numbers().d)
-	rsa_e = private_key.private_numbers().public_numbers.e
-	rsa_n = FixedBytes(KEY_SIZE/8, rsa_n)
-	rsa_d = FixedBytes(KEY_SIZE/8, rsa_d)
+	for idx, keySize in enumerate(KEY_SIZE):
+		print_ok("Test RSA with keylength = %d" % keySize)
+		#######################################
+		# Key generation
+		private_key = rsa.generate_private_key(public_exponent=65537, key_size=keySize, backend=default_backend())
+		public_key = private_key.public_key()
 
-	sirius_crypto.KeyDownload(target=options.target, RSA_n=rsa_n, RSA_d=rsa_d, RSA_e=rsa_e)
+		#######################################
+		# Key download
+		rsa_n = packl_ctypes(private_key.private_numbers().public_numbers.n)
+		rsa_d = packl_ctypes(private_key.private_numbers().d)
+		rsa_p = packl_ctypes(private_key.private_numbers().p)
+		rsa_q = packl_ctypes(private_key.private_numbers().q)
+		rsa_e = private_key.private_numbers().public_numbers.e
+		rsa_n = FixedBytes(keySize/8, rsa_n)
+		rsa_d = FixedBytes(keySize/8, rsa_d)
+		rsa_p = FixedBytes(keySize/8, rsa_p)
+		rsa_q = FixedBytes(keySize/8, rsa_q)
 
-	#######################################
-	# Doing with rsa
-	# encrypt
-	plain_input = FixedBytes(KEY_SIZE/8, options.message)
-	ciphered = sirius_crypto.Rsa(options.target, "ENC", plain_input)
-	ciphered = FixedBytes(KEY_SIZE/8, ciphered)
-	dump_hex(ciphered, "ciphered: ")
+		sirius_crypto.KeyDownload(target=options.target, RSA_n=rsa_n, RSA_d=rsa_d, RSA_e=rsa_e)
 
-	# decrypt
-	plain_ret = sirius_crypto.Rsa(options.target, "DEC", ciphered)
-	plain_ret = FixedBytes(KEY_SIZE/8, plain_ret)
+		#######################################
+		# Doing with rsa
+		# encrypt
+		plain_input = FixedBytes(keySize/8, options.message)
+		# plain_input = options.message
+		ciphered = sirius_crypto.Rsa(options.target, "ENC", plain_input)
+		ciphered = FixedBytes(keySize/8, ciphered)
+		if options.debug >= 1:
+			dump_hex(ciphered, "ciphered: ")
 
-	# print result
-	dump_hex(plain_ret,   "plain_ret  : ")
-	dump_hex(plain_input, "plain_input: ")
-	print("Check the plaintext return from board, with our input plaintext: ",
-		plain_ret == plain_input)
+		# decrypt
+		plain_ret = sirius_crypto.Rsa(options.target, "DEC", ciphered)
+		plain_ret = FixedBytes(keySize/8, plain_ret)
+
+		# print result
+		if options.debug >= 1:
+			dump_hex(plain_ret,   "plain_ret  : ")
+			dump_hex(plain_input, "plain_input: ")
+		print("Check the plaintext return from board, with our input plaintext: ",
+			plain_ret == plain_input)
 
 if __name__ == "__main__":
 	main()

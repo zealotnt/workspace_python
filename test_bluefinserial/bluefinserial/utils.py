@@ -334,3 +334,15 @@ def FixedBytes(maxLen, inputBytes):
 		retVal += '\x00'
 	retVal += inputBytes
 	return retVal
+
+def ProcessFilePath(path):
+	"""
+	This function accept a text, and try to convert it to a real path file that python can understand
+	+ accept the prefix "file:///" (when user ctrl+c the file, it will have a file protocol in it)
+	"""
+	if not isinstance(path, str):
+		return path
+	fileProtocolPrefix = "file:///"
+	if path.startswith(fileProtocolPrefix):
+		path = path[len(fileProtocolPrefix)-1:]
+	return path
