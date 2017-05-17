@@ -474,7 +474,7 @@ class SiriusAPICrypto():
 			return None
 		return rsp[3:]
 
-	def Rsa(self, target, operation, data):
+	def Rsa(self, target, operation, data, verbose=False):
 		"""
 		"""
 		if operation not in SiriusAPICrypto.rsa_operations:
@@ -483,7 +483,7 @@ class SiriusAPICrypto():
 
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
-		pkt = BluefinserialCommand(sirius_target, verbose=False)
+		pkt = BluefinserialCommand(sirius_target, verbose=verbose)
 		rsa_package = struct.pack('<B',
 			SiriusAPICrypto.rsa_operations[operation], # rsa operation
 		) + data

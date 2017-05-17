@@ -78,6 +78,7 @@ def main():
 	KEY_SIZE = [512, 1024, 2048, 3072]
 
 	for idx, keySize in enumerate(KEY_SIZE):
+		print("")
 		print_ok("Test RSA with keylength = %d" % keySize)
 		#######################################
 		# Key generation
@@ -96,6 +97,10 @@ def main():
 		rsa_p = FixedBytes(keySize/8, rsa_p)
 		rsa_q = FixedBytes(keySize/8, rsa_q)
 
+		if options.debug >= 2:
+			dump_hex(rsa_n, "rsa_n_%s   : " % (keySize))
+			dump_hex(rsa_d, "rsa_d_%s   : " % (keySize))
+
 		sirius_crypto.KeyDownload(target=options.target, RSA_n=rsa_n, RSA_d=rsa_d, RSA_e=rsa_e)
 
 		#######################################
@@ -106,7 +111,7 @@ def main():
 		ciphered = sirius_crypto.Rsa(options.target, "ENC", plain_input)
 		ciphered = FixedBytes(keySize/8, ciphered)
 		if options.debug >= 1:
-			dump_hex(ciphered, "ciphered: ")
+			dump_hex(ciphered,    "ciphered   : ")
 
 		# decrypt
 		plain_ret = sirius_crypto.Rsa(options.target, "DEC", ciphered)

@@ -23,90 +23,98 @@ sys.path.insert(0, get_git_root() + '/test_bluefinserial/bluefinserial')
 from utils import *
 
 def main():
-	private_key = dsa.generate_private_key(
-		key_size=1024,
-		backend=default_backend()
-	)
+	dumpFileText = ""
+	filePathSave = ""
+	KEY_LENGTHS = [1024, 2048, 3072]
+	DSA_MAX_SIG_LEN = 32
+	# KEY_LENGTHS = [1024]
+	if len(sys.argv) == 2:
+		filePathSave = ProcessFilePath(sys.argv[1])
 
-	# Parameters and Keys dumping
-	# p: public modulus
-	print("p: ", private_key.public_key().public_numbers().parameter_numbers.p)
-	# q: sub-group order
-	print("q: ", private_key.public_key().public_numbers().parameter_numbers.q)
-	# g: generator
-	print("g: ", private_key.public_key().public_numbers().parameter_numbers.g)
-	# y: public value
-	print("y: ", private_key.public_key().public_numbers().y)
-	# x: private value
-	print("x: ", private_key.private_numbers().x)
+	for keyLength in KEY_LENGTHS:
+		private_key = dsa.generate_private_key(
+			key_size=keyLength,
+			backend=default_backend()
+		)
 
-	# Sign
-	data = b"this is some data I'd like to sign"
-	signature = private_key.sign(
-		data,
-		hashes.SHA256()
-	)
-	print("signature: ", signature)
+		# Parameters and Keys dumping
+		# p: public modulus
+		print("p: ", private_key.public_key().public_numbers().parameter_numbers.p)
+		# q: sub-group order
+		print("q: ", private_key.public_key().public_numbers().parameter_numbers.q)
+		# g: generator
+		print("g: ", private_key.public_key().public_numbers().parameter_numbers.g)
+		# y: public value
+		print("y: ", private_key.public_key().public_numbers().y)
+		# x: private value
+		print("x: ", private_key.private_numbers().x)
 
-	# Verify
-	public_key = private_key.public_key()
-	print("Verify: ", public_key.verify(
-			signature,
+		# Sign
+		data = b"this is some data I'd like to sign"
+		signature = private_key.sign(
 			data,
 			hashes.SHA256()
 		)
-	)
-	r_s = utils.decode_dss_signature(signature)
-	sig_r = r_s[0]
-	sig_s = r_s[1]
 
-	# Dump hex value
-	print("\r\nHex value")
-	dump_hex(
-		packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p),
-		'p',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q),
-		'q',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g),
-		'g',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(private_key.public_key().public_numbers().y),
-		'y',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(private_key.private_numbers().x),
-		'x',
-		preFormat="C"
-	)
-	dump_hex(
-		data,
-		'data',
-		preFormat="C"
-	)
-	dump_hex(
-		signature,
-		'signature',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(sig_r),
-		'signature_r',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(sig_s),
-		'signature_s',
-		preFormat="C"
-	)
+		# Verify
+		public_key = private_key.public_key()
+		print("Verify: ", public_key.verify(
+				signature,
+				data,
+				hashes.SHA256()
+			)
+		)
+		r_s = utils.decode_dss_signature(signature)
+		sig_r = r_s[0]
+		sig_s = r_s[1]
+		r_s_str = FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_r)) + FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_s))
+		# r_s_str = packl_ctypes(sig_r) + packl_ctypes(sig_s)
+		dump_hex(r_s_str, "signature: ")
+
+		# Dump hex value
+		print("\r\nHex value")
+		toDump = [[
+				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p)),
+				'dsa_p_' + str(keyLength)
+			], [
+				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q)),
+				'dsa_q_' + str(keyLength)
+			], [
+				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g)),
+				'dsa_g_' + str(keyLength)
+			], [
+				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().y)),
+				'dsa_y_' + str(keyLength)
+			], [
+				FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().x)),
+				'dsa_x_' + str(keyLength)
+			], [
+				data,
+				'dsa_data_' + str(keyLength)
+			], [
+				FixedBytes(DSA_MAX_SIG_LEN*2, r_s_str),
+				'dsa_signature_' + str(keyLength),
+			], [
+				FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_r)),
+				'dsa_signature_r_'+ str(keyLength),
+			], [
+				FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_s)),
+				'dsa_signature_s_'+ str(keyLength),
+			]
+		]
+		for idx, item in enumerate(toDump):
+			dumpFileText += dump_hex(
+				item[0],
+				item[1],
+				preFormat="C"
+			)
+
+	if filePathSave != "":
+		dumpFileText = "#include <stdint.h>\r\n\r\n" + dumpFileText
+		f = open(filePathSave, "w")
+		f.write(dumpFileText)
+		f.close()
+		print_ok("Dump buffer data to " + filePathSave)
 
 if __name__ == "__main__":
 	main()
