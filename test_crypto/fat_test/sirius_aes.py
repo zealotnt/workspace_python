@@ -27,8 +27,7 @@ from scan import scan
 from utils import *
 from sirius_api_crypto import *
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
+from Crypto.Cipher import AES
 
 VALID_TARGET = ["RF", "APP"]
 
@@ -66,14 +65,55 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
-	iv = os.urandom(16)
-	key = os.urandom(16)
-	data = os.urandom(16)
-	ciphered = sirius_crypto.Aes(target=options.target, en_dec="ENC", mode="CFB", iv=iv, key=key, data=data)
-	de_ciphered = sirius_crypto.Aes(target=options.target, en_dec="DEC", mode="CFB", iv=iv, key=key, data=ciphered)
-	dump_hex(ciphered,    "ciphered   : ")
-	dump_hex(de_ciphered, "de_ciphered: ")
-	print(de_ciphered == data)
+	# For PyCrypto package
+	cryptoMode = [AES.MODE_ECB, AES.MODE_CBC, AES.MODE_OFB, AES.MODE_CFB]
+	segmentSize = [None, None, None, 64]
+	# For looping
+	modes = ["ECB", "CBC", "OFB", "CFB"]
+	keyLengths = [16, 24, 32]
+	for idx, mode in enumerate(modes):
+		for keyLen in keyLengths:
+			print("")
+			print_ok(">"*40)
+			print_ok("Testing AES_%s with keylen=%d" % (mode, keyLen))
+
+			iv = os.urandom(16)
+			key = os.urandom(keyLen)
+			data = os.urandom(32)
+
+			if options.debug >= 2:
+				dump_hex(data, "data: ")
+				dump_hex(iv,   "iv  : ")
+				dump_hex(key,  "key : ")
+
+			# Try encrypt with sirius
+			ciphered = sirius_crypto.Aes(target=options.target, en_dec="ENC", mode=mode, iv=iv, key=key, data=data)
+			# Check with our result
+			if segmentSize[idx] is not None:
+				encryption_suite = AES.new(key, cryptoMode[idx], iv, segment_size=segmentSize[idx])
+			else:
+				encryption_suite = AES.new(key, cryptoMode[idx], iv)
+			cipher_self = encryption_suite.encrypt(data)
+			if options.debug >= 1:
+				dump_hex(cipher_self, "cipher_self: ")
+			if cipher_self != ciphered:
+				print_err("Verify ciphered and cipher_self: fail")
+			else:
+				print("Verify ciphered and cipher_self: pass")
+
+			# Try decrypt with sirius
+			de_ciphered = sirius_crypto.Aes(target=options.target, en_dec="DEC", mode=mode, iv=iv, key=key, data=ciphered)
+			if options.debug >= 1:
+				dump_hex(ciphered,    "ciphered   : ")
+				dump_hex(de_ciphered, "de_ciphered: ")
+
+			# If it same as input message, test case is pass
+			if de_ciphered != data:
+				print_err("Verify input data with the de_ciphered from sirius: fail")
+			else:
+				print("Verify input data with the de_ciphered from sirius: pass")
+			print_ok("<"*40)
+			print("")
 
 if __name__ == "__main__":
 	main()
