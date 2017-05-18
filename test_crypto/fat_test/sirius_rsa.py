@@ -78,7 +78,9 @@ def main():
 	KEY_SIZE = [512, 1024, 2048, 3072]
 
 	for idx, keySize in enumerate(KEY_SIZE):
+		# print the head of resulr
 		print("")
+		print_ok(">"*40)
 		print_ok("Test RSA with keylength = %d" % keySize)
 		#######################################
 		# Key generation
@@ -123,6 +125,8 @@ def main():
 			dump_hex(plain_input, "plain_input: ")
 		print("Check the plaintext return from board, with our input plaintext: ",
 			plain_ret == plain_input)
+		print_ok("<"*40)
+		print("")
 
 if __name__ == "__main__":
 	main()

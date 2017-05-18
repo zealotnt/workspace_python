@@ -27,6 +27,9 @@ from scan import scan
 from utils import *
 from sirius_api_crypto import *
 
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+
 VALID_HASH = SiriusAPICrypto.getShaMethodList()
 VALID_TARGET = ["RF", "APP"]
 
@@ -46,10 +49,11 @@ def main():
 						dest="target",
 						default="APP",
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
-	parser.add_option(  "-d", "--digest",
-						dest="shaType",
-						default="SHA1",
-						help="Choose type of SHA to make a digest, any of: %s" % ', '.join(VALID_HASH))
+	parser.add_option(  "-d", "--debug",
+						dest="debug",
+						default=0,
+						action="count",
+						help="Make the script more verbose")
 	parser.add_option(  "-m", "--message",
 						dest="message",
 						default="",
@@ -66,7 +70,43 @@ def main():
 	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
 
 	sirius_crypto = SiriusAPICrypto(comm)
-	sirius_crypto.Sha(options.shaType, options.message, options.target)
+
+	digestEngine = [
+		hashes.Hash(hashes.SHA1(), backend=default_backend()),
+		hashes.Hash(hashes.SHA224(), backend=default_backend()),
+		hashes.Hash(hashes.SHA256(), backend=default_backend()),
+		hashes.Hash(hashes.SHA384(), backend=default_backend()),
+		hashes.Hash(hashes.SHA512(), backend=default_backend()),
+	]
+	DIGEST_ALGOS = ["SHA1", "SHA224", "SHA256", "SHA384", "SHA512"]
+	for idx, digest in enumerate(DIGEST_ALGOS):
+		# print the head of resulr
+		print("")
+		print_ok(">"*40)
+		print_ok("Testing %s" % (digest))
+
+		# get digest from sirius
+		digest_sirius = sirius_crypto.Sha(options.target, digest, options.message)
+
+		# self calculate
+		digestEngine[idx].update(options.message)
+		digest_self = digestEngine[idx].finalize()
+
+		# compare with result from sirius
+		if digest_sirius != digest_self:
+			print_err("digest_sirius != digest_self:")
+			dump_hex(digest_sirius, "\tdigest_sirius: ")
+			dump_hex(digest_self,   "\tdigest_self  : ")
+			continue
+		else:
+			print_ok("Digest %s ok" % (digest))
+
+		# print the tail of result
+		if options.debug >= 1:
+			dump_hex(digest_sirius, "\tdigest_sirius: ")
+			dump_hex(digest_self,   "\tdigest_self  : ")
+		print_ok("<"*40)
+		print("")
 
 if __name__ == "__main__":
 	main()

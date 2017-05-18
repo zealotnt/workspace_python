@@ -139,7 +139,7 @@ class SiriusAPICrypto():
 
 		return rsp[3:]
 
-	def Sha(self, method, message, target):
+	def Sha(self, target, method, message, selfCheck=False, verbose=False):
 		"""
 		SHA digest API
 		method: <str> method of hashing
@@ -150,7 +150,7 @@ class SiriusAPICrypto():
 			print_err("Invalid method: %s" % method)
 			return None
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
-		pkt = BluefinserialCommand(sirius_target)
+		pkt = BluefinserialCommand(sirius_target, verbose=verbose)
 		sha_package = struct.pack('<B', SiriusAPICrypto.sha_dict[method]) + message
 		cmd = pkt.Packet('\x8b', '\x4e', sha_package)
 		rsp = self._datalink.Exchange(cmd)
@@ -162,20 +162,22 @@ class SiriusAPICrypto():
 			return None
 
 		# Check with our result
-		digest = hashes.Hash(SiriusAPICrypto.sha_functions[method], backend=default_backend())
-		digest.update(message)
-		ourResult = digest.finalize()
-		theirResult = rsp[3:]
-		if len(theirResult) != len(ourResult):
-			print_err("Wrong length, our: %d, their: %d" % (len(ourResult), len(theirResult)))
-			return None
-		if theirResult != ourResult:
-			print_err("Wrong value")
-			dump_hex(ourResult,   "Ours:   ")
-			dump_hex(theirResult, "Theirs: ")
-			return None
-		dump_hex(rsp[3:], "Sha serial return ok, check ok, digest: ")
-		return True
+		if selfCheck:
+			digest = hashes.Hash(SiriusAPICrypto.sha_functions[method], backend=default_backend())
+			digest.update(message)
+			ourResult = digest.finalize()
+			theirResult = rsp[3:]
+			if len(theirResult) != len(ourResult):
+				print_err("Wrong length, our: %d, their: %d" % (len(ourResult), len(theirResult)))
+				return None
+			if theirResult != ourResult:
+				print_err("Wrong value")
+				dump_hex(ourResult,   "Ours:   ")
+				dump_hex(theirResult, "Theirs: ")
+				return None
+		if verbose:
+			dump_hex(rsp[3:], "Sha serial return: ")
+		return rsp[3:]
 
 	def KeyDownload(self, target, DSS_p=None, DSS_q=None, DSS_g=None, DSS_y=None, DSS_x=None,
 					ECDSA_x=None, ECDSA_y=None, ECDSA_pri=None,
