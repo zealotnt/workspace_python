@@ -53,8 +53,13 @@ def main():
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
 	parser.add_option(  "-m", "--message",
 						dest="message",
-						default="",
+						default=os.urandom(KEY_SIZE),
 						help="the input message to be hashed")
+	parser.add_option(  "-d", "--debug",
+						dest="debug",
+						default=0,
+						action="count",
+						help="Make the script more verbose")
 	(options, args) = parser.parse_args()
 
 	# Init the com port
@@ -82,25 +87,31 @@ def main():
 	ecdsaPubXStr = FixedBytes(KEY_SIZE/8, ecdsaPubXStr)
 	ecdsaPubYStr = FixedBytes(KEY_SIZE/8, ecdsaPubYStr)
 	ecdsaPriStr = FixedBytes(KEY_SIZE/8, ecdsaPriStr)
-
+	if options.debug >= 2:
+		dump_hex(ecdsaPubXStr, "ecdsaPubXStr: ")
+		dump_hex(ecdsaPubYStr, "ecdsaPubYStr: ")
+		dump_hex(ecdsaPriStr,  "ecdsaPriStr : ")
 	sirius_crypto.KeyDownload(target=options.target, ECDSA_x=ecdsaPubXStr, ECDSA_y=ecdsaPubYStr, ECDSA_pri=ecdsaPriStr)
 
 	#######################################################
-	# Sign the message
+	# Sign functionality test on sirius
+	# let the sirius board sign the message
 	r_s = sirius_crypto.EcdsaSign(target=options.target, curve="secp256k1", hashAlgo="SHA256", message=options.message)
 	sig_r = r_s[:len(r_s)/2]
 	sig_s = r_s[len(r_s)/2:]
 
-	# Check the signature return from the sirius board
+	# Check the signature return from the sirius board, using native verification
 	signature = utils.encode_dss_signature(
 		CalculateBigInt(sig_r),
 		CalculateBigInt(sig_s)
 	)
+	if options.debug >= 2:
+		dump_hex(r_s, "Signature receive: ")
 	print("Using signature fom sirius, we will verify => status: ", public_key.verify(signature, options.message, ec.ECDSA(hashes.SHA256())))
 
 	#######################################################
-	# Verify the message
-	# create our own signature
+	# Verification functionality test on sirius
+	# create native own signature
 	signature = private_key.sign(
 		options.message,
 		ec.ECDSA(hashes.SHA256())
@@ -109,6 +120,11 @@ def main():
 	sig_r_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[0]))
 	sig_s_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[1]))
 	sigCombine = sig_r_str + sig_s_str
+	if options.debug >= 2:
+		dump_hex(sig_r_str, "our sig_r_str: ")
+		dump_hex(sig_s_str, "our sig_s_str: ")
+
+	# send our native signature, let the target check the signature is valid or not
 	verifyStatus = sirius_crypto.EcdsaVerify(
 		target=options.target,
 		curve="secp256k1",

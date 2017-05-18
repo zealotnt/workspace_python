@@ -25,6 +25,12 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import utils
 
 def main():
+	dumpFileText = ""
+	filePathSave = ""
+	keyLength = 256
+	if len(sys.argv) == 2:
+		filePathSave = ProcessFilePath(sys.argv[1])
+
 	# Key generation
 	private_key = ec.generate_private_key(
 		ec.SECP256K1(), default_backend()
@@ -37,7 +43,7 @@ def main():
 	print("pri:   ", private_key.private_numbers().private_value)
 
 	# Sign
-	data = b"this is some data I'd like to sign"
+	data = os.urandom(keyLength)
 	signature = private_key.sign(
 		data,
 		ec.ECDSA(hashes.SHA256())
@@ -53,41 +59,38 @@ def main():
 
 	# Dump hex value
 	print("\r\nHex value")
-	dump_hex(
-		packl_ctypes(public_key.public_numbers().x),
-		'x',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(public_key.public_numbers().y),
-		'y',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(private_key.private_numbers().private_value),
-		'pri',
-		preFormat="C"
-	)
-	dump_hex(
+	to_Dump = [[
+		FixedBytes(keyLength/8, packl_ctypes(public_key.public_numbers().x)),
+		'ecdsa_x_',
+	],[
+		FixedBytes(keyLength/8, packl_ctypes(public_key.public_numbers().y)),
+		'ecdsa_y_',
+	],[
+		FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().private_value)),
+		'ecdsa_pri_',
+	],[
 		data,
-		'data',
-		preFormat="C"
-	)
-	dump_hex(
-		signature,
-		'signature',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(sig_r),
-		'signature_r',
-		preFormat="C"
-	)
-	dump_hex(
-		packl_ctypes(sig_s),
-		'signature_s',
-		preFormat="C"
-	)
+		'ecdsa_data_',
+	],[
+		FixedBytes(keyLength/8, packl_ctypes(sig_r)),
+		'ecdsa_signature_r_',
+	],[
+		FixedBytes(keyLength/8, packl_ctypes(sig_s)),
+		'ecdsa_signature_s_',
+	]]
+	for idx, item in enumerate(to_Dump):
+		dumpFileText += dump_hex(
+			item[0],
+			item[1],
+			preFormat="C"
+		)
+
+	if filePathSave != "":
+		dumpFileText = "#include <stdint.h>\r\n\r\n" + dumpFileText
+		f = open(filePathSave, "w")
+		f.write(dumpFileText)
+		f.close()
+		print_ok("Dump buffer data to " + filePathSave)
 
 if __name__ == "__main__":
 	main()

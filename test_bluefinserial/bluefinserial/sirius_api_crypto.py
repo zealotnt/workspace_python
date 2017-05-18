@@ -44,6 +44,7 @@ class SiriusAPICrypto():
 	# ECDSA
 	ecdsa_curve = {
 		"secp256k1": 0,
+		"secp256r1": 0,
 	}
 	ecdsa_sha_functions = {
 		"SHA1": 0,
