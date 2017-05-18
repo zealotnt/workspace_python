@@ -32,6 +32,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from Crypto.PublicKey import RSA
 
 # Constants
 KEY_SIZE = 2048
@@ -79,6 +80,7 @@ def main():
 
 	for idx, keySize in enumerate(KEY_SIZE):
 		# print the head of resulr
+		err = False
 		print("")
 		print_ok(">"*40)
 		print_ok("Test RSA with keylength = %d" % keySize)
@@ -107,24 +109,40 @@ def main():
 
 		#######################################
 		# Doing with rsa
-		# encrypt
+		# encrypt with sirius
 		plain_input = FixedBytes(keySize/8, options.message)
-		# plain_input = options.message
 		ciphered = sirius_crypto.Rsa(options.target, "ENC", plain_input)
 		ciphered = FixedBytes(keySize/8, ciphered)
-		if options.debug >= 1:
-			dump_hex(ciphered,    "ciphered   : ")
 
-		# decrypt
+		# encrypt with native, the compare it with sirius
+		pubkey_tup = (private_key.private_numbers().public_numbers.n, long(private_key.private_numbers().public_numbers.e))
+		puc_key_2ndframework = RSA.construct(pubkey_tup)
+		cipher_cal = puc_key_2ndframework.encrypt(plain_input, keySize)
+		cipher_cal = cipher_cal[0]
+		if ciphered != cipher_cal:
+			print_err("ciphered != cipher_cal")
+			dump_hex(ciphered,   "ciphered  : ")
+			dump_hex(cipher_cal, "cipher_cal: ")
+			err = True
+		else:
+			print_ok("cipher_sirius compare with cipher_cal: pass")
+
+		# decrypt with sirius
 		plain_ret = sirius_crypto.Rsa(options.target, "DEC", ciphered)
 		plain_ret = FixedBytes(keySize/8, plain_ret)
 
 		# print result
-		if options.debug >= 1:
+		if plain_ret == plain_input:
+			print_ok("Check the plaintext_dec return from board, with our plaintext_input: pass")
+		else:
+			print_err("Check the plaintext_dec return from board, with our plaintext_input: fail")
 			dump_hex(plain_ret,   "plain_ret  : ")
 			dump_hex(plain_input, "plain_input: ")
-		print("Check the plaintext return from board, with our input plaintext: ",
-			plain_ret == plain_input)
+			err = True
+		if options.debug >= 1 and err == False:
+			dump_hex(ciphered,    "ciphered   : ")
+			dump_hex(plain_ret,   "plain_ret  : ")
+			dump_hex(plain_input, "plain_input: ")
 		print_ok("<"*40)
 		print("")
 
