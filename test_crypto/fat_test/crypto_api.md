@@ -57,7 +57,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Key Length | 1 | Length of AES key |
 | Input Data | Variable | Plaintext for encryption<br>Ciphered text for decryption |
 | AES Key Value | Variable | Could be 16/24/32 bytes |
-| IV | 8 | Initial Vector |
+| IV | 16 | Initial Vector |
 | Mode | 1 | Encryption/Decryption Mode<br>0x00: ECB Encryption<br>0x01: ECB Decryption<br>0x02: CBC Encryption<br>0x03: CBC Decryption<br>0x04: OFB Encryption<br>0x05: OFB Decryption<br>0x06: CFB Encryption<br>0x07: CFB Decryption |
 
 ### 3.2 Reponse message
@@ -95,6 +95,8 @@ This document show instruction and API implementation, API guide for cryptograph
 - References
     + [Ref-1](https://gist.github.com/ecerulm/90653daf2b808aea0837)
     + [Ref-2](http://stackoverflow.com/questions/28354844/how-to-calculate-aes-cmac-using-openssl)
+    + [AES-CMAC](http://csrc.nist.gov/groups/ST/toolkit/documents/Examples/AES_CMAC.pdf)
+    + [TDES-CMAC](http://csrc.nist.gov/groups/ST/toolkit/documents/Examples/TDES_CMAC.pdf)
 
 ## 5 Key Download
 
@@ -111,16 +113,19 @@ This document show instruction and API implementation, API guide for cryptograph
 | Tag  | Length valid | Description |
 |----------|:-------------:|:------|
 | 0x01 | 1024/2048/3072 bit | p value of DSS parameters |
-| 0x02 | 1024/2048/3072 bit | q value of DSS parameters |
+| 0x02 | Maximum 3072bit | q value of DSS parameters |
 | 0x03 | 1024/2048/3072 bit | g value of DSS parameters |
 | 0x04 | 1024/2048/3072 bit | y value of DSS public key |
-| 0x05 | 1024/2048/3072 bit | x value of DSS private key |
+| 0x05 | Maximum 3072bit | x value of DSS private key |
 | 0x06 | 256 bit | x point of ECDSA public key |
 | 0x07 | 256 bit | y point of ECDSA public key |
 | 0x08 | 256 bit | 256 bit of ECDSA private key |
 | 0x09 | 2048/3072 bit | n The modulus of RSA public key |
 | 0x0A | 2048/3072 bit | d The Private Exponent of RSA private key |
 | 0x0B | 4 Bytes | Public exponent of RSA |
+
+Note:
+- 1024/2048/3072 bit <=> 128/256/384 byte
 
 #### 5.2 Response message
 
@@ -141,7 +146,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Operation | 1 | DSA operation<br>0x00: Sign<br>0x01: Verify |
 | Hash Algo | 1 | Hash algorithm<br>0x00: SHA1<br>0x01: SHA256 |
 | Input message length | 2 | Length of input message |
-| Signature length | 1 | Length of signature<br>Signature length always <= 40 bytes (verify only, if sign, this length = 0) |
+| Signature length | 1 | Length of signature<br>Signature length always <= 64 bytes (verify only, if sign, this length = 0) |
 | Input message | Variable | Message to be signed/verified |
 | Signature | Variable | Signature value (if sign, this field is empty) |
 
@@ -153,7 +158,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Command Code | 1 | Fix value: 0x8b |
 | Command Control Code | 1 | Fix value: 0x49 |
 | Status Response | 1 | Result code |
-| Signature/Verify | N | If signing: Signature for input message, N = double of DSA key<br>If verify: result in verify request, N = 1<br>0: valid<br>1: invalid |
+| Signature/Verify | N | If signing: Signature for input message<br>+ N = 40 bytes if key is 1024bit-128B<br>+ N = 64 bytes if key is 2048bit-256B<br>If verify: result in verify request, N = 1<br>+ 0: valid<br>+ 1: invalid |
 
 - References
     + [DSA Sig len](https://groups.google.com/forum/#!topic/sci.crypt/4iGX27jDJu8)
@@ -181,7 +186,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Command Code | 1 | Fix value: 0x8b |
 | Command Control Code | 1 | Fix value: 0x4b |
 | Status Response | 1 | Result code |
-| Signature/Verify | N | If signing: Signature for input message, N = double of curve/key length<br>If verify: Result in verify request, N = 1<br>0: valid<br>1: invalid |
+| Signature/Verify | N | If signing: Signature for input message, N = double of curve/key length<br>If verify: Result in verify request, N = 1<br>+ 0: valid<br>+ 1: invalid |
 
 ## 8.  RSA cryptography
 
