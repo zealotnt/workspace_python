@@ -104,7 +104,7 @@ def main():
 				FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().public_numbers.n)),
 				'rsa_n_' + str(keyLength),
 			], [
-				FixedBytes(keyLength/8, e_str),
+				FixedBytes(4, e_str),
 				'rsa_e_' + str(keyLength),
 			], [
 				FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().d)),

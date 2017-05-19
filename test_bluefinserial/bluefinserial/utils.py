@@ -172,21 +172,25 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 
 	varType = ""
 	varArray = ""
+	postfix = ""
 	if preFormat == "C" or preFormat == "c":
 		token = ", "
 		prefix = "0x"
 		wrap = 8
 		varType = "uint8_t"
 		varArray = "[]"
+		postfix = "\r\n\t};\r\n\r\n"
 	elif preFormat == "raw":
 		token = " "
 		prefix = ""
 		wrap = 0
-		desc_str = desc_str + " "
+		desc_str = '"%s":\r\n' % (desc_str)
+		postfix = "\r\n\r\n"
 
 	# print desc_str + binascii.hexlify(data)
 	if wrap == 0:
-		print (desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data))
+		to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n" + postfix
+		write_and_concat_str(to_write)
 	else:
 		# [Ref](http://stackoverflow.com/questions/734368/type-checking-of-arguments-python)
 		if isinstance(data, int):
@@ -205,7 +209,7 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 			write_and_concat_str(to_write)
 			count += 1
 
-		write_and_concat_str("\r\n\t};\r\n\r\n")
+		write_and_concat_str(postfix)
 		sys.stdout.flush()
 	ret = gStr
 	del gStr

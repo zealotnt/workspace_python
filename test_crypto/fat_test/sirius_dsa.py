@@ -34,8 +34,14 @@ from cryptography.hazmat.primitives.asymmetric import utils
 
 
 VALID_TARGET = ["RF", "APP"]
+# KEY_SIZE = 1024
+# HASH_ALGO = hashes.SHA1()
+# DSA_SIG_PART_LEN = 20 # r or s
+
 KEY_SIZE = 2048
+HASH_ALGO = hashes.SHA256()
 DSA_SIG_PART_LEN = 32 # r or s
+
 
 def main():
 	parser = OptionParser()
@@ -115,7 +121,6 @@ def main():
 	# Sign the message
 	# ask the sirius to sign the message
 	r_s = sirius_crypto.DsaSign(target=options.target, hashAlgo="SHA256", message=options.message)
-	print(len(r_s))
 	sig_r = r_s[:len(r_s)/2]
 	sig_s = r_s[len(r_s)/2:]
 	if options.debug >= 2:
@@ -127,14 +132,14 @@ def main():
 		CalculateBigInt(sig_r),
 		CalculateBigInt(sig_s)
 	)
-	print("Using signature fom sirius, we will verify => status: (if None means ok)", public_key.verify(signature, options.message, hashes.SHA256()))
+	print("Using signature fom sirius, we will verify => status: (if None means ok)", public_key.verify(signature, options.message, HASH_ALGO))
 
 	#######################################################
 	# Verify the message
 	# create our own signature
 	signature = private_key.sign(
 		options.message,
-		hashes.SHA256()
+		HASH_ALGO
 	)
 	r_s = utils.decode_dss_signature(signature)
 	sig_r_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[0]))
