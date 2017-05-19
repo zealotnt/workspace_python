@@ -34,8 +34,8 @@ from cryptography.hazmat.primitives.asymmetric import utils
 
 
 VALID_TARGET = ["RF", "APP"]
-KEY_SIZE = 1024
-DSA_SIG_PART_LEN = 20 # r or s
+KEY_SIZE = 2048
+DSA_SIG_PART_LEN = 32 # r or s
 
 def main():
 	parser = OptionParser()
@@ -57,6 +57,11 @@ def main():
 						dest="message",
 						default="",
 						help="the input message to be process with dsa")
+	parser.add_option(  "-d", "--debug",
+						dest="debug",
+						default=0,
+						action="count",
+						help="Make the script more verbose")
 	(options, args) = parser.parse_args()
 
 	# Init the com port
@@ -85,10 +90,17 @@ def main():
 	dsa_xStr = packl_ctypes(private_key.private_numbers().x)
 
 	dsa_pStr = FixedBytes(KEY_SIZE/8, dsa_pStr)
-	dsa_qStr = FixedBytes(KEY_SIZE/8, dsa_qStr)
+	dsa_qStr = TrimZeroes(dsa_qStr)
 	dsa_gStr = FixedBytes(KEY_SIZE/8, dsa_gStr)
 	dsa_yStr = FixedBytes(KEY_SIZE/8, dsa_yStr)
-	dsa_xStr = FixedBytes(KEY_SIZE/8, dsa_xStr)
+	dsa_xStr = TrimZeroes(dsa_xStr)
+
+	if options.debug >= 2:
+		dump_hex(dsa_pStr, "dsa_pStr : ")
+		dump_hex(dsa_qStr, "dsa_qStr : ")
+		dump_hex(dsa_gStr, "dsa_gStr : ")
+		dump_hex(dsa_yStr, "dsa_yStr : ")
+		dump_hex(dsa_xStr, "dsa_xStr : ")
 
 	sirius_crypto.KeyDownload(
 		target=options.target,
@@ -100,18 +112,21 @@ def main():
 	)
 
 	# #######################################################
-	# # Sign the message
+	# Sign the message
+	# ask the sirius to sign the message
 	r_s = sirius_crypto.DsaSign(target=options.target, hashAlgo="SHA256", message=options.message)
 	print(len(r_s))
 	sig_r = r_s[:len(r_s)/2]
 	sig_s = r_s[len(r_s)/2:]
+	if options.debug >= 2:
+		dump_hex(sig_r, "sirius sig_r: ")
+		dump_hex(sig_s, "sirius sig_s: ")
 
 	# Check the signature return from the sirius board
 	signature = utils.encode_dss_signature(
 		CalculateBigInt(sig_r),
 		CalculateBigInt(sig_s)
 	)
-	dump_hex(r_s, "Signature dump from sirius: ")
 	print("Using signature fom sirius, we will verify => status: (if None means ok)", public_key.verify(signature, options.message, hashes.SHA256()))
 
 	#######################################################
@@ -125,6 +140,11 @@ def main():
 	sig_r_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[0]))
 	sig_s_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[1]))
 	sigCombine = sig_r_str + sig_s_str
+	if options.debug >= 2:
+		dump_hex(sig_r_str, "our sig_r_str: ")
+		dump_hex(sig_s_str, "our sig_s_str: ")
+
+	# ask sirius to verify our generated signature
 	verifyStatus = sirius_crypto.DsaVerify(
 		target=options.target,
 		hashAlgo="SHA256",

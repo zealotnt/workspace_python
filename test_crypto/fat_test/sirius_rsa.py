@@ -35,7 +35,6 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from Crypto.PublicKey import RSA
 
 # Constants
-KEY_SIZE = 2048
 VALID_TARGET = ["RF", "APP"]
 
 def main():
@@ -126,8 +125,11 @@ def main():
 			err = True
 		else:
 			print_ok("cipher_sirius compare with cipher_cal: pass")
+			if options.debug >= 2:
+				dump_hex(ciphered,   "ciphered  : ")
 
 		# decrypt with sirius
+		sirius_crypto.KeyDownload(target=options.target, RSA_n=rsa_n, RSA_d=rsa_d, RSA_e=rsa_e)
 		plain_ret = sirius_crypto.Rsa(options.target, "DEC", ciphered)
 		plain_ret = FixedBytes(keySize/8, plain_ret)
 

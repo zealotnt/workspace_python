@@ -301,6 +301,14 @@ def CalculateBigInt(bytes_list):
 		idx += 1
 	return ret
 
+def TrimZeroes(inputBytes):
+	idxNotNull = 0
+	for idx, item in enumerate(inputBytes):
+		if item != '\x00':
+			idxNotNull = idx
+			break
+	return inputBytes[idxNotNull: ]
+
 def FixedBytes(maxLen, inputBytes):
 	"""
 	Sometimes, the bignum return from function likes packl_ctypes() has some prefix zeroes

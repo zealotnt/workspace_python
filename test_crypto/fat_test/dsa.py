@@ -25,13 +25,14 @@ from utils import *
 def main():
 	dumpFileText = ""
 	filePathSave = ""
+	SHA_FUNCS = [hashes.SHA1(), hashes.SHA256(), hashes.SHA256()]
 	KEY_LENGTHS = [1024, 2048, 3072]
-	DSA_MAX_SIG_LEN = 32
-	# KEY_LENGTHS = [1024]
+	DSA_MAX_SIG_LENS = [20, 32, 32]
+
 	if len(sys.argv) == 2:
 		filePathSave = ProcessFilePath(sys.argv[1])
 
-	for keyLength in KEY_LENGTHS:
+	for idx, keyLength in enumerate(KEY_LENGTHS):
 		private_key = dsa.generate_private_key(
 			key_size=keyLength,
 			backend=default_backend()
@@ -53,7 +54,7 @@ def main():
 		data = b"this is some data I'd like to sign"
 		signature = private_key.sign(
 			data,
-			hashes.SHA256()
+			SHA_FUNCS[idx]
 		)
 
 		# Verify
@@ -61,44 +62,45 @@ def main():
 		print("Verify: ", public_key.verify(
 				signature,
 				data,
-				hashes.SHA256()
+				SHA_FUNCS[idx]
 			)
 		)
 		r_s = utils.decode_dss_signature(signature)
 		sig_r = r_s[0]
 		sig_s = r_s[1]
-		r_s_str = FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_r)) + FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_s))
+		r_s_str = (FixedBytes(DSA_MAX_SIG_LENS[idx], packl_ctypes(sig_r)) +
+				   FixedBytes(DSA_MAX_SIG_LENS[idx], packl_ctypes(sig_s)))
 		# r_s_str = packl_ctypes(sig_r) + packl_ctypes(sig_s)
 		dump_hex(r_s_str, "signature: ")
 
 		# Dump hex value
 		print("\r\nHex value")
 		toDump = [[
-				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p)),
+				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p)),
 				'dsa_p_' + str(keyLength)
 			], [
-				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q)),
+				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q)),
 				'dsa_q_' + str(keyLength)
 			], [
-				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g)),
+				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g)),
 				'dsa_g_' + str(keyLength)
 			], [
-				FixedBytes(keyLength/8, packl_ctypes(private_key.public_key().public_numbers().y)),
+				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().y)),
 				'dsa_y_' + str(keyLength)
 			], [
-				FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().x)),
+				TrimZeroes(packl_ctypes(private_key.private_numbers().x)),
 				'dsa_x_' + str(keyLength)
 			], [
 				data,
 				'dsa_data_' + str(keyLength)
 			], [
-				FixedBytes(DSA_MAX_SIG_LEN*2, r_s_str),
+				FixedBytes(DSA_MAX_SIG_LENS[idx]*2, r_s_str),
 				'dsa_signature_' + str(keyLength),
 			], [
-				FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_r)),
+				FixedBytes(DSA_MAX_SIG_LENS[idx], packl_ctypes(sig_r)),
 				'dsa_signature_r_'+ str(keyLength),
 			], [
-				FixedBytes(DSA_MAX_SIG_LEN, packl_ctypes(sig_s)),
+				FixedBytes(DSA_MAX_SIG_LENS[idx], packl_ctypes(sig_s)),
 				'dsa_signature_s_'+ str(keyLength),
 			]
 		]
