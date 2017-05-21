@@ -67,7 +67,7 @@ def main():
 
 	# For PyCrypto package
 	cryptoMode = [AES.MODE_ECB, AES.MODE_CBC, AES.MODE_OFB, AES.MODE_CFB]
-	segmentSize = [None, None, None, 64]
+	segmentSize = [None, None, 128, 128]
 	# For looping
 	modes = ["ECB", "CBC", "OFB", "CFB"]
 	keyLengths = [16, 24, 32]

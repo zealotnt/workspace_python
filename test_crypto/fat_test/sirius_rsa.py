@@ -55,7 +55,7 @@ def main():
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
 	parser.add_option(  "-m", "--message",
 						dest="message",
-						default="",
+						default=os.urandom(64),
 						help="the input message to be hashed")
 	parser.add_option(  "-d", "--debug",
 						dest="debug",
