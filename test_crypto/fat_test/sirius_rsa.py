@@ -55,7 +55,7 @@ def main():
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
 	parser.add_option(  "-m", "--message",
 						dest="message",
-						default=os.urandom(64),
+						default=os.urandom(63),
 						help="the input message to be hashed")
 	parser.add_option(  "-d", "--debug",
 						dest="debug",
@@ -75,7 +75,8 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
-	KEY_SIZE = [512, 1024, 2048, 3072]
+	# KEY_SIZE = [512, 1024, 2048, 3072]
+	KEY_SIZE = [512, 1024, 2048]
 
 	for idx, keySize in enumerate(KEY_SIZE):
 		# print the head of resulr

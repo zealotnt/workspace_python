@@ -42,6 +42,10 @@ KEY_SIZE = 2048
 HASH_ALGO = hashes.SHA256()
 DSA_SIG_PART_LEN = 32 # r or s
 
+# KEY_SIZE = 3072
+# HASH_ALGO = hashes.SHA256()
+# DSA_SIG_PART_LEN = 32 # r or s
+
 
 def main():
 	parser = OptionParser()
