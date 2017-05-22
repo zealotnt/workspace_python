@@ -34,18 +34,6 @@ from cryptography.hazmat.primitives.asymmetric import utils
 
 
 VALID_TARGET = ["RF", "APP"]
-# KEY_SIZE = 1024
-# HASH_ALGO = hashes.SHA1()
-# DSA_SIG_PART_LEN = 20 # r or s
-
-KEY_SIZE = 2048
-HASH_ALGO = hashes.SHA256()
-DSA_SIG_PART_LEN = 32 # r or s
-
-# KEY_SIZE = 3072
-# HASH_ALGO = hashes.SHA256()
-# DSA_SIG_PART_LEN = 32 # r or s
-
 
 def main():
 	parser = OptionParser()
@@ -85,95 +73,115 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
-	#######################################################
-	# Create key and download to board
-	# Key generation
-	private_key = dsa.generate_private_key(
-		key_size=KEY_SIZE, backend=default_backend()
-	)
-	public_key = private_key.public_key()
+	KEY_SIZE_LENGTHS = [ 1024, 2048 ]
+	HASH_ALGO = [hashes.SHA1(), hashes.SHA256()]
+	DSA_SIG_PART_LENS = [ 20, 32 ]
 
-	dsa_pStr = packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p)
-	dsa_qStr = packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q)
-	dsa_gStr = packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g)
-	dsa_yStr = packl_ctypes(private_key.public_key().public_numbers().y)
-	dsa_xStr = packl_ctypes(private_key.private_numbers().x)
+	# KEY_SIZE = 3072
+	# HASH_ALGO = hashes.SHA256()
+	# DSA_SIG_PART_LEN = 32 # r or s
 
-	dsa_pStr = FixedBytes(KEY_SIZE/8, dsa_pStr)
-	dsa_qStr = TrimZeroes(dsa_qStr)
-	dsa_gStr = FixedBytes(KEY_SIZE/8, dsa_gStr)
-	dsa_yStr = FixedBytes(KEY_SIZE/8, dsa_yStr)
-	dsa_xStr = TrimZeroes(dsa_xStr)
+	for idx, KEY_SIZE in enumerate(KEY_SIZE_LENGTHS):
+		print("")
+		print_ok(">"*40)
+		print_ok("Test DSA with keylength = %d" % KEY_SIZE)
 
-	if options.debug >= 2:
-		dump_hex(dsa_pStr, "dsa_pStr : ")
-		dump_hex(dsa_qStr, "dsa_qStr : ")
-		dump_hex(dsa_gStr, "dsa_gStr : ")
-		dump_hex(dsa_yStr, "dsa_yStr : ")
-		dump_hex(dsa_xStr, "dsa_xStr : ")
+		#######################################################
+		# Create key and download to board
+		# Key generation
+		private_key = dsa.generate_private_key(
+			key_size=KEY_SIZE, backend=default_backend()
+		)
+		public_key = private_key.public_key()
 
-	sirius_crypto.KeyDownload(
-		target=options.target,
-		DSS_p=dsa_pStr,
-		DSS_q=dsa_qStr,
-		DSS_g=dsa_gStr,
-		DSS_y=dsa_yStr,
-		DSS_x=dsa_xStr
-	)
+		dsa_pStr = packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p)
+		dsa_qStr = packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q)
+		dsa_gStr = packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g)
+		dsa_yStr = packl_ctypes(private_key.public_key().public_numbers().y)
+		dsa_xStr = packl_ctypes(private_key.private_numbers().x)
 
-	# #######################################################
-	# Sign the message
-	# ask the sirius to sign the message
-	r_s = sirius_crypto.DsaSign(target=options.target, hashAlgo="SHA256", message=options.message)
-	sig_r = r_s[:len(r_s)/2]
-	sig_s = r_s[len(r_s)/2:]
-	if options.debug >= 2:
-		dump_hex(sig_r, "sirius sig_r: ")
-		dump_hex(sig_s, "sirius sig_s: ")
+		dsa_pStr = FixedBytes(KEY_SIZE/8, dsa_pStr)
+		dsa_qStr = TrimZeroes(dsa_qStr)
+		dsa_gStr = FixedBytes(KEY_SIZE/8, dsa_gStr)
+		dsa_yStr = FixedBytes(KEY_SIZE/8, dsa_yStr)
+		dsa_xStr = TrimZeroes(dsa_xStr)
 
-	# Check the signature return from the sirius board
-	signature = utils.encode_dss_signature(
-		CalculateBigInt(sig_r),
-		CalculateBigInt(sig_s)
-	)
-	print("Using signature fom sirius, we will verify => status: (if None means ok)", public_key.verify(signature, options.message, HASH_ALGO))
+		if options.debug >= 2:
+			dump_hex(dsa_pStr, "dsa_pStr : ")
+			dump_hex(dsa_qStr, "dsa_qStr : ")
+			dump_hex(dsa_gStr, "dsa_gStr : ")
+			dump_hex(dsa_yStr, "dsa_yStr : ")
+			dump_hex(dsa_xStr, "dsa_xStr : ")
 
-	#######################################################
-	# Verify the message
-	# create our own signature
-	signature = private_key.sign(
-		options.message,
-		HASH_ALGO
-	)
-	r_s = utils.decode_dss_signature(signature)
-	sig_r_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[0]))
-	sig_s_str = FixedBytes(DSA_SIG_PART_LEN, packl_ctypes(r_s[1]))
-	sigCombine = sig_r_str + sig_s_str
-	if options.debug >= 2:
-		dump_hex(sig_r_str, "our sig_r_str: ")
-		dump_hex(sig_s_str, "our sig_s_str: ")
+		sirius_crypto.KeyDownload(
+			target=options.target,
+			DSS_p=dsa_pStr,
+			DSS_q=dsa_qStr,
+			DSS_g=dsa_gStr,
+			DSS_y=dsa_yStr,
+			DSS_x=dsa_xStr
+		)
 
-	# ask sirius to verify our generated signature
-	verifyStatus = sirius_crypto.DsaVerify(
-		target=options.target,
-		hashAlgo="SHA256",
-		message=options.message,
-		signature=sigCombine
-	)
-	print("We sign a message using our private key, sirius should return true: ", verifyStatus)
+		# #######################################################
+		# Sign the message
+		# ask the sirius to sign the message
+		r_s = sirius_crypto.DsaSign(target=options.target, hashAlgo="SHA256", message=options.message)
+		sig_r = r_s[:len(r_s)/2]
+		sig_s = r_s[len(r_s)/2:]
+		if options.debug >= 2:
+			dump_hex(sig_r, "sirius sig_r: ")
+			dump_hex(sig_s, "sirius sig_s: ")
 
-	# Try modify one elem of signature, see if verify failed
-	sigCombine = sig_r_str + sig_s_str
-	sigNum = chr(ord(sigCombine[0]) + 1)
-	sigCombine = sigNum + sigCombine[1:]
-	verifyStatus = sirius_crypto.DsaVerify(
-		target=options.target,
-		hashAlgo="SHA256",
-		message=options.message,
-		signature=sigCombine
-	)
-	print("Modify a signature, sirius should return false: ", verifyStatus)
+		# Check the signature return from the sirius board
+		signature = utils.encode_dss_signature(
+			CalculateBigInt(sig_r),
+			CalculateBigInt(sig_s)
+		)
+		print("Using signature fom sirius, we will verify => status: (if None means ok)",
+			public_key.verify(
+				signature,
+				options.message,
+				HASH_ALGO[idx]
+			)
+		)
 
+		#######################################################
+		# Verify the message
+		# create our own signature
+		signature = private_key.sign(
+			options.message,
+			HASH_ALGO[idx]
+		)
+		r_s = utils.decode_dss_signature(signature)
+		sig_r_str = FixedBytes(DSA_SIG_PART_LENS[idx], packl_ctypes(r_s[0]))
+		sig_s_str = FixedBytes(DSA_SIG_PART_LENS[idx], packl_ctypes(r_s[1]))
+		sigCombine = sig_r_str + sig_s_str
+		if options.debug >= 2:
+			dump_hex(sig_r_str, "our sig_r_str: ")
+			dump_hex(sig_s_str, "our sig_s_str: ")
+
+		# ask sirius to verify our generated signature
+		verifyStatus = sirius_crypto.DsaVerify(
+			target=options.target,
+			hashAlgo="SHA256",
+			message=options.message,
+			signature=sigCombine
+		)
+		print("We sign a message using our private key, sirius should return true: ", verifyStatus)
+
+		# Try modify one elem of signature, see if verify failed
+		sigCombine = sig_r_str + sig_s_str
+		sigNum = chr(ord(sigCombine[0]) + 1)
+		sigCombine = sigNum + sigCombine[1:]
+		verifyStatus = sirius_crypto.DsaVerify(
+			target=options.target,
+			hashAlgo="SHA256",
+			message=options.message,
+			signature=sigCombine
+		)
+		print("Modify a signature, sirius should return false: ", verifyStatus)
+		print_ok("<"*40)
+		print("")
 
 if __name__ == "__main__":
 	main()

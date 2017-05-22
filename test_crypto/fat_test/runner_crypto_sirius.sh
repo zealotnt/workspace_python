@@ -24,7 +24,7 @@ usage()
 {
 	echo "Usage:"
 	echo "  bash $cmdname [-p COMPORT] [-t upgrade-type]"
-	echo "  -p PORT | --port=PORT          Serial device to interface with reader"
+	echo "  -s PORT | --serport=PORT          Serial device to interface with reader"
 	echo "                                 ex, -p /dev/ttyUSB0"
 	echo "  -t | --target=TEST_TARGET_NAME Target to test crypto feature"
 	echo "                                 support targets: '${TEST_TARGET_LIST[@]}', if no type specify, '$DEFAULT_TEST_TARGET' type will be default"
@@ -72,12 +72,12 @@ RunTestScritp()
 while [[ $# -gt 0 ]]
 do
 	case "$1" in
-		-p)
+		-s)
 		SERIAL_PORT="$2"
-		if [[ $SERIAL_PORT == "" ]]; then echoerr "-p argument required"; usage; fi
+		if [[ $SERIAL_PORT == "" ]]; then echoerr "-s argument required"; usage; fi
 		shift 2
 		;;
-		--port=*)
+		--serport=*)
 		SERIAL_PORT="${1#*=}"
 		shift 1
 		;;
