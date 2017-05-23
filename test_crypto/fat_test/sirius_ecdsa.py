@@ -73,80 +73,102 @@ def main():
 
 	sirius_crypto = SiriusAPICrypto(comm)
 
-	#######################################################
-	# Create key and download to board
-	# Key generation
-	private_key = ec.generate_private_key(
-		ec.SECP256R1(), default_backend()
-	)
-	public_key = private_key.public_key()
+	HASH_ALGO_SIRIUS = [ "SHA1", "SHA256" ]
+	HASH_ALGO_NATIVE = [hashes.SHA1(), hashes.SHA256()]
 
-	ecdsaPubXStr = packl_ctypes(public_key.public_numbers().x)
-	ecdsaPubYStr = packl_ctypes(public_key.public_numbers().y)
-	ecdsaPriStr = packl_ctypes(private_key.private_numbers().private_value)
-	ecdsaPubXStr = FixedBytes(KEY_SIZE/8, ecdsaPubXStr)
-	ecdsaPubYStr = FixedBytes(KEY_SIZE/8, ecdsaPubYStr)
-	ecdsaPriStr = FixedBytes(KEY_SIZE/8, ecdsaPriStr)
-	if options.debug >= 2:
-		dump_hex(ecdsaPubXStr, "ecdsaPubXStr: ")
-		dump_hex(ecdsaPubYStr, "ecdsaPubYStr: ")
-		dump_hex(ecdsaPriStr,  "ecdsaPriStr : ")
-	sirius_crypto.KeyDownload(target=options.target, ECDSA_x=ecdsaPubXStr, ECDSA_y=ecdsaPubYStr, ECDSA_pri=ecdsaPriStr)
+	for idx, hashAlgo in enumerate(HASH_ALGO_SIRIUS):
+		print("")
+		print_ok(">"*40)
+		print_ok("Test ECDSA with hash = %s" % hashAlgo)
 
-	#######################################################
-	# Sign functionality test on sirius
-	# let the sirius board sign the message
-	r_s = sirius_crypto.EcdsaSign(target=options.target, curve="secp256k1", hashAlgo="SHA256", message=options.message)
-	sig_r = r_s[:len(r_s)/2]
-	sig_s = r_s[len(r_s)/2:]
+		#######################################################
+		# Create key and download to board
+		# Key generation
+		private_key = ec.generate_private_key(
+			ec.SECP256R1(), default_backend()
+		)
+		public_key = private_key.public_key()
 
-	# Check the signature return from the sirius board, using native verification
-	signature = utils.encode_dss_signature(
-		CalculateBigInt(sig_r),
-		CalculateBigInt(sig_s)
-	)
-	if options.debug >= 2:
-		dump_hex(r_s, "Signature receive: ")
-	print("Using signature fom sirius, we will verify => status: ", public_key.verify(signature, options.message, ec.ECDSA(hashes.SHA256())))
+		ecdsaPubXStr = packl_ctypes(public_key.public_numbers().x)
+		ecdsaPubYStr = packl_ctypes(public_key.public_numbers().y)
+		ecdsaPriStr = packl_ctypes(private_key.private_numbers().private_value)
+		ecdsaPubXStr = FixedBytes(KEY_SIZE/8, ecdsaPubXStr)
+		ecdsaPubYStr = FixedBytes(KEY_SIZE/8, ecdsaPubYStr)
+		ecdsaPriStr = FixedBytes(KEY_SIZE/8, ecdsaPriStr)
+		if options.debug >= 2:
+			dump_hex(ecdsaPubXStr, "ecdsaPubXStr: ")
+			dump_hex(ecdsaPubYStr, "ecdsaPubYStr: ")
+			dump_hex(ecdsaPriStr,  "ecdsaPriStr : ")
+		sirius_crypto.KeyDownload(target=options.target, ECDSA_x=ecdsaPubXStr, ECDSA_y=ecdsaPubYStr, ECDSA_pri=ecdsaPriStr)
 
-	#######################################################
-	# Verification functionality test on sirius
-	# create native own signature
-	signature = private_key.sign(
-		options.message,
-		ec.ECDSA(hashes.SHA256())
-	)
-	r_s = utils.decode_dss_signature(signature)
-	sig_r_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[0]))
-	sig_s_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[1]))
-	sigCombine = sig_r_str + sig_s_str
-	if options.debug >= 2:
-		dump_hex(sig_r_str, "our sig_r_str: ")
-		dump_hex(sig_s_str, "our sig_s_str: ")
+		#######################################################
+		# Sign functionality test on sirius
+		# let the sirius board sign the message
+		r_s = sirius_crypto.EcdsaSign(target=options.target, curve="secp256k1", hashAlgo=hashAlgo, message=options.message)
+		sig_r = r_s[:len(r_s)/2]
+		sig_s = r_s[len(r_s)/2:]
 
-	# send our native signature, let the target check the signature is valid or not
-	verifyStatus = sirius_crypto.EcdsaVerify(
-		target=options.target,
-		curve="secp256k1",
-		hashAlgo="SHA256",
-		message=options.message,
-		signature=sigCombine
-	)
-	print("We sign a message using our private key, sirius should return true: ", verifyStatus)
+		# Check the signature return from the sirius board, using native verification
+		signature = utils.encode_dss_signature(
+			CalculateBigInt(sig_r),
+			CalculateBigInt(sig_s)
+		)
+		if options.debug >= 2:
+			dump_hex(r_s, "Signature receive: ")
+		print("Using signature fom sirius, we will verify => status: ",
+			public_key.verify(
+				signature,
+				options.message,
+				ec.ECDSA(HASH_ALGO_NATIVE[idx])
+			)
+		)
 
-	# Try modify one elem of signature, see if verify failed
-	sigCombine = sig_r_str + sig_s_str
-	sigNum = chr(ord(sigCombine[0]) + 1)
-	sigCombine = sigNum + sigCombine[1:]
-	verifyStatus = sirius_crypto.EcdsaVerify(
-		target=options.target,
-		curve="secp256k1",
-		hashAlgo="SHA256",
-		message=options.message,
-		signature=sigCombine
-	)
-	print("Modify a signature, sirius should return false: ", verifyStatus)
+		#######################################################
+		# Verification functionality test on sirius
+		# create native own signature
+		signature = private_key.sign(
+			options.message,
+			ec.ECDSA(HASH_ALGO_NATIVE[idx])
+		)
+		r_s = utils.decode_dss_signature(signature)
+		sig_r_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[0]))
+		sig_s_str = FixedBytes(KEY_SIZE/8, packl_ctypes(r_s[1]))
+		sigCombine = sig_r_str + sig_s_str
+		if options.debug >= 2:
+			dump_hex(sig_r_str, "our sig_r_str: ")
+			dump_hex(sig_s_str, "our sig_s_str: ")
 
+		# send our native signature, let the target check the signature is valid or not
+		verifyStatus = sirius_crypto.EcdsaVerify(
+			target=options.target,
+			curve="secp256k1",
+			hashAlgo=hashAlgo,
+			message=options.message,
+			signature=sigCombine
+		)
+		if verifyStatus != True:
+			print_err("We sign a message using our private key, sirius tell this is a invalid signature, fail")
+		else:
+			print("We sign a message using our private key, sirius tell this is a valid signature, pass")
+
+		# Try modify one elem of signature, see if verify failed
+		sigCombine = sig_r_str + sig_s_str
+		sigNum = chr(ord(sigCombine[0]) + 1)
+		sigCombine = sigNum + sigCombine[1:]
+		verifyStatus = sirius_crypto.EcdsaVerify(
+			target=options.target,
+			curve="secp256k1",
+			hashAlgo=hashAlgo,
+			message=options.message,
+			signature=sigCombine
+		)
+		if verifyStatus != False:
+			print_err("Modify a signature, sirius tell this is a valid signature, fail")
+		else:
+			print("Modify a signature, sirius tell this an invalid siganture, pass")
+
+		print_ok("<"*40)
+		print("")
 
 if __name__ == "__main__":
 	main()

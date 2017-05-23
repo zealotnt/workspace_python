@@ -74,6 +74,7 @@ def main():
 	sirius_crypto = SiriusAPICrypto(comm)
 
 	KEY_SIZE_LENGTHS = [ 1024, 2048 ]
+	HASH_SIRIUS = ["SHA1", "SHA256"]
 	HASH_ALGO = [hashes.SHA1(), hashes.SHA256()]
 	DSA_SIG_PART_LENS = [ 20, 32 ]
 
@@ -125,7 +126,7 @@ def main():
 		# #######################################################
 		# Sign the message
 		# ask the sirius to sign the message
-		r_s = sirius_crypto.DsaSign(target=options.target, hashAlgo="SHA256", message=options.message)
+		r_s = sirius_crypto.DsaSign(target=options.target, hashAlgo=HASH_SIRIUS[idx], message=options.message)
 		sig_r = r_s[:len(r_s)/2]
 		sig_s = r_s[len(r_s)/2:]
 		if options.debug >= 2:
@@ -163,11 +164,14 @@ def main():
 		# ask sirius to verify our generated signature
 		verifyStatus = sirius_crypto.DsaVerify(
 			target=options.target,
-			hashAlgo="SHA256",
+			hashAlgo=HASH_SIRIUS[idx],
 			message=options.message,
 			signature=sigCombine
 		)
-		print("We sign a message using our private key, sirius should return true: ", verifyStatus)
+		if verifyStatus != True:
+			print_err("We sign a message using our private key, return invalid signature, fail")
+		else:
+			print("We sign a message using our private key, return valid signature, pass")
 
 		# Try modify one elem of signature, see if verify failed
 		sigCombine = sig_r_str + sig_s_str
@@ -175,11 +179,14 @@ def main():
 		sigCombine = sigNum + sigCombine[1:]
 		verifyStatus = sirius_crypto.DsaVerify(
 			target=options.target,
-			hashAlgo="SHA256",
+			hashAlgo=HASH_SIRIUS[idx],
 			message=options.message,
 			signature=sigCombine
 		)
-		print("Modify a signature, sirius should return false: ", verifyStatus)
+		if verifyStatus != False:
+			print_err("Modify a signature, sirius return valid, fail")
+		else:
+			print("Modify a signature, sirius return invalid, pass")
 		print_ok("<"*40)
 		print("")
 

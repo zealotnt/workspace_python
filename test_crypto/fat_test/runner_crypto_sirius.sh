@@ -100,8 +100,6 @@ do
 	esac
 done
 
-CheckValidOption $TEST_TARGET_NAME "${TEST_TARGET_LIST[@]}"
-
 if [[ "$SERIAL_PORT" == "" ]]; then
 	echoerr "Error: you need to provide an available serial port to continue."
 	usage
@@ -111,6 +109,8 @@ if [[ "$TEST_TARGET_NAME" == "" ]]; then
 	echoinfo "No tested target specified, use upgrade '$DEFAULT_TEST_TARGET' as default"
 	TEST_TARGET_NAME=$DEFAULT_TEST_TARGET
 fi
+
+CheckValidOption $TEST_TARGET_NAME "${TEST_TARGET_LIST[@]}"
 
 TEST_SCRIPT=(
 	"sirius_trng.py"
