@@ -15,7 +15,6 @@ def get_git_root():
 	path = CURRENT_DIR
 	git_repo = git.Repo(path, search_parent_directories=True)
 	git_root = git_repo.git.rev_parse("--show-toplevel")
-	print (git_root)
 	return git_root
 sys.path.insert(0, get_git_root() + '/test_bluefinserial/bluefinserial')
 from utils import *
