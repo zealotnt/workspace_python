@@ -44,19 +44,16 @@ def main():
 						dest="target",
 						default="APP",
 						help="Choose type of target to send serial API to, any of: %s" % ', '.join(VALID_TARGET))
+	parser.add_option(  "-g", "--gendata",
+						dest="gendata",
+						default=None,
+						help="Option to generate cmac standard data, instead of running real test")
+	parser.add_option(  "--dumpStyle",
+						dest="dumpStyle",
+						default="C",
+						help="Style to dump C|raw")
+
 	(options, args) = parser.parse_args()
-
-	# Init the com port
-	try:
-		comm = BluefinserialSend(options.serial, options.baud)
-	except Exception, e:
-		print e
-		parser.print_help()
-		sys.exit(-1)
-	print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
-
-	sirius_crypto = SiriusAPICrypto(comm)
-
 
 	# K, M and T from
 	# http://csrc.nist.gov/publications/nistpubs/800-38B/Updated_CMAC_Examples.pdf
@@ -122,15 +119,53 @@ def main():
 	}
 	testCases = [testCase_E2_AES_128, testCase_E2_AES_192, testCase_E2_AES_256, testCase_S1_TDES]
 
-	for item in testCases:
-		cmac = sirius_crypto.Cmac(options.target, item["cipher"], item["K"], item["M"])
-		if cmac == item["T"]:
-			print_ok("Test case " + item["name"] + " ok")
-		else:
-			print_err("Test case " + item["name"] + " fail:")
-			dump_hex(item["T"], "Expected: ")
-			dump_hex(cmac,      "Result  : ")
+	dumpFileText = ""
+	# Just gen data, no sending command
+	if options.gendata is not None:
+		for item in testCases:
+			dumpFileText += dump_hex(
+				item["M"],
+				"%s_%s" % (item["name"], "InputMessage"),
+				preFormat=options.dumpStyle
+			)
+			dumpFileText += dump_hex(
+				item["K"],
+				"%s_%s" % (item["name"], "Key"),
+				preFormat=options.dumpStyle
+			)
+			dumpFileText += dump_hex(
+				item["T"],
+				"%s_%s" % (item["name"], "OutTag"),
+				preFormat=options.dumpStyle
+			)
+
+		dumpFileText = "#include <stdint.h>\r\n\r\n" + dumpFileText
+		print("dump ne", dumpFileText, options.gendata)
+		f = open(options.gendata, "w")
+		f.write(dumpFileText)
+		f.close()
+	# Send command, no gen data
+	else:
+		# Init the com port
+		try:
+			comm = BluefinserialSend(options.serial, options.baud)
+		except Exception, e:
+			print e
+			parser.print_help()
 			sys.exit(-1)
+		print_ok("Use " + options.serial + " with baudrate = " + str(options.baud))
+
+		sirius_crypto = SiriusAPICrypto(comm)
+
+		for item in testCases:
+			cmac = sirius_crypto.Cmac(options.target, item["cipher"], item["K"], item["M"])
+			if cmac == item["T"]:
+				print_ok("Test case " + item["name"] + " ok")
+			else:
+				print_err("Test case " + item["name"] + " fail:")
+				dump_hex(item["T"], "Expected: ")
+				dump_hex(cmac,      "Result  : ")
+				sys.exit(-1)
 
 if __name__ == "__main__":
 	main()

@@ -62,20 +62,26 @@ if [[ "$FILE_PREFIX" == "" ]]; then
 fi
 
 GEN_SCRIPT=(
-	"cmac.py"
+	"sirius_cmac.py"
 	"dsa.py"
 	"ecdsa.py"
 	"rsa.py"
 )
+GEN_OUTPUT_PRE_FLAG=(
+	"-g"	#CMAC
+	""		#DSA
+	""		#ECDSA
+	""		#RSA
+)
 GEN_ADDITIONAL_PARAM=(
-	"raw" 			#CMAC
-	"raw" 			#DSA
-	"raw"			#ECDSA
-	"raw"			#RSA
+	"--dumpStyle raw"	#CMAC
+	"raw" 				#DSA
+	"raw"				#ECDSA
+	"raw"				#RSA
 )
 
 count=${#GEN_SCRIPT[@]}
 for ((j=0; j < $count; j++)); do
 	cipher_algo_name=${GEN_SCRIPT[j]%.py}
-	python $DIR/${GEN_SCRIPT[j]} ${FILE_PREFIX}_${cipher_algo_name}.txt ${GEN_ADDITIONAL_PARAM[j]}
+	python $DIR/${GEN_SCRIPT[j]} ${GEN_OUTPUT_PRE_FLAG[j]} ${FILE_PREFIX}_${cipher_algo_name}.txt ${GEN_ADDITIONAL_PARAM[j]}
 done
