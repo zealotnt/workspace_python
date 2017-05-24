@@ -68,14 +68,14 @@ GEN_SCRIPT=(
 	"rsa.py"
 )
 GEN_ADDITIONAL_PARAM=(
-	"" 			#CMAC
-	"" 			#DSA
-	""			#ECDSA
-	""			#RSA
+	"raw" 			#CMAC
+	"raw" 			#DSA
+	"raw"			#ECDSA
+	"raw"			#RSA
 )
 
 count=${#GEN_SCRIPT[@]}
 for ((j=0; j < $count; j++)); do
 	cipher_algo_name=${GEN_SCRIPT[j]%.py}
-	python $DIR/${GEN_SCRIPT[j]} "${FILE_PREFIX}_${cipher_algo_name}.txt"
+	python $DIR/${GEN_SCRIPT[j]} ${FILE_PREFIX}_${cipher_algo_name}.txt ${GEN_ADDITIONAL_PARAM[j]}
 done

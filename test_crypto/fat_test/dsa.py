@@ -24,6 +24,8 @@ from utils import *
 
 def main():
 	dumpFileText = ""
+	dumpStyle = "C"
+	dumpStyleSupport = [ "C", "raw" ]
 	filePathSave = ""
 	SHA_FUNCS = [hashes.SHA1(), hashes.SHA256(), hashes.SHA256()]
 	KEY_LENGTHS = [1024, 2048, 3072]
@@ -31,6 +33,12 @@ def main():
 
 	if len(sys.argv) == 2:
 		filePathSave = ProcessFilePath(sys.argv[1])
+	elif len(sys.argv) == 3:
+		filePathSave = ProcessFilePath(sys.argv[1])
+		dumpStyle = sys.argv[2]
+		if dumpStyle not in dumpStyleSupport:
+			print_err("Not support type %s" % (dumpStyle))
+			sys.exit(-1)
 
 	for idx, keyLength in enumerate(KEY_LENGTHS):
 		private_key = dsa.generate_private_key(
@@ -108,7 +116,7 @@ def main():
 			dumpFileText += dump_hex(
 				item[0],
 				item[1],
-				preFormat="C"
+				preFormat=dumpStyle
 			)
 
 	if filePathSave != "":

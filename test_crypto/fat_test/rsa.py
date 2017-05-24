@@ -36,10 +36,18 @@ def randomword(length):
 
 def main():
 	dumpFileText = ""
+	dumpStyle = "C"
+	dumpStyleSupport = [ "C", "raw" ]
 	filePathSave = ""
 	KEY_LENGTHS = [512, 1024, 2048, 3072]
 	if len(sys.argv) == 2:
 		filePathSave = ProcessFilePath(sys.argv[1])
+	elif len(sys.argv) == 3:
+		filePathSave = ProcessFilePath(sys.argv[1])
+		dumpStyle = sys.argv[2]
+		if dumpStyle not in dumpStyleSupport:
+			print_err("Not support type %s" % (dumpStyle))
+			sys.exit(-1)
 
 	for keyLength in KEY_LENGTHS:
 		# Key generation
@@ -136,7 +144,7 @@ def main():
 			dumpFileText += dump_hex(
 				item[0],
 				item[1],
-				preFormat="C"
+				preFormat=dumpStyle
 			)
 
 	if filePathSave != "":

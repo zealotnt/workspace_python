@@ -26,10 +26,18 @@ from cryptography.hazmat.primitives.asymmetric import utils
 
 def main():
 	dumpFileText = ""
+	dumpStyle = "C"
+	dumpStyleSupport = [ "C", "raw" ]
 	filePathSave = ""
 	keyLength = 256
 	if len(sys.argv) == 2:
 		filePathSave = ProcessFilePath(sys.argv[1])
+	elif len(sys.argv) == 3:
+		filePathSave = ProcessFilePath(sys.argv[1])
+		dumpStyle = sys.argv[2]
+		if dumpStyle not in dumpStyleSupport:
+			print_err("Not support type %s" % (dumpStyle))
+			sys.exit(-1)
 
 	# Key generation
 	private_key = ec.generate_private_key(
@@ -82,7 +90,7 @@ def main():
 		dumpFileText += dump_hex(
 			item[0],
 			item[1],
-			preFormat="C"
+			preFormat=dumpStyle
 		)
 
 	if filePathSave != "":
