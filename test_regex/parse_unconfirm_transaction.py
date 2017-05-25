@@ -78,7 +78,7 @@ def GetLineNumber(content, fromIdx):
 			return line
 	return line
 
-def ParseNocard(content, debugLevel=0):
+def ParseNocard(fileName, content, debugLevel=0):
 	# match = re.finditer(r'Detecting card.+\[No Card\]', content)
 	match = [(m.start(0), m.end(0)) for m in re.finditer(r'Detecting card.+\[No Card\]', content)]
 	resultList = []
@@ -101,7 +101,7 @@ def ParseNocard(content, debugLevel=0):
 
 		if debugLevel > 2:
 			print ">"*80
-			print "SECTION=%d" % idx
+			print "SECTION=%d line=%d" % (idx, convertedDict["LINE_START"])
 			for idx, item in enumerate(convertedDict["DETECTING_CARD"]):
 				print idx
 				print item
@@ -147,6 +147,8 @@ def ParseNocard(content, debugLevel=0):
 		"DETECT": 0,
 		"READ": 0,
 		"WRITE": 0,
+		"AT_IDX": [],
+		"AT_LINE": []
 	}
 	unconfirmData = {
 		"TIMES": 0,
@@ -156,56 +158,56 @@ def ParseNocard(content, debugLevel=0):
 	}
 
 	for idx, item in enumerate(resultList):
-		if 1:
-			# Result for unconfirm
-			if len(item["DETECTING_CARD"]) > 1:
-				dataAtFirstDetection = item["DETECTING_CARD"][1]
-				if IsUnconfirm(dataAtFirstDetection):
-					if debugLevel > 1:
-						print("Unconfirm at SECTION=%d" % idx)
-					unconfirmData["TIMES"] += 1
-					unconfirmData["AT_IDX"].append(idx)
-					unconfirmData["AT_LINE"].append(item["LINE_START"])
-					unconfirmData["AT_ALL_IDX"].append(item["IDX_START"])
-
-			# Result for success
-			if len(item["DETECTING_CARD"]) >= 3:
+		# Result for unconfirm
+		if len(item["DETECTING_CARD"]) > 1:
+			dataAtFirstDetection = item["DETECTING_CARD"][1]
+			if IsUnconfirm(dataAtFirstDetection):
 				if debugLevel > 1:
-					print("Success at SECTION=%d" % idx)
+					print("Unconfirm at SECTION=%d" % idx)
+				unconfirmData["TIMES"] += 1
+				unconfirmData["AT_IDX"].append(idx)
+				unconfirmData["AT_LINE"].append(item["LINE_START"])
+				unconfirmData["AT_ALL_IDX"].append(item["IDX_START"])
 
-				dataAtFirstSuccess = item["DETECTING_CARD"][1]
-				timingData = ParseTime(dataAtFirstSuccess)
-				if len(timingData) != 3:
-					continue
-				if debugLevel > 1:
-					print (timingData)
+		# Result for success
+		if len(item["DETECTING_CARD"]) >= 2:
+			dataAtFirstSuccess = item["DETECTING_CARD"][1]
+			timingData = ParseTime(dataAtFirstSuccess)
+			if len(timingData) != 3:
+				print ("Section %d" % idx)
+				continue
+			if debugLevel > 1:
+				print("Success at SECTION=%d, Timing data: " % idx, timingData)
 
-				if maxNumbers["DETECT"]["VAL"] <= timingData[0]:
-					maxNumbers["DETECT"]["VAL"] = timingData[0]
-				if minNumbers["DETECT"]["VAL"] >= timingData[0]:
-					minNumbers["DETECT"]["VAL"] = timingData[0]
+			if maxNumbers["DETECT"]["VAL"] <= timingData[0]:
+				maxNumbers["DETECT"]["VAL"] = timingData[0]
+			if minNumbers["DETECT"]["VAL"] >= timingData[0]:
+				minNumbers["DETECT"]["VAL"] = timingData[0]
 
-				if maxNumbers["READ"]["VAL"] <= timingData[1]:
-					maxNumbers["READ"]["VAL"] = timingData[1]
-				if minNumbers["READ"]["VAL"] >= timingData[1]:
-					minNumbers["READ"]["VAL"] = timingData[1]
+			if maxNumbers["READ"]["VAL"] <= timingData[1]:
+				maxNumbers["READ"]["VAL"] = timingData[1]
+			if minNumbers["READ"]["VAL"] >= timingData[1]:
+				minNumbers["READ"]["VAL"] = timingData[1]
 
-				if maxNumbers["WRITE"]["VAL"] <= timingData[2]:
-					maxNumbers["WRITE"]["VAL"] = timingData[2]
-				if minNumbers["WRITE"]["VAL"] >= timingData[2]:
-					minNumbers["WRITE"]["VAL"] = timingData[2]
+			if maxNumbers["WRITE"]["VAL"] <= timingData[2]:
+				maxNumbers["WRITE"]["VAL"] = timingData[2]
+			if minNumbers["WRITE"]["VAL"] >= timingData[2]:
+				minNumbers["WRITE"]["VAL"] = timingData[2]
 
-				avgNumbers["TIMES"] += 1
-				avgNumbers["TOTAL_DETECT"] += timingData[0]
-				avgNumbers["TOTAL_READ"] += timingData[1]
-				avgNumbers["TOTAL_WRITE"] += timingData[2]
+			avgNumbers["TIMES"] += 1
+			avgNumbers["TOTAL_DETECT"] += timingData[0]
+			avgNumbers["TOTAL_READ"] += timingData[1]
+			avgNumbers["TOTAL_WRITE"] += timingData[2]
+
+			avgNumbers["AT_LINE"].append(item["LINE_START"])
+			avgNumbers["AT_IDX"].append(item["IDX_START"])
 
 	avgNumbers = CalAverate(avgNumbers)
 
 	print ("")
 	print ("")
-	print ("RESULT")
-	print ("SUCCESS %d times" % avgNumbers["TIMES"])
+	print ("RESULT of %s" % (fileName))
+	print ("SUCCESS %d times at lines" % avgNumbers["TIMES"], avgNumbers["AT_LINE"])
 	print ("DETECT: MAX = %d, MIN = %d, AVG = %d" % (
 		maxNumbers["DETECT"]["VAL"],
 		minNumbers["DETECT"]["VAL"],
@@ -249,12 +251,7 @@ def main():
 	# Break the result into chunk of Nocard detected
 	# we should have a list
 	# print fileContent
-	noCardList = ParseNocard(fileContent, debugLevel=int(options.debugLevel))
-	# ParseUnconfirm(noCardList)
-
-	#########################################################
-	# The next one of Nocard detection, if it detect CEPAS, and has a code C0
-	# then it is an unconfirm transaction
+	noCardList = ParseNocard(options.file, fileContent, debugLevel=int(options.debugLevel))
 
 if __name__ == "__main__":
 	main()
