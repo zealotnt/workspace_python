@@ -7,7 +7,6 @@ import os
 import re
 import time
 import sys
-import serial
 import struct
 import inspect
 from optparse import OptionParser, OptionGroup
@@ -55,9 +54,12 @@ def IsUnconfirm(content):
 
 def CalAverate(inputDat):
 	times = inputDat["TIMES"]
-	inputDat["DETECT"] = inputDat["TOTAL_DETECT"] / times
-	inputDat["READ"] = inputDat["TOTAL_READ"] / times
-	inputDat["WRITE"] = inputDat["TOTAL_WRITE"] / times
+	if times != 0:
+		inputDat["DETECT"] = inputDat["TOTAL_DETECT"] / times
+		inputDat["READ"] = inputDat["TOTAL_READ"] / times
+		inputDat["WRITE"] = inputDat["TOTAL_WRITE"] / times
+	else:
+		print("No success, no average")
 	return inputDat
 
 def ParseTime(content):
@@ -72,8 +74,9 @@ def ParseTime(content):
 def GetLineNumber(content, fromIdx):
 	line = 0
 	for idx, char in enumerate(content):
-		if char == '\r':
+		if char == '\n':
 			line += 1
+
 		if idx >= fromIdx:
 			return line
 	return line
@@ -99,17 +102,19 @@ def ParseNocard(fileName, content, debugLevel=0):
 		convertedDict["IDX_END"] = endIdx
 		resultList.append(convertedDict)
 
-		if debugLevel > 2:
-			print ">"*80
-			print "SECTION=%d line=%d" % (idx, convertedDict["LINE_START"])
+		if debugLevel >= 2:
+			print (">"*80)
+			print ("SECTION=%d line=%d" % (idx, convertedDict["LINE_START"]))
 			for idx, item in enumerate(convertedDict["DETECTING_CARD"]):
-				print idx
-				print item
-			print "<"*80
-			print ""
-			print ""
-			print ""
+				print (idx)
+				print (item)
+			print ("<"*80)
+			print ("")
+			print ("")
+			print ("")
+	return resultList
 
+def PrintResult(fileName, resultList, debugLevel=0):
 	# Print the result
 	maxNumbers = {
 		"DETECT": {
@@ -127,16 +132,16 @@ def ParseNocard(fileName, content, debugLevel=0):
 	}
 	minNumbers = {
 		"DETECT": {
-			"IDX": 100,
-			"VAL": 100,
+			"IDX": 100000,
+			"VAL": 100000,
 		},
 		"READ": {
-			"IDX": 100,
-			"VAL": 100,
+			"IDX": 100000,
+			"VAL": 100000,
 		},
 		"WRITE": {
-			"IDX": 100,
-			"VAL": 100,
+			"IDX": 100000,
+			"VAL": 100000,
 		},
 	}
 	avgNumbers = {
@@ -162,22 +167,24 @@ def ParseNocard(fileName, content, debugLevel=0):
 		if len(item["DETECTING_CARD"]) > 1:
 			dataAtFirstDetection = item["DETECTING_CARD"][1]
 			if IsUnconfirm(dataAtFirstDetection):
-				if debugLevel > 1:
-					print("Unconfirm at SECTION=%d" % idx)
+				if debugLevel >= 1:
+					print("Unconfirm at SECTION=%d line=%d" % (idx, item["LINE_START"]))
 				unconfirmData["TIMES"] += 1
 				unconfirmData["AT_IDX"].append(idx)
 				unconfirmData["AT_LINE"].append(item["LINE_START"])
 				unconfirmData["AT_ALL_IDX"].append(item["IDX_START"])
+				continue
 
 		# Result for success
 		if len(item["DETECTING_CARD"]) >= 2:
 			dataAtFirstSuccess = item["DETECTING_CARD"][1]
 			timingData = ParseTime(dataAtFirstSuccess)
 			if len(timingData) != 3:
-				print ("Section %d" % idx)
+				if debugLevel >= 1:
+					print ("Section %d" % idx)
 				continue
-			if debugLevel > 1:
-				print("Success at SECTION=%d, Timing data: " % idx, timingData)
+			if debugLevel >= 1:
+				print("Success at SECTION=%d line=%d Timing data: " % (idx, item["LINE_START"]), timingData)
 
 			if maxNumbers["DETECT"]["VAL"] <= timingData[0]:
 				maxNumbers["DETECT"]["VAL"] = timingData[0]
@@ -205,24 +212,26 @@ def ParseNocard(fileName, content, debugLevel=0):
 	avgNumbers = CalAverate(avgNumbers)
 
 	print ("")
-	print ("")
 	print ("RESULT of %s" % (fileName))
+	print ("")
 	print ("SUCCESS %d times at lines" % avgNumbers["TIMES"], avgNumbers["AT_LINE"])
-	print ("DETECT: MAX = %d, MIN = %d, AVG = %d" % (
+	print ("DETECT: MAX = %4d, MIN = %4d, AVG = %4d" % (
 		maxNumbers["DETECT"]["VAL"],
 		minNumbers["DETECT"]["VAL"],
 		avgNumbers["DETECT"])
 	)
-	print ("READ: MAX = %d, MIN = %d, AVG = %d" % (
+	print ("READ:   MAX = %4d, MIN = %4d, AVG = %4d" % (
 		maxNumbers["READ"]["VAL"],
 		minNumbers["READ"]["VAL"],
 		avgNumbers["READ"])
 	)
-	print ("WRITE: MAX = %d, MIN = %d, AVG = %d" % (
+	print ("WRITE:  MAX = %4d, MIN = %4d, AVG = %4d" % (
 		maxNumbers["WRITE"]["VAL"],
 		minNumbers["WRITE"]["VAL"],
 		avgNumbers["WRITE"])
 	)
+
+	print ("")
 	print ("UNCONFIRM %d times, at lines: " % (unconfirmData["TIMES"]), unconfirmData["AT_LINE"])
 	return resultList
 
@@ -243,15 +252,21 @@ def main():
 
 	#########################################################
 	# Open and read the file
-	f = open(options.file, 'rb')
+	f = open(options.file, 'r')
 	fileContent = f.read()
 	f.close()
+
+	# replace the weird line endings
+	fileContent = fileContent.replace('\r\n', '\n')
+	fileContent = fileContent.replace('\n\r', '\n')
+	fileContent = fileContent.replace('\r', '\n')
 
 	#########################################################
 	# Break the result into chunk of Nocard detected
 	# we should have a list
 	# print fileContent
 	noCardList = ParseNocard(options.file, fileContent, debugLevel=int(options.debugLevel))
+	PrintResult(options.file, noCardList, debugLevel=int(options.debugLevel))
 
 if __name__ == "__main__":
 	main()
