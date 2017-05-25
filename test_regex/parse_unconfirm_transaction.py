@@ -17,6 +17,8 @@ class ResultParser():
 	def DictModel():
 		return {
 			"ALL": "",
+			"LINE_START": 0,
+			"LINE_END": 0,
 			"IDX_START": 0,
 			"IDX_END": 0,
 			"IS_SUCCESS": True,
@@ -67,6 +69,15 @@ def ParseTime(content):
 		timeData.append(int(item[2]))
 	return timeData
 
+def GetLineNumber(content, fromIdx):
+	line = 0
+	for idx, char in enumerate(content):
+		if char == '\r':
+			line += 1
+		if idx >= fromIdx:
+			return line
+	return line
+
 def ParseNocard(content, debugLevel=0):
 	# match = re.finditer(r'Detecting card.+\[No Card\]', content)
 	match = [(m.start(0), m.end(0)) for m in re.finditer(r'Detecting card.+\[No Card\]', content)]
@@ -84,6 +95,7 @@ def ParseNocard(content, debugLevel=0):
 		convertedDict["DETECTING_CARD"] = ParseDetectingCard(allLog)
 		convertedDict["ALL"] = allLog
 		convertedDict["IDX_START"] = startIdx
+		convertedDict["LINE_START"] = GetLineNumber(content, startIdx)
 		convertedDict["IDX_END"] = endIdx
 		resultList.append(convertedDict)
 
@@ -138,7 +150,9 @@ def ParseNocard(content, debugLevel=0):
 	}
 	unconfirmData = {
 		"TIMES": 0,
-		"AT": []
+		"AT_ALL_IDX": [],
+		"AT_IDX": [],
+		"AT_LINE": []
 	}
 
 	for idx, item in enumerate(resultList):
@@ -150,7 +164,9 @@ def ParseNocard(content, debugLevel=0):
 					if debugLevel > 1:
 						print("Unconfirm at SECTION=%d" % idx)
 					unconfirmData["TIMES"] += 1
-					unconfirmData["AT"].append(idx)
+					unconfirmData["AT_IDX"].append(idx)
+					unconfirmData["AT_LINE"].append(item["LINE_START"])
+					unconfirmData["AT_ALL_IDX"].append(item["IDX_START"])
 
 			# Result for success
 			if len(item["DETECTING_CARD"]) >= 3:
@@ -205,7 +221,7 @@ def ParseNocard(content, debugLevel=0):
 		minNumbers["WRITE"]["VAL"],
 		avgNumbers["WRITE"])
 	)
-	print ("UNCONFIRM %d times, at " % (unconfirmData["TIMES"]), unconfirmData["AT"])
+	print ("UNCONFIRM %d times, at lines: " % (unconfirmData["TIMES"]), unconfirmData["AT_LINE"])
 	return resultList
 
 def main():
