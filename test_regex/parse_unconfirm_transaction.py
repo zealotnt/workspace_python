@@ -25,6 +25,7 @@ class ResultParser():
 			"IS_READ_ERROR": False,
 			"DETECTING_CARD": [],
 		}
+
 	@staticmethod
 	def LineDictModel(line, start, end):
 		"""
@@ -37,6 +38,51 @@ class ResultParser():
 			"IDX_END": end,
 		}
 
+	@staticmethod
+	def BoundaryNumbers(value):
+		"""
+		"""
+		return {
+			"DETECT": {
+				"IDX": value,
+				"VAL": value,
+			},
+			"READ": {
+				"IDX": value,
+				"VAL": value,
+			},
+			"WRITE": {
+				"IDX": value,
+				"VAL": value,
+			},
+		}
+
+	@staticmethod
+	def AverageNumbers():
+		"""
+		"""
+		return {
+			"TIMES": 0,
+			"TOTAL_DETECT": 0,
+			"TOTAL_READ": 0,
+			"TOTAL_WRITE": 0,
+			"DETECT": 0,
+			"READ": 0,
+			"WRITE": 0,
+			"AT_IDX": [],
+			"AT_LINE": []
+		}
+
+	@staticmethod
+	def UnconfirmNumbers():
+		"""
+		"""
+		return {
+			"TIMES": 0,
+			"AT_ALL_IDX": [],
+			"AT_IDX": [],
+			"AT_LINE": []
+		}
 # def ParseUnconfirm(noCardList):
 # 	for idx, item in enumerate(noCardList):
 # 		# Break the all log into list of "Detecting Card"
@@ -152,51 +198,10 @@ def ParseNocard(fileName, content, debugLevel=0):
 
 def PrintResult(fileName, resultList, debugLevel=0):
 	# Print the result
-	maxNumbers = {
-		"DETECT": {
-			"IDX": 0,
-			"VAL": 0,
-		},
-		"READ": {
-			"IDX": 0,
-			"VAL": 0,
-		},
-		"WRITE": {
-			"IDX": 0,
-			"VAL": 0,
-		},
-	}
-	minNumbers = {
-		"DETECT": {
-			"IDX": 100000,
-			"VAL": 100000,
-		},
-		"READ": {
-			"IDX": 100000,
-			"VAL": 100000,
-		},
-		"WRITE": {
-			"IDX": 100000,
-			"VAL": 100000,
-		},
-	}
-	avgNumbers = {
-		"TIMES": 0,
-		"TOTAL_DETECT": 0,
-		"TOTAL_READ": 0,
-		"TOTAL_WRITE": 0,
-		"DETECT": 0,
-		"READ": 0,
-		"WRITE": 0,
-		"AT_IDX": [],
-		"AT_LINE": []
-	}
-	unconfirmData = {
-		"TIMES": 0,
-		"AT_ALL_IDX": [],
-		"AT_IDX": [],
-		"AT_LINE": []
-	}
+	maxNumbers = ResultParser.BoundaryNumbers(0)
+	minNumbers = ResultParser.BoundaryNumbers(100000)
+	avgNumbers = ResultParser.AverageNumbers()
+	unconfirmData = ResultParser.UnconfirmNumbers()
 
 	for idx, item in enumerate(resultList):
 		# Result for unconfirm
