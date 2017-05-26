@@ -25,6 +25,17 @@ class ResultParser():
 			"IS_READ_ERROR": False,
 			"DETECTING_CARD": [],
 		}
+	@staticmethod
+	def LineDictModel(line, start, end):
+		"""
+		This dict will be parsed from all log
+		This will gives with specific the StartIndex and EndIndex of each Line number
+		"""
+		return {
+			"LINE": line,
+			"IDX_START": start,
+			"IDX_END": end,
+		}
 
 # def ParseUnconfirm(noCardList):
 # 	for idx, item in enumerate(noCardList):
@@ -71,7 +82,29 @@ def ParseTime(content):
 		timeData.append(int(item[2]))
 	return timeData
 
-def GetLineNumber(content, fromIdx):
+def ParseLineDictData(content):
+	ret = []
+	startIdx = 0
+	endIdx = 0
+	lastStartIdx = 0
+	lineNumber = 1
+	for idx, char in enumerate(content):
+		if char == '\n':
+			endIdx = idx
+			ret.append(ResultParser.LineDictModel(lineNumber, startIdx, endIdx))
+			# Update the values for next line
+			lineNumber += 1
+			startIdx = endIdx + 1
+	return ret
+
+def GetLineNumberFromLineDict(lineDict, fromIdx):
+	for item in lineDict:
+		if item["IDX_START"] <= fromIdx:
+			if item["IDX_END"] >= fromIdx:
+				return item["LINE"]
+	return 0
+
+def GetLineNumberFromAllLog(content, fromIdx):
 	line = 0
 	for idx, char in enumerate(content):
 		if char == '\n':
@@ -85,7 +118,9 @@ def ParseNocard(fileName, content, debugLevel=0):
 	# match = re.finditer(r'Detecting card.+\[No Card\]', content)
 	match = [(m.start(0), m.end(0)) for m in re.finditer(r'Detecting card.+\[No Card\]', content)]
 	resultList = []
+	linesData = ParseLineDictData(content)
 	# print match
+
 	for idx, item in enumerate(match):
 		convertedDict = ResultParser.DictModel()
 		startIdx = item[0]
@@ -98,7 +133,8 @@ def ParseNocard(fileName, content, debugLevel=0):
 		convertedDict["DETECTING_CARD"] = ParseDetectingCard(allLog)
 		convertedDict["ALL"] = allLog
 		convertedDict["IDX_START"] = startIdx
-		convertedDict["LINE_START"] = GetLineNumber(content, startIdx)
+		# convertedDict["LINE_START"] = GetLineNumberFromAllLog(content, startIdx)
+		convertedDict["LINE_START"] = GetLineNumberFromLineDict(linesData, startIdx)
 		convertedDict["IDX_END"] = endIdx
 		resultList.append(convertedDict)
 
