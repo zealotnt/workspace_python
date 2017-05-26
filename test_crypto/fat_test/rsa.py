@@ -26,6 +26,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from Crypto.PublicKey import RSA
 
 # [Source](http://stackoverflow.com/questions/2030053/random-strings-in-python)
 def randomword(length):
@@ -61,48 +62,12 @@ def main():
 
 		# Encrypt message
 		message = b"encrypted data"# randomword(keyLength/8)
-		ciphertext = public_key.encrypt(
-			message,
-			padding.OAEP(
-				mgf=padding.MGF1(algorithm=hashes.SHA1()),
-				algorithm=hashes.SHA1(),
-				label=None
-			)
+		pubkey_tup = (
+			private_key.private_numbers().public_numbers.n,
+			long(private_key.private_numbers().public_numbers.e)
 		)
-
-		# Decrypt message
-		plaintext = private_key.decrypt(
-			ciphertext,
-			padding.OAEP(
-				mgf=padding.MGF1(algorithm=hashes.SHA1()),
-				algorithm=hashes.SHA1(),
-				label=None
-			)
-		)
-		plaintext == message
-
-
-		# Sign message
-		signature = private_key.sign(
-			message,
-			padding.PSS(
-				mgf=padding.MGF1(hashes.SHA256()),
-				salt_length=padding.PSS.MAX_LENGTH
-			),
-			hashes.SHA256()
-		)
-
-		# Verify message
-		public_key.verify(
-			signature,
-			message,
-			padding.PSS(
-				mgf=padding.MGF1(hashes.SHA256()),
-				salt_length=padding.PSS.MAX_LENGTH
-			),
-			hashes.SHA256()
-		)
-
+		puc_key_2ndframework = RSA.construct(pubkey_tup)
+		ciphertext = puc_key_2ndframework.encrypt(plain_input, keySize)
 
 		# Dump hex value
 		print("\r\nHex value")
