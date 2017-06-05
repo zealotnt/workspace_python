@@ -264,6 +264,10 @@ class ResultParser():
 					ops = i1[2]
 				if "verify" in method:
 					ops = i1[3]
+				if "private" in method:
+					ops = i1[2]
+				if "public" in method:
+					ops = i1[3]
 
 			if keySize != keySize_2nd:
 				print("keySize != keySize_2nd, something error !!!")
@@ -463,7 +467,7 @@ def main():
 		publicTable.AddRow(publicTableRow)
 
 	# Thirdly, generate the ecdhTable
-	ecdhTableLayout = ResultParser.MarkdownTableLayoutModel()
+	ecdhTableLayout = ResultParser.MarkdownTableLayoutModel(isKey=True, onlySw=True)
 	ecdhTable = MardownTableGenerator()
 	ecdhTable.CreateTable(ecdhTableLayout)
 	for idx, item in enumerate(ecdhResultSoft):
@@ -472,9 +476,9 @@ def main():
 			item["KeySize"],
 			item["TimeRunning"],
 			item["ActualTime"],
-			ecdhResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			ecdhResultHard[idx]["ResultTimes"]]
+			item["Ops"],
+		]
 		ecdhTable.AddRow(ecdhTableRow)
 
 	if options.dump == True:
