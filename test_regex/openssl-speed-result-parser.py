@@ -7,8 +7,6 @@ import os
 import re
 import time
 import sys
-import serial
-import struct
 import inspect
 from optparse import OptionParser, OptionGroup
 
@@ -67,19 +65,74 @@ class ResultParser():
 	@staticmethod
 	def DictModel():
 		return {
-			"Method": "",
-			"BlockSize": "",
-			"KeySize": "",
-			"TimeRunning": "",
-			"ActualTime": "",
-			"ResultTimes": ""
+			"Method": "",			# 0
+			"BlockSize": "",		# 1
+			"KeySize": "",			# 2
+			"TimeRunning": "",		# 3
+			"ActualTime": "",		# 4
+			"ResultTimes": "",		# 5
+			"Ops": "",				# 6
 		}
 
 	@staticmethod
-	def ParseNonPublicResult(content):
+	def MarkdownTableLayoutModel(isKey=False, onlySw=False):
+		unit = "Block Size"
+		if isKey == True:
+			unit = "Key Size"
+		if onlySw == True:
+			return [
+				"Method",
+				unit,
+				"Running time(s)",
+				"CPU running time(s) Software crypto",
+				"Number of encodings Software crypto",
+				"Throughput Software crypto",
+			]
+		return [
+			"Method",
+			unit,
+			"Running time(s)",
+			"CPU running time(s) Software crypto",
+			"CPU running time(s) Hardware crypto",
+			"Number of encodings Software crypto",
+			"Number of encodings Hardware crypto",
+			"Throughput Software crypto",
+			"Throughput Hardware crypto"
+		]
+
+	@staticmethod
+	def GetOpsNonPublicContent(content):
+		upperFilter = "The 'numbers' are in 1000s of bytes per second processed."
+		belowFilter = "sign    verify    sign/s verify/s"
+		if upperFilter in content:
+			upperIdx = content.index(upperFilter)
+		else:
+			return ""
+		if belowFilter in content:
+			belowIdx = content.index(belowFilter)
+		else:
+			return ""
+		return content[upperIdx:belowIdx]
+
+	@staticmethod
+	def ParseNonPublicResult(content, debugLevel=0):
 		# Some non-public key cryptography parser
 		#                           #0       #1      #2                 #3   #4          #5
 		match = re.findall(r'Doing (.+) for (.+) on (.+) size blocks: (\d+) (.+)\'s in ([\d.]+)s', content)
+
+		contentOps = ResultParser.GetOpsNonPublicContent(content)
+		# Ops for non-public key parser
+		#                            #0             #1               #2                #3           #4               #5
+		#                            method         16B              64B               256B         1024B            8192B
+		# matchOps = re.findall(r'^([\w\d()\.]+)\s+', content)
+		matchOps = re.findall(
+			r'^([\w\d()-\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)',
+			contentOps,
+			re.MULTILINE
+		)
+		if debugLevel >= 2:
+			print (contentOps)
+			print (matchOps)
 		resultList = []
 		for item in match:
 			convertedDict = ResultParser.DictModel()
@@ -89,6 +142,20 @@ class ResultParser():
 			resultTimes = item[3]
 			method_2nd = item[4]
 			actualTime = item[5]
+			ops = ""
+			for i1 in matchOps:
+				if i1[0] != method:
+					continue
+				if "16" == blockSize:
+					ops = i1[1]
+				if "64" == blockSize:
+					ops = i1[2]
+				if "256" == blockSize:
+					ops = i1[3]
+				if "1024" == blockSize:
+					ops = i1[4]
+				if "8192" == blockSize:
+					ops = i1[5]
 			if method != method_2nd:
 				print ("method != method_2nd, something error !!!")
 				continue
@@ -98,14 +165,85 @@ class ResultParser():
 			convertedDict["TimeRunning"] = timeRunning
 			convertedDict["ActualTime"] = actualTime
 			convertedDict["ResultTimes"] = resultTimes
+			convertedDict["Ops"] = ops
 			resultList.append(convertedDict)
 		return resultList
 
 	@staticmethod
-	def ParsePublicResult(content):
+	def GetOpsPublicContent(content):
+		"""
+		Because each public crypto has its own section in "sign    verify    sign/s verify/s" `seperator`
+		This function will return a list of these section
+		"""
+		seperator = "sign    verify    sign/s verify/s"
+		idx = 0
+		listIdx = []
+		result = []
+		while True:
+			if content.find(seperator, idx) != -1:
+				idx = content.find(seperator, idx)
+				listIdx.append(idx)
+				idx += 1
+			else:
+				break
+		for i, idx in enumerate(listIdx):
+			if i != len(listIdx) - 1:
+				result.append(content[idx:listIdx[i+1]])
+			else:
+				result.append(content[idx:])
+		return result
+
+	@staticmethod
+	def ParsePublicResult(content, debugLevel=0):
 		# Parse the public key cryptography result
 		#                           #0        #1           #2      #3   #4       #5         $6
 		match = re.findall(r'Doing (\d+) bit (.+)\'s for (\d+)s: (\d+) (\d+) bit (.+) in ([\d\.]+)s', content)
+
+		matchOpsFinal = []
+		contentOps = ResultParser.GetOpsPublicContent(content)
+		if debugLevel >= 3:
+			print ("contentOps list:")
+			print (">"*70)
+			for item in contentOps:
+				print (item)
+			print ("<"*70)
+		for contentOpsValue in contentOps:
+			# This parser for rsa, dsa
+			matchOps = re.findall(
+				#   #0    #1          #2         #3           #4           #5
+				#  method  keysize    sign      verify       sign_ops     verify_ops
+				r'^(\w+)\s+(\d+) bits ([\d\.]+)s ([\d\.]+)s\s+([\d\.]+)\s+([\d\.]+)$',
+				contentOpsValue,
+				re.MULTILINE
+			)
+			if matchOps != []:
+				for i1 in matchOps:
+					if debugLevel >= 2:
+						print (i1)
+					# method, block, sign_ops, verify_ops
+					l1 = [i1[0], i1[1], i1[4], i1[5]]
+					matchOpsFinal.append(l1)
+
+			# This parser for ecdsa
+			matchOps = re.findall(
+				#     #0          #1              #2            #3          #4           #5
+				#     keysize     method          sign          verify      sign_ops     verify_ops
+				r'^\s+(\d+) bit ([\w]+)[()\d\w\s]+\s+([\d\.]+)s\s+([\d\.]+)s\s+([\d\.]+)\s+([\d\.]+)$',
+				contentOpsValue,
+				re.MULTILINE
+			)
+			if matchOps != []:
+				for i1 in matchOps:
+					if debugLevel >= 2:
+						print (i1)
+					# method, block, sign_ops, verify_ops
+					l1 = [i1[1], i1[0], i1[4], i1[5]]
+					matchOpsFinal.append(l1)
+		if debugLevel >= 3:
+			print ("matchOpsFinal list:")
+			for item in matchOpsFinal:
+				print (item)
+
 		resultList = []
 		for item in match:
 			convertedDict = ResultParser.DictModel()
@@ -116,6 +254,21 @@ class ResultParser():
 			keySize_2nd = item[4]
 			method_2nd = item[5]
 			actualTime = item[6]
+			ops = ""
+			for i1 in matchOpsFinal:
+				if keySize != i1[1]:
+					continue
+				if i1[0] not in method:
+					continue
+				if "sign" in method:
+					ops = i1[2]
+				if "verify" in method:
+					ops = i1[3]
+				if "private" in method:
+					ops = i1[2]
+				if "public" in method:
+					ops = i1[3]
+
 			if keySize != keySize_2nd:
 				print("keySize != keySize_2nd, something error !!!")
 				continue
@@ -125,11 +278,12 @@ class ResultParser():
 			convertedDict["TimeRunning"] = timeRunning
 			convertedDict["ActualTime"] = actualTime
 			convertedDict["ResultTimes"] = resultTimes
+			convertedDict["Ops"] = ops
 			resultList.append(convertedDict)
 		return resultList
 
 	@staticmethod
-	def ParseECDHResult(content):
+	def ParseECDHResult(content, debugLevel=0):
 		# Parse the ECDH
 		#                           #0         #1          #2      #3    #4        #5           #6
 		match = re.findall(r'Doing (\d+) bit  (.+)\'s for (\d+)s: (\d+) (\d+)-bit (.+) ops in ([\d\.]+)s', content)
@@ -209,6 +363,10 @@ def main():
 						action="store_true",
 						default=False,
 						help="Dump result to stdout")
+	parser.add_option(  "--debug",
+						dest="debugLevel",
+						default="0",
+						help="Dump result to stdout")
 	(options, args) = parser.parse_args()
 
 	#########################################################
@@ -236,40 +394,50 @@ def main():
 	if not os.path.isfile(fileHard):
 		print("File path %s not found" % (fileHard))
 		sys.exit(1)
+	debugLevel = int(options.debugLevel)
 
 	#########################################################
 	# Open and read the file
-	f = open(fileSoft, 'rb')
+	f = open(fileSoft, 'rU')
 	fileContentSoft = f.read()
 	f.close()
-	f = open(fileHard, 'rb')
+	f = open(fileHard, 'rU')
 	fileContentHard = f.read()
 	f.close()
 
 	#########################################################
 	# Now create the result
-	nonPublicResultSoft = ResultParser.ParseNonPublicResult(fileContentSoft)
-	publicResultSoft = ResultParser.ParsePublicResult(fileContentSoft)
-	ecdhResultSoft = ResultParser.ParseECDHResult(fileContentSoft)
+	nonPublicResultSoft = ResultParser.ParseNonPublicResult(fileContentSoft, debugLevel=debugLevel)
+	publicResultSoft = ResultParser.ParsePublicResult(fileContentSoft, debugLevel=debugLevel)
+	ecdhResultSoft = ResultParser.ParseECDHResult(fileContentSoft, debugLevel=debugLevel)
 
-	nonPublicResultHard = ResultParser.ParseNonPublicResult(fileContentHard)
-	publicResultHard = ResultParser.ParsePublicResult(fileContentHard)
-	ecdhResultHard = ResultParser.ParseECDHResult(fileContentHard)
+	nonPublicResultHard = ResultParser.ParseNonPublicResult(fileContentHard, debugLevel=debugLevel)
+	publicResultHard = ResultParser.ParsePublicResult(fileContentHard, debugLevel=debugLevel)
+	ecdhResultHard = ResultParser.ParseECDHResult(fileContentHard, debugLevel=debugLevel)
 
 	#########################################################
 	# Now generate the tables
 	# Firstly, generate the nonPublicTable
-	nonPublicTableLayout =[
-		"Method",
-		"Block Size",
-		"Time Running",
-		"Actual Time Soft",
-		"Actual Time Hard",
-		"Result Times Soft",
-		"Result Times Hard"]
+	nonPublicTableLayout = ResultParser.MarkdownTableLayoutModel()
 	nonPublicTable = MardownTableGenerator()
 	nonPublicTable.CreateTable(nonPublicTableLayout)
 	for idx, item in enumerate(nonPublicResultSoft):
+		# Filter the row that software and hardware don't have much differences between CPU usage time
+		diffAbs = abs(float(nonPublicResultHard[idx]["ActualTime"]) - float(item["ActualTime"]))
+		diffPercent = diffAbs / float(item["ActualTime"]) * 100
+		# hw1: 0.5
+		# sw1: 3
+		# diff1: 2.5
+		# percent1: 83.3%
+		#
+		# hw2: 3
+		# sw2: 3
+		# diff2: 0
+		# percent2: 0%
+		if diffPercent <= 10:
+			if debugLevel >= 1:
+				print ("Ignore method %s, reason: no diff between hw and sw" % item["Method"])
+			continue
 		nonPublicTableRow = [
 			item["Method"],
 			item["BlockSize"],
@@ -277,18 +445,14 @@ def main():
 			item["ActualTime"],
 			nonPublicResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			nonPublicResultHard[idx]["ResultTimes"]]
+			nonPublicResultHard[idx]["ResultTimes"],
+			item["Ops"],
+			nonPublicResultHard[idx]["Ops"],
+		]
 		nonPublicTable.AddRow(nonPublicTableRow)
 
 	# Secondly, generate the publicTable
-	publicTableLayout =[
-		"Method",
-		"Key Size",
-		"Time Running",
-		"Actual Time Soft",
-		"Actual Time Hard",
-		"Result Times Soft",
-		"Result Times Hard"]
+	publicTableLayout = ResultParser.MarkdownTableLayoutModel(isKey=True, onlySw=True)
 	publicTable = MardownTableGenerator()
 	publicTable.CreateTable(publicTableLayout)
 	for idx, item in enumerate(publicResultSoft):
@@ -297,20 +461,13 @@ def main():
 			item["KeySize"],
 			item["TimeRunning"],
 			item["ActualTime"],
-			publicResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			publicResultHard[idx]["ResultTimes"]]
+			item["Ops"],
+		]
 		publicTable.AddRow(publicTableRow)
 
 	# Thirdly, generate the ecdhTable
-	ecdhTableLayout =[
-		"Method",
-		"Key Size",
-		"Time Running",
-		"Actual Time Soft",
-		"Actual Time Hard",
-		"Result Times Soft",
-		"Result Times Hard"]
+	ecdhTableLayout = ResultParser.MarkdownTableLayoutModel(isKey=True, onlySw=True)
 	ecdhTable = MardownTableGenerator()
 	ecdhTable.CreateTable(ecdhTableLayout)
 	for idx, item in enumerate(ecdhResultSoft):
@@ -319,9 +476,9 @@ def main():
 			item["KeySize"],
 			item["TimeRunning"],
 			item["ActualTime"],
-			ecdhResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			ecdhResultHard[idx]["ResultTimes"]]
+			item["Ops"],
+		]
 		ecdhTable.AddRow(ecdhTableRow)
 
 	if options.dump == True:

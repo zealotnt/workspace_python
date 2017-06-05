@@ -85,6 +85,9 @@ class BluefinserialCommand():
 	pkt = ''
 	TARGET_APPLICATION = 0xC5
 	TARGET_RF = 0x35
+	SURISDK_VERSION = 0x03
+	SURIBL_VERSION = 0x02
+	PN5180_VERSION = 0x04
 
 	def __init__(self, target):
 		"""
@@ -229,6 +232,52 @@ class BluefinserialSvcRfSession(BluefinserialCommand):
 			print_err("Error when set RTC to RF processor")
 			return
 
+	def parse_version(self, u32_version):
+		firmware_version_rev = u32_version % 100
+		firmware_version_minor = ((u32_version - firmware_version_rev) % 10000) / 100
+		firmware_version_major = (u32_version - firmware_version_minor - firmware_version_rev) / 10000
+		firmware_version_str = str(firmware_version_major) + "." + str(firmware_version_minor) + "." + str(firmware_version_rev)
+		return firmware_version_str
+
+	def GetSurisdkVersion(self):
+		getVersionPacket = struct.pack('<B', self.SURISDK_VERSION)
+		cmd = self.RfPacket('\x8B', '\x00', getVersionPacket)
+
+		rsp = ''
+		rsp = self.Exchange(cmd)
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Surisdk firmware version check fail")
+			return None
+		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
+		firmware_version_str = self.parse_version(u32_firmware_version)
+		return firmware_version_str
+
+	def GetSuriblVersion(self):
+		getVersionPacket = struct.pack('<B', self.SURIBL_VERSION)
+		cmd = self.RfPacket('\x8B', '\x00', getVersionPacket)
+
+		rsp = ''
+		rsp = self.Exchange(cmd)
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("Suribl firmware version check fail")
+			return None
+		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
+		firmware_version_str = self.parse_version(u32_firmware_version)
+		return firmware_version_str
+
+	def GetPN5180Version(self):
+		getVersionPacket = struct.pack('<B', self.PN5180_VERSION)
+		cmd = self.RfPacket('\x8B', '\x00', getVersionPacket)
+
+		rsp = ''
+		rsp = self.Exchange(cmd)
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("PN5180 firmware version check fail")
+			return None
+		u32_firmware_version = ord(rsp[3]) + (ord(rsp[4]) << 8) + (ord(rsp[5]) << 16)
+		firmware_version_str = self.parse_version(u32_firmware_version)
+		return firmware_version_str
+
 def FlushQueue(queue):
 	while True:
 		try:
@@ -254,10 +303,13 @@ parser.add_option(  "-g", "--get",
 					dest="get_value",
 					action="store_true",
 					help="get RTC value from RF processor")
-
+parser.add_option(  "-v", "--ver",
+					dest="get_version",
+					action="store_true",
+					help="get version from RF processor")
 (options, args) = parser.parse_args()
 
-if options.set_value is None and options.get_value is None:
+if options.set_value is None and options.get_value is None and options.get_version is None:
 	parser.print_help()
 	sys.exit(-1)
 if options.set_value and options.get_value:
@@ -271,3 +323,8 @@ if options.set_value:
 
 if options.get_value:
 	print rf_session.GetRtc()
+
+if options.get_version:
+	print ("SURISDK_VER: %s" % rf_session.GetSurisdkVersion())
+	print ("SURIBL_VER:  %s" % rf_session.GetSuriblVersion())
+	print ("PN5180_VER:  %s" % rf_session.GetPN5180Version())

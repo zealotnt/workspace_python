@@ -26,6 +26,63 @@ class ResultParser():
 			"DETECTING_CARD": [],
 		}
 
+	@staticmethod
+	def LineDictModel(line, start, end):
+		"""
+		This dict will be parsed from all log
+		This will gives with specific the StartIndex and EndIndex of each Line number
+		"""
+		return {
+			"LINE": line,
+			"IDX_START": start,
+			"IDX_END": end,
+		}
+
+	@staticmethod
+	def BoundaryNumbers(value):
+		"""
+		"""
+		return {
+			"DETECT": {
+				"IDX": value,
+				"VAL": value,
+			},
+			"READ": {
+				"IDX": value,
+				"VAL": value,
+			},
+			"WRITE": {
+				"IDX": value,
+				"VAL": value,
+			},
+		}
+
+	@staticmethod
+	def AverageNumbers():
+		"""
+		"""
+		return {
+			"TIMES": 0,
+			"TOTAL_DETECT": 0,
+			"TOTAL_READ": 0,
+			"TOTAL_WRITE": 0,
+			"DETECT": 0,
+			"READ": 0,
+			"WRITE": 0,
+			"AT_IDX": [],
+			"AT_LINE": []
+		}
+
+	@staticmethod
+	def UnconfirmNumbers():
+		"""
+		"""
+		return {
+			"TIMES": 0,
+			"AT_ALL_IDX": [],
+			"AT_IDX": [],
+			"AT_LINE": []
+		}
 # def ParseUnconfirm(noCardList):
 # 	for idx, item in enumerate(noCardList):
 # 		# Break the all log into list of "Detecting Card"
@@ -71,7 +128,29 @@ def ParseTime(content):
 		timeData.append(int(item[2]))
 	return timeData
 
-def GetLineNumber(content, fromIdx):
+def ParseLineDictData(content):
+	ret = []
+	startIdx = 0
+	endIdx = 0
+	lastStartIdx = 0
+	lineNumber = 1
+	for idx, char in enumerate(content):
+		if char == '\n':
+			endIdx = idx
+			ret.append(ResultParser.LineDictModel(lineNumber, startIdx, endIdx))
+			# Update the values for next line
+			lineNumber += 1
+			startIdx = endIdx + 1
+	return ret
+
+def GetLineNumberFromLineDict(lineDict, fromIdx):
+	for item in lineDict:
+		if item["IDX_START"] <= fromIdx:
+			if item["IDX_END"] >= fromIdx:
+				return item["LINE"]
+	return 0
+
+def GetLineNumberFromAllLog(content, fromIdx):
 	line = 0
 	for idx, char in enumerate(content):
 		if char == '\n':
@@ -85,7 +164,9 @@ def ParseNocard(fileName, content, debugLevel=0):
 	# match = re.finditer(r'Detecting card.+\[No Card\]', content)
 	match = [(m.start(0), m.end(0)) for m in re.finditer(r'Detecting card.+\[No Card\]', content)]
 	resultList = []
+	linesData = ParseLineDictData(content)
 	# print match
+
 	for idx, item in enumerate(match):
 		convertedDict = ResultParser.DictModel()
 		startIdx = item[0]
@@ -98,7 +179,8 @@ def ParseNocard(fileName, content, debugLevel=0):
 		convertedDict["DETECTING_CARD"] = ParseDetectingCard(allLog)
 		convertedDict["ALL"] = allLog
 		convertedDict["IDX_START"] = startIdx
-		convertedDict["LINE_START"] = GetLineNumber(content, startIdx)
+		# convertedDict["LINE_START"] = GetLineNumberFromAllLog(content, startIdx)
+		convertedDict["LINE_START"] = GetLineNumberFromLineDict(linesData, startIdx)
 		convertedDict["IDX_END"] = endIdx
 		resultList.append(convertedDict)
 
@@ -116,51 +198,10 @@ def ParseNocard(fileName, content, debugLevel=0):
 
 def PrintResult(fileName, resultList, debugLevel=0):
 	# Print the result
-	maxNumbers = {
-		"DETECT": {
-			"IDX": 0,
-			"VAL": 0,
-		},
-		"READ": {
-			"IDX": 0,
-			"VAL": 0,
-		},
-		"WRITE": {
-			"IDX": 0,
-			"VAL": 0,
-		},
-	}
-	minNumbers = {
-		"DETECT": {
-			"IDX": 100000,
-			"VAL": 100000,
-		},
-		"READ": {
-			"IDX": 100000,
-			"VAL": 100000,
-		},
-		"WRITE": {
-			"IDX": 100000,
-			"VAL": 100000,
-		},
-	}
-	avgNumbers = {
-		"TIMES": 0,
-		"TOTAL_DETECT": 0,
-		"TOTAL_READ": 0,
-		"TOTAL_WRITE": 0,
-		"DETECT": 0,
-		"READ": 0,
-		"WRITE": 0,
-		"AT_IDX": [],
-		"AT_LINE": []
-	}
-	unconfirmData = {
-		"TIMES": 0,
-		"AT_ALL_IDX": [],
-		"AT_IDX": [],
-		"AT_LINE": []
-	}
+	maxNumbers = ResultParser.BoundaryNumbers(0)
+	minNumbers = ResultParser.BoundaryNumbers(100000)
+	avgNumbers = ResultParser.AverageNumbers()
+	unconfirmData = ResultParser.UnconfirmNumbers()
 
 	for idx, item in enumerate(resultList):
 		# Result for unconfirm
