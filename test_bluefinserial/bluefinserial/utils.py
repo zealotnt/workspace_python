@@ -153,10 +153,44 @@ def pythonVer():
 
 # If python 2, type(data) should be string
 # If python 3, type(data) should be bytes
-def dump_hex(data, desc_str="", token=":", prefix="", wrap=0):
+def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
+	"""
+	data: hex data to be dump
+	desc_str: description string, will be print first
+	token: the mark to seperated between bytes
+	prefix: prefix of bytes
+	wrap: number of bytes to be printed before create a new line
+	"""
+	global gStr
+	gStr = ""
+	def concat_str(text):
+		global gStr
+		gStr += text
+	def write_and_concat_str(text):
+		concat_str(text)
+		sys.stdout.write(text)
+
+	varType = ""
+	varArray = ""
+	postfix = ""
+	if preFormat == "C" or preFormat == "c":
+		token = ", "
+		prefix = "0x"
+		wrap = 8
+		varType = "uint8_t"
+		varArray = "[]"
+		postfix = "\r\n\t};\r\n\r\n"
+	elif preFormat == "raw":
+		token = " "
+		prefix = ""
+		wrap = 0
+		desc_str = '"%s":\r\n' % (desc_str)
+		postfix = "\r\n\r\n"
+
 	# print desc_str + binascii.hexlify(data)
 	if wrap == 0:
-		print (desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data))
+		to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n" + postfix
+		write_and_concat_str(to_write)
 	else:
 		# [Ref](http://stackoverflow.com/questions/734368/type-checking-of-arguments-python)
 		if isinstance(data, int):
@@ -164,19 +198,24 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0):
 
 		count = 0
 
-		sys.stdout.write("%s = {\r\n\t\t" % (desc_str))
+		write_and_concat_str("%s %s%s = {\r\n\t\t" % (varType, desc_str, varArray))
 		for c in data:
-			if (count % wrap == 0) and (count != 0):
-				sys.stdout.write("\r\n\t\t")
+			if (count % wrap == 0) and (count != 0) and (wrap != 0):
+				write_and_concat_str("\r\n\t\t")
 			if pythonVer() == 2:
 				to_write = prefix + "{:02x}".format(ord(c)) + token
 			else:
 				to_write = prefix + "{:02x}".format(c) + token
-			sys.stdout.write(to_write)
+			write_and_concat_str(to_write)
 			count += 1
 
-		sys.stdout.write("\r\n\t};\r\n\r\n")
+		write_and_concat_str(postfix)
 		sys.stdout.flush()
+	ret = gStr
+	del gStr
+	return ret
+# Register another name for the dump_hex function
+hex_dump = dump_hex
 
 def GetFileContent(path):
 	f = open(path, 'rb')
@@ -246,3 +285,76 @@ def getKeysOfDict(dictionary, token="--", boundary="()"):
 			ret += boundary[1]
 		idx += 1
 	return ret
+
+# This function calculate BigInt from list of bytes, Big Endian order
+def CalculateBigInt(bytes_list):
+	"""
+	bytes_list:
+	+ Count be list of number
+	+ Update 12/5/2017: could be bytes string (Py2.7)
+	"""
+	ret = 0
+	max_idx = len(bytes_list) - 1
+	idx = 0
+	for val in bytes_list:
+		if isinstance(val, str):
+			value = ord(val)
+		else:
+			value = val
+		ret += value << 8*(max_idx - idx)
+		idx += 1
+	return ret
+
+def TrimZeroes(inputBytes):
+	idxNotNull = 0
+	for idx, item in enumerate(inputBytes):
+		if item != '\x00':
+			idxNotNull = idx
+			break
+	return inputBytes[idxNotNull: ]
+
+def FixedBytes(maxLen, inputBytes):
+	"""
+	Sometimes, the bignum return from function likes packl_ctypes() has some prefix zeroes
+	-> This will make the array bigger than the actual limit size
+	-> This function will trim down the zeroes
+
+	This function will also prefix the array with 0x00, if the inputBytes is not enough bytes
+	if it is not enough bytes, it will be reject from the device
+	"""
+
+	# remove the prefix 0x00 of inputBytes
+	idxNotNull = 0
+	for idx, item in enumerate(inputBytes):
+		if item != '\x00':
+			idxNotNull = idx
+			break
+	inputBytes = inputBytes[idxNotNull: ]
+
+	if len(inputBytes) > maxLen:
+		print_err("len(inputBytes) > maxLen (%d > %d), can't prefixed, quit" % (len(inputBytes), maxLen))
+		return None
+	if len(inputBytes) == maxLen:
+		# len is enough, no need to prefix
+		return inputBytes
+
+	retVal = ''
+	lenPrefix = maxLen - len(inputBytes)
+	count = 0
+	while count < lenPrefix:
+		count += 1
+		retVal += '\x00'
+	retVal += inputBytes
+	return retVal
+
+def ProcessFilePath(path):
+	"""
+	This function accept a text, and try to convert it to a real path file that python can understand
+	+ accept the prefix "file:///" (when user ctrl+c the file, it will have a file protocol in it)
+	"""
+	if not isinstance(path, str):
+		return path
+	fileProtocolPrefix = "file:///"
+	if path.startswith(fileProtocolPrefix):
+		path = path[len(fileProtocolPrefix)-1:]
+	return path

@@ -10,16 +10,6 @@ import sys
 sys.path.insert(0, '../../../../test_bluefinserial/bluefinserial')
 from utils import *
 
-# This function calculate BigInt from list of bytes, Big Endian order
-def CalculateBigInt(bytes_list):
-	ret = 0
-	max_idx = len(bytes_list) - 1
-	idx = 0
-	for val in bytes_list:
-		ret += val << 8*(max_idx - idx)
-		idx += 1
-	return ret
-
 #######################################################################
 # Constant declaration
 #######################################################################
@@ -61,7 +51,7 @@ public_number = ec.EllipticCurvePublicNumbers(
 	CalculateBigInt(x_pubkey),
 	CalculateBigInt(y_pubkey),
 	ec.SECP256R1()
-	)
+)
 
 public_key = public_number.public_key(default_backend())
 
@@ -72,6 +62,6 @@ public_key = public_number.public_key(default_backend())
 signature = utils.encode_dss_signature(
 	CalculateBigInt(r_KAT_signature),
 	CalculateBigInt(s_KAT_signature)
-	)
+)
 
 print("Verify status: ", public_key.verify(signature, MSG, ec.ECDSA(hashes.SHA256())))

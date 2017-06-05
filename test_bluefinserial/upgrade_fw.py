@@ -96,11 +96,7 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-2)
 
-	if options.firmware_file is not None:
-		fileProtocolPrefix = "file:///"
-		file = options.firmware_file
-		if file.startswith(fileProtocolPrefix):
-			file = file[len(fileProtocolPrefix)-1:]
+	file = ProcessFilePath(options.firmware_file)
 
 	if options.compressFile is True:
 		jsonExtension = ".json"

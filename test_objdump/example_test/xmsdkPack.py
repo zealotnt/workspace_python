@@ -1,13 +1,37 @@
 #!/usr/bin/python
+# cd ${ProjDirPath}/${ConfigName}
+# python ../scripts/xmsdkPack.py ${ConfigName} ${BuildArtifactFileName}
 
 import mlsFwPack
+import sys
+import os
 
-xmsdkMetadata = mlsFwPack.getRodata("output/xm_version.o")
-xmsdkBinary = open("output/xmsdk", 'rb').read()
+def usage():
+	print "Usage: " + sys.argv[0] + " <buildDirectory>"
 
-# xmsdkMetadata = mlsFwPack.getRodata("output/xm_version.o")
-# xmsdkBinary = open("/home/zealot/eclipseMars/workspace_Bluefin/BBB-AppDevelopment/testSerialBBB/Debug-Board-Slave/xmsdk", 'rb').read()
+if len(sys.argv) != 3:
+	print "Syntax error"
+	usage()
+	exit(1)
 
-xmsdkJson = mlsFwPack.packJson("xmsdk", xmsdkMetadata, xmsdkBinary)
+buildDir = sys.argv[1]
+buildObj = sys.argv[2]
 
-mlsFwPack.writeJsonFile("output/xmsdk.json", xmsdkJson)
+pathToObject 	= "../" + buildDir + "/src/mlsApp/src/version.o"
+pathToBin 		= "../" + buildDir + "/" + buildObj
+pathOutput 		= "../" + buildDir + "/" + buildObj + ".json"
+
+xmsdkMetadata = mlsFwPack.getRodata(pathToObject)
+
+xmsdkBinary = open(pathToBin, 'rb').read()
+
+xmsdkJson = mlsFwPack.packJson(buildObj, xmsdkMetadata, xmsdkBinary)
+
+mlsFwPack.writeJsonFile(pathOutput, xmsdkJson)
+
+print "Write successfully to " + pathOutput
+
+jsonFileName = "../" + buildDir + "/" + buildObj + ".json"
+tarFileName = "../" + buildDir + "/" + buildObj + ".json.tar.xz"
+tarCmd = "tar --xz -cvf " + tarFileName + " " + jsonFileName
+os.system(tarCmd)

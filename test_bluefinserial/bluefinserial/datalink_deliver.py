@@ -134,7 +134,7 @@ class BluefinserialSend():
 			print_err("Invalid command header")
 			return None
 
-		self.NACK_PACKET = '\x00' + self.getRepHeader(self._target) + '\x01\xff\xfe'
+		self.NACK_PACKET = '\x00' + packet[1] + '\x01\xff\xfe'
 		self._ack_remain = ""
 		self._response = ""
 		self._full_packet = ""
