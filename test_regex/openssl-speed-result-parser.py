@@ -67,13 +67,27 @@ class ResultParser():
 	@staticmethod
 	def DictModel():
 		return {
-			"Method": "",
-			"BlockSize": "",
-			"KeySize": "",
-			"TimeRunning": "",
-			"ActualTime": "",
-			"ResultTimes": ""
+			"Method": "",			# 0
+			"BlockSize": "",		# 1
+			"KeySize": "",			# 2
+			"TimeRunning": "",		# 3
+			"ActualTime": "",		# 4
+			"ResultTimes": "",		# 5
+			"Ops": "",				# 6
 		}
+
+	@staticmethod
+	def MarkdownTableLayoutModel():
+		return [
+			"Method",
+			"Block Size",
+			"Time Running",
+			"Actual Time Soft",
+			"Actual Time Hard",
+			"Result Times Soft",
+			"Result Times Hard",
+			"Throughput Soft",
+			"Throughput Hard"]
 
 	@staticmethod
 	def ParseNonPublicResult(content):
@@ -259,14 +273,7 @@ def main():
 	#########################################################
 	# Now generate the tables
 	# Firstly, generate the nonPublicTable
-	nonPublicTableLayout =[
-		"Method",
-		"Block Size",
-		"Time Running",
-		"Actual Time Soft",
-		"Actual Time Hard",
-		"Result Times Soft",
-		"Result Times Hard"]
+	nonPublicTableLayout = ResultParser.MarkdownTableLayoutModel()
 	nonPublicTable = MardownTableGenerator()
 	nonPublicTable.CreateTable(nonPublicTableLayout)
 	for idx, item in enumerate(nonPublicResultSoft):
@@ -281,14 +288,7 @@ def main():
 		nonPublicTable.AddRow(nonPublicTableRow)
 
 	# Secondly, generate the publicTable
-	publicTableLayout =[
-		"Method",
-		"Key Size",
-		"Time Running",
-		"Actual Time Soft",
-		"Actual Time Hard",
-		"Result Times Soft",
-		"Result Times Hard"]
+	publicTableLayout = ResultParser.MarkdownTableLayoutModel()
 	publicTable = MardownTableGenerator()
 	publicTable.CreateTable(publicTableLayout)
 	for idx, item in enumerate(publicResultSoft):
@@ -303,14 +303,7 @@ def main():
 		publicTable.AddRow(publicTableRow)
 
 	# Thirdly, generate the ecdhTable
-	ecdhTableLayout =[
-		"Method",
-		"Key Size",
-		"Time Running",
-		"Actual Time Soft",
-		"Actual Time Hard",
-		"Result Times Soft",
-		"Result Times Hard"]
+	ecdhTableLayout = ResultParser.MarkdownTableLayoutModel()
 	ecdhTable = MardownTableGenerator()
 	ecdhTable.CreateTable(ecdhTableLayout)
 	for idx, item in enumerate(ecdhResultSoft):
