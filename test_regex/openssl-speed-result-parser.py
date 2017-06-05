@@ -7,8 +7,6 @@ import os
 import re
 import time
 import sys
-import serial
-import struct
 import inspect
 from optparse import OptionParser, OptionGroup
 
@@ -90,10 +88,38 @@ class ResultParser():
 			"Throughput Hard"]
 
 	@staticmethod
-	def ParseNonPublicResult(content):
+	def GetOpsNonPublicContent(content):
+		upperFilter = "The 'numbers' are in 1000s of bytes per second processed."
+		belowFilter = "sign    verify    sign/s verify/s"
+		if upperFilter in content:
+			upperIdx = content.index(upperFilter)
+		else:
+			return ""
+		if belowFilter in content:
+			belowIdx = content.index(belowFilter)
+		else:
+			return ""
+		return content[upperIdx:belowIdx]
+
+	@staticmethod
+	def ParseNonPublicResult(content, debugLevel=0):
 		# Some non-public key cryptography parser
 		#                           #0       #1      #2                 #3   #4          #5
 		match = re.findall(r'Doing (.+) for (.+) on (.+) size blocks: (\d+) (.+)\'s in ([\d.]+)s', content)
+
+		contentOps = ResultParser.GetOpsNonPublicContent(content)
+		# Ops for non-public key parser
+		#                            #0             #1               #2                #3           #4               #5
+		#                            method         16B              64B               256B         1024B            8192B
+		# matchOps = re.findall(r'^([\w\d()\.]+)\s+', content)
+		matchOps = re.findall(
+			r'^([\w\d()-\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)\s+([\w\d()\.]+)',
+			contentOps,
+			re.MULTILINE
+		)
+		if debugLevel >= 2:
+			print (contentOps)
+			print (matchOps)
 		resultList = []
 		for item in match:
 			convertedDict = ResultParser.DictModel()
@@ -103,6 +129,20 @@ class ResultParser():
 			resultTimes = item[3]
 			method_2nd = item[4]
 			actualTime = item[5]
+			ops = ""
+			for i1 in matchOps:
+				if i1[0] != method:
+					continue
+				if "16" == blockSize:
+					ops = i1[1]
+				if "64" == blockSize:
+					ops = i1[2]
+				if "256" == blockSize:
+					ops = i1[3]
+				if "1024" == blockSize:
+					ops = i1[4]
+				if "8192" == blockSize:
+					ops = i1[5]
 			if method != method_2nd:
 				print ("method != method_2nd, something error !!!")
 				continue
@@ -112,8 +152,13 @@ class ResultParser():
 			convertedDict["TimeRunning"] = timeRunning
 			convertedDict["ActualTime"] = actualTime
 			convertedDict["ResultTimes"] = resultTimes
+			convertedDict["Ops"] = ops
 			resultList.append(convertedDict)
 		return resultList
+
+	@staticmethod
+	def GetOpsPublicContent(content):
+		return ""
 
 	@staticmethod
 	def ParsePublicResult(content):
@@ -253,10 +298,10 @@ def main():
 
 	#########################################################
 	# Open and read the file
-	f = open(fileSoft, 'rb')
+	f = open(fileSoft, 'rU')
 	fileContentSoft = f.read()
 	f.close()
-	f = open(fileHard, 'rb')
+	f = open(fileHard, 'rU')
 	fileContentHard = f.read()
 	f.close()
 
@@ -284,7 +329,10 @@ def main():
 			item["ActualTime"],
 			nonPublicResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			nonPublicResultHard[idx]["ResultTimes"]]
+			nonPublicResultHard[idx]["ResultTimes"],
+			item["Ops"],
+			nonPublicResultHard[idx]["Ops"],
+		]
 		nonPublicTable.AddRow(nonPublicTableRow)
 
 	# Secondly, generate the publicTable
