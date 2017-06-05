@@ -75,17 +75,30 @@ class ResultParser():
 		}
 
 	@staticmethod
-	def MarkdownTableLayoutModel():
+	def MarkdownTableLayoutModel(isKey=False, onlySw=False):
+		unit = "Block Size"
+		if isKey == True:
+			unit = "Key Size"
+		if onlySw == True:
+			return [
+				"Method",
+				unit,
+				"Running time(s)",
+				"CPU running time(s) Software crypto",
+				"Number of encodings Software crypto",
+				"Throughput Software crypto",
+			]
 		return [
 			"Method",
-			"Block Size",
-			"Time Running",
-			"Actual Time Soft",
-			"Actual Time Hard",
-			"Result Times Soft",
-			"Result Times Hard",
-			"Throughput Soft",
-			"Throughput Hard"]
+			unit,
+			"Running time(s)",
+			"CPU running time(s) Software crypto",
+			"CPU running time(s) Hardware crypto",
+			"Number of encodings Software crypto",
+			"Number of encodings Hardware crypto",
+			"Throughput Software crypto",
+			"Throughput Hardware crypto"
+		]
 
 	@staticmethod
 	def GetOpsNonPublicContent(content):
@@ -266,7 +279,7 @@ class ResultParser():
 		return resultList
 
 	@staticmethod
-	def ParseECDHResult(content):
+	def ParseECDHResult(content, debugLevel=0):
 		# Parse the ECDH
 		#                           #0         #1          #2      #3    #4        #5           #6
 		match = re.findall(r'Doing (\d+) bit  (.+)\'s for (\d+)s: (\d+) (\d+)-bit (.+) ops in ([\d\.]+)s', content)
@@ -346,6 +359,10 @@ def main():
 						action="store_true",
 						default=False,
 						help="Dump result to stdout")
+	parser.add_option(  "--debug",
+						dest="debugLevel",
+						default="0",
+						help="Dump result to stdout")
 	(options, args) = parser.parse_args()
 
 	#########################################################
@@ -373,6 +390,7 @@ def main():
 	if not os.path.isfile(fileHard):
 		print("File path %s not found" % (fileHard))
 		sys.exit(1)
+	debugLevel = int(options.debugLevel)
 
 	#########################################################
 	# Open and read the file
@@ -385,13 +403,13 @@ def main():
 
 	#########################################################
 	# Now create the result
-	nonPublicResultSoft = ResultParser.ParseNonPublicResult(fileContentSoft)
-	publicResultSoft = ResultParser.ParsePublicResult(fileContentSoft)
-	ecdhResultSoft = ResultParser.ParseECDHResult(fileContentSoft)
+	nonPublicResultSoft = ResultParser.ParseNonPublicResult(fileContentSoft, debugLevel=debugLevel)
+	publicResultSoft = ResultParser.ParsePublicResult(fileContentSoft, debugLevel=debugLevel)
+	ecdhResultSoft = ResultParser.ParseECDHResult(fileContentSoft, debugLevel=debugLevel)
 
-	nonPublicResultHard = ResultParser.ParseNonPublicResult(fileContentHard)
-	publicResultHard = ResultParser.ParsePublicResult(fileContentHard)
-	ecdhResultHard = ResultParser.ParseECDHResult(fileContentHard)
+	nonPublicResultHard = ResultParser.ParseNonPublicResult(fileContentHard, debugLevel=debugLevel)
+	publicResultHard = ResultParser.ParsePublicResult(fileContentHard, debugLevel=debugLevel)
+	ecdhResultHard = ResultParser.ParseECDHResult(fileContentHard, debugLevel=debugLevel)
 
 	#########################################################
 	# Now generate the tables
@@ -400,6 +418,22 @@ def main():
 	nonPublicTable = MardownTableGenerator()
 	nonPublicTable.CreateTable(nonPublicTableLayout)
 	for idx, item in enumerate(nonPublicResultSoft):
+		# Filter the row that software and hardware don't have much differences between CPU usage time
+		diffAbs = abs(float(nonPublicResultHard[idx]["ActualTime"]) - float(item["ActualTime"]))
+		diffPercent = diffAbs / float(item["ActualTime"]) * 100
+		# hw1: 0.5
+		# sw1: 3
+		# diff1: 2.5
+		# percent1: 83.3%
+		#
+		# hw2: 3
+		# sw2: 3
+		# diff2: 0
+		# percent2: 0%
+		if diffPercent <= 10:
+			if debugLevel >= 1:
+				print ("Ignore method %s, reason: no diff between hw and sw" % item["Method"])
+			continue
 		nonPublicTableRow = [
 			item["Method"],
 			item["BlockSize"],
@@ -414,7 +448,7 @@ def main():
 		nonPublicTable.AddRow(nonPublicTableRow)
 
 	# Secondly, generate the publicTable
-	publicTableLayout = ResultParser.MarkdownTableLayoutModel()
+	publicTableLayout = ResultParser.MarkdownTableLayoutModel(isKey=True, onlySw=True)
 	publicTable = MardownTableGenerator()
 	publicTable.CreateTable(publicTableLayout)
 	for idx, item in enumerate(publicResultSoft):
@@ -423,11 +457,8 @@ def main():
 			item["KeySize"],
 			item["TimeRunning"],
 			item["ActualTime"],
-			publicResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			publicResultHard[idx]["ResultTimes"],
 			item["Ops"],
-			publicResultHard[idx]["Ops"],
 		]
 		publicTable.AddRow(publicTableRow)
 
