@@ -158,13 +158,79 @@ class ResultParser():
 
 	@staticmethod
 	def GetOpsPublicContent(content):
-		return ""
+		"""
+		Because each public crypto has its own section in "sign    verify    sign/s verify/s" `seperator`
+		This function will return a list of these section
+		"""
+		seperator = "sign    verify    sign/s verify/s"
+		idx = 0
+		listIdx = []
+		result = []
+		while True:
+			if content.find(seperator, idx) != -1:
+				idx = content.find(seperator, idx)
+				listIdx.append(idx)
+				idx += 1
+			else:
+				break
+		for i, idx in enumerate(listIdx):
+			if i != len(listIdx) - 1:
+				result.append(content[idx:listIdx[i+1]])
+			else:
+				result.append(content[idx:])
+		return result
 
 	@staticmethod
-	def ParsePublicResult(content):
+	def ParsePublicResult(content, debugLevel=0):
 		# Parse the public key cryptography result
 		#                           #0        #1           #2      #3   #4       #5         $6
 		match = re.findall(r'Doing (\d+) bit (.+)\'s for (\d+)s: (\d+) (\d+) bit (.+) in ([\d\.]+)s', content)
+
+		matchOpsFinal = []
+		contentOps = ResultParser.GetOpsPublicContent(content)
+		if debugLevel >= 3:
+			print ("contentOps list:")
+			print (">"*70)
+			for item in contentOps:
+				print (item)
+			print ("<"*70)
+		for contentOpsValue in contentOps:
+			# This parser for rsa, dsa
+			matchOps = re.findall(
+				#   #0    #1          #2         #3           #4           #5
+				#  method  keysize    sign      verify       sign_ops     verify_ops
+				r'^(\w+)\s+(\d+) bits ([\d\.]+)s ([\d\.]+)s\s+([\d\.]+)\s+([\d\.]+)$',
+				contentOpsValue,
+				re.MULTILINE
+			)
+			if matchOps != []:
+				for i1 in matchOps:
+					if debugLevel >= 2:
+						print (i1)
+					# method, block, sign_ops, verify_ops
+					l1 = [i1[0], i1[1], i1[4], i1[5]]
+					matchOpsFinal.append(l1)
+
+			# This parser for ecdsa
+			matchOps = re.findall(
+				#     #0          #1              #2            #3          #4           #5
+				#     keysize     method          sign          verify      sign_ops     verify_ops
+				r'^\s+(\d+) bit ([\w]+)[()\d\w\s]+\s+([\d\.]+)s\s+([\d\.]+)s\s+([\d\.]+)\s+([\d\.]+)$',
+				contentOpsValue,
+				re.MULTILINE
+			)
+			if matchOps != []:
+				for i1 in matchOps:
+					if debugLevel >= 2:
+						print (i1)
+					# method, block, sign_ops, verify_ops
+					l1 = [i1[1], i1[0], i1[4], i1[5]]
+					matchOpsFinal.append(l1)
+		if debugLevel >= 3:
+			print ("matchOpsFinal list:")
+			for item in matchOpsFinal:
+				print (item)
+
 		resultList = []
 		for item in match:
 			convertedDict = ResultParser.DictModel()
@@ -175,6 +241,17 @@ class ResultParser():
 			keySize_2nd = item[4]
 			method_2nd = item[5]
 			actualTime = item[6]
+			ops = ""
+			for i1 in matchOpsFinal:
+				if keySize != i1[1]:
+					continue
+				if i1[0] not in method:
+					continue
+				if "sign" in method:
+					ops = i1[2]
+				if "verify" in method:
+					ops = i1[3]
+
 			if keySize != keySize_2nd:
 				print("keySize != keySize_2nd, something error !!!")
 				continue
@@ -184,6 +261,7 @@ class ResultParser():
 			convertedDict["TimeRunning"] = timeRunning
 			convertedDict["ActualTime"] = actualTime
 			convertedDict["ResultTimes"] = resultTimes
+			convertedDict["Ops"] = ops
 			resultList.append(convertedDict)
 		return resultList
 
@@ -347,7 +425,10 @@ def main():
 			item["ActualTime"],
 			publicResultHard[idx]["ActualTime"],
 			item["ResultTimes"],
-			publicResultHard[idx]["ResultTimes"]]
+			publicResultHard[idx]["ResultTimes"],
+			item["Ops"],
+			publicResultHard[idx]["Ops"],
+		]
 		publicTable.AddRow(publicTableRow)
 
 	# Thirdly, generate the ecdhTable
