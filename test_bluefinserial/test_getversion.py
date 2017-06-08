@@ -62,6 +62,8 @@ if __name__ == "__main__":
 			sirius_system.GetSuriblVersion()
 
 		if "APP" in targets:
+			# Enable debug print of App processor
+			sirius_system.AppDebugPrintEnable()
 			sirius_system.GetXmsdkVersion()
 			sirius_system.GetSvcVersion()
 

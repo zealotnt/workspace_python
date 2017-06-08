@@ -116,6 +116,16 @@ class SiriusAPISystem():
 			return None
 		return True
 
+	def AppDebugPrintEnable(self):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_APPLICATION)
+		cmd = pkt.Packet('\x20', '\xF0', "\x01\x07")
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None) or (rsp[2] != '\x00'):
+			print_err("AppDebugPrintEnable command fail")
+			return None
+		return True
+
 	def SetRootPassword(self, password=""):
 		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_APPLICATION)
 		# always has null character at the end
