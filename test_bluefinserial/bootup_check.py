@@ -26,25 +26,6 @@ FIRMWARE_BACKUP_FOLDER		= "/home/root/fw_backup/"
 BACKUP_FACTORY_FOLDER 		= FIRMWARE_BACKUP_FOLDER + "factory/"
 BACKUP_UPGRADES_FOLDER		= FIRMWARE_BACKUP_FOLDER + "upgrades/"
 
-XMSDK_FW_FILE_NAME			= "xmsdk.json.tar.xz"
-XMSDK_FACT_BAK_PATH 		= BACKUP_FACTORY_FOLDER + XMSDK_FW_FILE_NAME
-XMSDK_UPG_BAK_PATH			= BACKUP_UPGRADES_FOLDER + XMSDK_FW_FILE_NAME
-
-SVC_FW_FILE_NAME			= "svc.json.tar.xz"
-SVC_FACT_BAK_PATH 			= BACKUP_FACTORY_FOLDER + SVC_FW_FILE_NAME
-SVC_UPG_BAK_PATH			= BACKUP_UPGRADES_FOLDER + SVC_FW_FILE_NAME
-
-SURIFW_FW_FILE_NAME			= "surisdk.json.tar.xz"
-SURIFW_FACT_BAK_PATH 		= BACKUP_FACTORY_FOLDER + SURIFW_FW_FILE_NAME
-SURIFW_UPG_BAK_PATH			= BACKUP_UPGRADES_FOLDER + SURIFW_FW_FILE_NAME
-
-SURIBL_FW_FILE_NAME			= "suribootloader.json.tar.xz"
-SURIBL_FACT_BAK_PATH 		= BACKUP_FACTORY_FOLDER + SURIBL_FW_FILE_NAME
-SURIBL_UPG_BAK_PATH 		= BACKUP_UPGRADES_FOLDER + SURIBL_FW_FILE_NAME
-
-SURI_ERASER_NAME			= "erasersigned.tar"
-SURI_ERASER_PATH			= BACKUP_FACTORY_FOLDER + SURI_ERASER_NAME
-
 FIRMWARE_UPGRADING_FLAG 	= FIRMWARE_BACKUP_FOLDER + "upg_flag"
 
 SEND_SCP_SCRIPT 			= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/sendscp_mod.sh"
@@ -118,14 +99,66 @@ def SCRIPT_PREFIX(debugType="", color=""):
 	return "[%sBOOTUP_%s%s] " % (color, debugType, bcolors.ENDC)
 
 # ---- GLOBALS
-class ffirmware:
-	UPDATED_FIRMWARE = [XMSDK_UPG_BAK_PATH, SVC_UPG_BAK_PATH, SURIFW_UPG_BAK_PATH, SURIBL_UPG_BAK_PATH]
-	FACTORY_FIRMWARE = [XMSDK_FACT_BAK_PATH, SVC_FACT_BAK_PATH, SURIFW_FACT_BAK_PATH, SURIBL_FACT_BAK_PATH]
-	FIRMWARE_JSON_PREFIX = ["xmsdk", "svc", "surisdk", "suribl"]
-	IDX_XM = 0
-	IDX_SVC = 1
-	IDX_SURISDK = 2
-	IDX_SURIBL = 3
+class SiriusFirmwareRecovery():
+	SURI_ERASER_NAME			= "erasersigned.tar"
+	SURI_ERASER_PATH			= BACKUP_FACTORY_FOLDER + SURI_ERASER_NAME
+	SURIBL_FW_FILE_NAME			= "suribootloader.json.tar.xz"
+	SURISDK_FW_FILE_NAME		= "surisdk.json.tar.xz"
+	PN5180_FW_FILE_NAME			= "pn5180.json.tar.xz"
+	EMV_CONF0_FILE_NAME			= ""
+	EMV_CONF1_FILE_NAME			= ""
+	EMV_CONF2_FILE_NAME			= ""
+	EMV_CONF3_FILE_NAME			= ""
+	EMV_CAPK_FILE_NAME			= ""
+	SVC_FW_FILE_NAME			= "svc.json.tar.xz"
+	XMSDK_FW_FILE_NAME			= "xmsdk.json.tar.xz"
+
+	@staticmethod
+	def FirmwareRecoverList(inFolder):
+		"""
+		inFolder: path (best if absolute path) to folder contains all of the folder
+
+		ret: return the dictionary of recovery firmwares, all of them are contain in `inFolder`
+		"""
+		return {
+			"ERASER": SURI_ERASER_PATH,
+			"SURIBL": inFolder + SURIBL_FW_FILE_NAME,
+			"SURISDK": inFolder + SURISDK_FW_FILE_NAME,
+			"PN5180": inFolder + PN5180_FW_FILE_NAME,
+			"EMV_CONF0": inFolder + EMV_CONF0_FILE_NAME,
+			"EMV_CONF1": inFolder + EMV_CONF1_FILE_NAME,
+			"EMV_CONF2": inFolder + EMV_CONF2_FILE_NAME,
+			"EMV_CONF3": inFolder + EMV_CONF3_FILE_NAME,
+			"EMV_CAPK": inFolder + EMV_CAPK_FILE_NAME,
+			"SVC": inFolder + SVC_FW_FILE_NAME,
+			"XMSDK": inFolder + XMSDK_FW_FILE_NAME,
+		}
+
+	@staticmethod
+	def FirmwareJsonPrefix():
+		return [
+			"suribl",
+			"suribl",
+			"surisdk",
+			"pn5180",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"svc",
+			"xmsdk"
+		]
+
+	@staticmethod
+	def RecoveryFlowModel(folderPath, nextFolderName, curFolderName, tearDownFunc=None):
+		return [
+			"FW_FOLDER_PATH": "",
+			"NEXT_FOLDER_NAME": "",
+			"CUR_FOLDER_NAME": "",
+			"TEAR_DOWN_FUNC": "",
+		]
 
 class bcolors:
 	HEADER = '\033[95m'
@@ -369,7 +402,7 @@ def TestBlink():
 		sys.exit(0)
 	print_ok("Bootup check ok")
 
-def ValidateUpgradeFirmwares():
+def ValidateFirmware():
 	present = 0
 	for idx, firmware in enumerate(ffirmware.UPDATED_FIRMWARE):
 		try:
@@ -511,55 +544,39 @@ def main():
 	blink_led.start()
 	retVal = -1
 	try:
-		print_noti(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		print_noti(">"*70)
 		time_now = datetime.datetime.now()
 		print_noti("Event: Start logging. Time: %s" % (time_now.strftime("%d, %b %Y; %-Hh:%-Mm:%-Ss")))
 
 		print_warn("Last upgrade is not complete yet, rollback previous stable version")
-		#########################################################################################
-		# Step 1
-		# check validity of firmwares in upgrade folder
-		if ValidateUpgradeFirmwares() != True:
-			print_warn("Validation of \"upgrades firmware\" fail, use \"factory firmware\" instead")
-			# if at least one firmware json is invalid
-			# choose firmware in factory folder to roll back
-			retVal = RollbackFirmware(ffirmware.FACTORY_FIRMWARE, "factory")
-			return
 
-		#########################################################################################
-		# Step 2
-		# check if there is enough 4 type of firmware in the BACKUP_UPGRADES_FOLDER folder
-		# if it missing some file, collect the file from BACKUP_FACTORY_FOLDER
-		firmwareUpgrades = ["", "", "", ""]
-		# get available firmware from upgrade folder
-		for idx, firmware in enumerate(ffirmware.UPDATED_FIRMWARE):
-			if CheckFilePresence(firmware) == FILE_PRESENT:
-				firmwareUpgrades[idx] = firmware
-				print_noti("Got \"upgrade firmware\" \"%s\"" % (firmware))
-		# if any firmware type is missing, get them from factory folder
-		for idx, firmware in enumerate(firmwareUpgrades):
-			if firmware == "":
-				print_noti("Using \"factory firmware\" \"%s\" instead" % (ffirmware.FACTORY_FIRMWARE[idx]))
-				firmwareUpgrades[idx] = ffirmware.FACTORY_FIRMWARE[idx]
-		# rollback from the collected firmware
-		ret = RollbackFirmware(firmwareUpgrades, "upgrades")
+		backupFolderRecoveryFlow = SiriusFirmwareRecovery.RecoveryFlowModel()
+		baselineFolderRecoveryFlow = SiriusFirmwareRecovery.RecoveryFlowModel()
+		factoryFolderRecoveryFlow = SiriusFirmwareRecovery.RecoveryFlowModel()
 
-		#########################################################################################
-		# Step 3
-		# if the roll back is fail
-		# try rolling back to factory firmware
-		if ret != 0:
-			retVal = RollbackFirmware(ffirmware.FACTORY_FIRMWARE, "factory - last try")
-		# else, it is ok now, roll back process is ok, return to reader application
-		else:
-			retVal = 0
-		return
+		SiriusRecoveryFlowPipeline = [
+			backupFolderRecoveryFlow,
+			baselineFolderRecoveryFlow,
+			factoryFolderRecoveryFlow,
+		]
+
+		for flow in SiriusRecoveryFlowPipeline:
+			if ValidateFirmware() == True:
+				# Do the recovery with current...
+				retVal = RollbackFirmware(ffirmware.FACTORY_FIRMWARE, "factory")
+
+				# If there is  teardown function, call it
+
+			# If fail, go to next folder...
+			else:
+				print_warn("Validation of \"%s\" fail, use \"%s\" instead" % )
+
 	except Exception as e:
 		print_err(e.message)
 	finally:
 		time_now = datetime.datetime.now()
 		print_noti("Event: End logging. Time: %s" % (time_now.strftime("%d, %b %Y; %-Hh:%-Mm:%-Ss")))
-		print_noti("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+		print_noti("<"*70)
 
 		blink_led.StopThread()
 		sys.exit(retVal)
