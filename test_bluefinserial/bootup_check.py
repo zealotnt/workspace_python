@@ -267,14 +267,14 @@ def CheckFilePresence(file_path):
 		return FILE_ABSENT
 	return FILE_PRESENT
 
-def check_files_present(fileList):
+def CheckListFilePresent(fileList):
 	for file in fileList:
 		# if absent, return right away
 		if CheckFilePresence(file) == FILE_ABSENT:
 			return FILE_ABSENT
 	return FILE_PRESENT
 
-def restore_app_firmware(file_restored, file_name, dry_run=False):
+def RestoreJsonFromCompressed(file_restored, file_name, dry_run=False):
 	"""
 	:param file_restored: compress file to restore from
 	:param file_name: the prefix of json in the firmware, and the output firmware
@@ -298,7 +298,7 @@ def restore_app_firmware(file_restored, file_name, dry_run=False):
 	# Decode json file
 	return DecodeJsonAndWriteToFile(extracted_file, file_name, dry_run)
 
-def check_bl_folder_valid(extract_result):
+def IsScpFolderValid(extract_result):
 	folder_name = ""
 	idx = 0
 	for line in extract_result.splitlines():
@@ -309,13 +309,13 @@ def check_bl_folder_valid(extract_result):
 				folder_name = match.group()
 			# If there is other file/folder in this compress file, exit
 			if match.group() != folder_name:
-				return False
+				return False, ""
 		else:
 			# Not match, return right away
-			return False
+			return False, ""
 	return True, folder_name
 
-def upgrade_suribl(compress_file):
+def UpgradeSuribl(compress_file):
 	# Clean the old bootloader firmware folder
 	os.system("rm -rf %s" % (RF_SCP_EXTRACT_PATH))
 	os.system("mkdir -p %s" % (RF_SCP_EXTRACT_PATH))
@@ -325,7 +325,7 @@ def upgrade_suribl(compress_file):
 	pListFile = subprocess.Popen(['bsdtar', '-tf', compress_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	output, err = pListFile.communicate()
 	rc = pListFile.returncode
-	ret, folder_name = check_bl_folder_valid(output)
+	ret, folder_name = IsSCPFolderValid(output)
 	if ret != True:
 		print_err("Content in suribl is not valid !!!")
 		return False
@@ -348,14 +348,14 @@ def upgrade_suribl(compress_file):
 
 	return True
 
-def stop_svc_xmsdk():
+def KillSvcXmsdk():
 	os.system("killall xmsdk")
 	os.system("killall svc")
 
-def run_svc(file_path):
+def RunSvc(file_path):
 	os.system("./" + file_path + " &")
 
-def run_suri_upgrade(file_path):
+def UpgradeSurisdk(file_path):
 	return os.system("./rfp_fwupgrade " + file_path)
 
 def TestBlink():
@@ -374,7 +374,7 @@ def ValidateUpgradeFirmwares():
 	for idx, firmware in enumerate(ffirmware.UPDATED_FIRMWARE):
 		try:
 			# check validity of firmwares in folder
-			ret, json = restore_app_firmware(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx], dry_run=True)
+			ret, json = RestoreJsonFromCompressed(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx], dry_run=True)
 			if ret != True:
 				print_err("Err when extract file")
 			present += 1
@@ -404,17 +404,17 @@ def RollbackFirmware(firmwareList, firmwareName):
 	print_noti("Going to rollback using \"%s firmwares\"" % (firmwareName))
 	output_json_filename = ["", "", "", ""]
 
-	if check_files_present(firmwareList) != FILE_PRESENT:
+	if CheckListFilePresent(firmwareList) != FILE_PRESENT:
 		print_err("Not all factory backup file present")
 		return -1
 
-	stop_svc_xmsdk()
+	KillSvcXmsdk()
 
 	########################################################################
 	# Step 1
 	# Extract firmware from list of compressed files
 	for idx, firmware in enumerate(firmwareList):
-		ret, output_json_filename[idx] = restore_app_firmware(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx])
+		ret, output_json_filename[idx] = RestoreJsonFromCompressed(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx])
 		if ret != True:
 			print_err("Err when extract %s" % (ffirmware.FIRMWARE_JSON_PREFIX[idx]))
 			return -1
@@ -426,14 +426,14 @@ def RollbackFirmware(firmwareList, firmwareName):
 	# Note: If this step fail due to file not found, it is not a big deal, may be the flasher,...
 	# Just continue with other firmwares
 	print_noti("Going to erase Maxim firmware using \"%s\"" % (SURI_ERASER_PATH))
-	ret = upgrade_suribl(SURI_ERASER_PATH)
+	ret = UpgradeSuribl(SURI_ERASER_PATH)
 	if ret != True:
 		print_err("Err when erase maxim firwmare")
 	print_ok("Erase Maxim firmware using \"%s\" successfully" % (SURI_ERASER_PATH))
 
 	# suribl
 	print_noti("Going to roll back suribl firmware using \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL]))
-	ret = upgrade_suribl(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL])
+	ret = UpgradeSuribl(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL])
 	if ret != True:
 		print_err("Err when roll back suribl")
 		return -1
@@ -441,11 +441,11 @@ def RollbackFirmware(firmwareList, firmwareName):
 
 	# svc
 	print_noti("Start svc service \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC]))
-	run_svc(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC])
+	RunSvc(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC])
 
 	# surisdk
 	print_noti("Going to roll back surisdk firmware using \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK]))
-	ret = run_suri_upgrade(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK])
+	ret = UpgradeSurisdk(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK])
 	if ret != 0:
 		print_err("Err when roll back surisdk")
 		return -1
@@ -467,7 +467,7 @@ def RollbackFirmware(firmwareList, firmwareName):
 		# os.remove(suribl_json)
 		os.remove(json_file)
 
-	stop_svc_xmsdk()
+	KillSvcXmsdk()
 	print_ok("Rollback using \"%s firmwares\" successfully" % (firmwareName))
 	return 0
 
