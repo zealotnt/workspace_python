@@ -234,275 +234,280 @@ class BlinkLedThread(threading.Thread):
 	def StopThread(self):
 		self.shouldKilled = True
 
-def Extractfile(file_path):
-	tarExamineCmd = "bsdtar -tf " + file_path
-	pListFile = subprocess.Popen(['bsdtar', '-tf', file_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	output, err = pListFile.communicate()
-	rc = pListFile.returncode
+class SiriusFwValidator():
 
-	tarCmd = "bsdtar -xvf " + file_path
-	rc = os.system(tarCmd)
-	if rc != 0:
-		print_err("err when extracting file " + file_path)
-		return None
-	return output
+	@staticmethod
+	def Extractfile(file_path):
+		tarExamineCmd = "bsdtar -tf " + file_path
+		pListFile = subprocess.Popen(['bsdtar', '-tf', file_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		output, err = pListFile.communicate()
+		rc = pListFile.returncode
 
-def DecodeJsonAndWriteToFile(json_file, target_name, dry_run=False):
-	json_file_name = json_file.replace("\r", "").replace("\n", "")
+		tarCmd = "bsdtar -xvf " + file_path
+		rc = os.system(tarCmd)
+		if rc != 0:
+			print_err("err when extracting file " + file_path)
+			return None
+		return output
 
-	try:
-		json_text = open(json_file[:len(json_file)-1], 'rb').read()
-		json_decoded = json.loads(json_text)
-	except Exception as e:
-		raise Exception("Json decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
+	@staticmethod
+	def DecodeJsonAndWriteToFile(json_file, target_name, dry_run=False):
+		json_file_name = json_file.replace("\r", "").replace("\n", "")
 
-	fw_dict = {key: value for (key, value) in (json_decoded.items())}
-	if dry_run == False:
-		print_debug(target_name + "'s md5 =" + fw_dict[target_name + "_md5"])
-		print_debug(target_name + "'s metadata =" + fw_dict[target_name + "_metadata"])
-	json_md5 = fw_dict[target_name + "_md5"]
-	json_based64 = fw_dict[target_name + "_fw"]
-	try:
-		json_binary = base64.standard_b64decode(json_based64)
-	except Exception as e:
-		raise Exception("Base64 decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
-	try:
-		fileMd5 = md5.new()
-		fileMd5.update(json_binary)
-		md5_calculated = fileMd5.hexdigest()
-	except Exception as e:
-		raise Exception("MD5 calculated file \"%s\" error: %s" % (json_file_name, str(e.message)))
+		try:
+			json_text = open(json_file[:len(json_file)-1], 'rb').read()
+			json_decoded = json.loads(json_text)
+		except Exception as e:
+			raise Exception("Json decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
 
-	# Check md5
-	if md5_calculated != json_md5:
-		print_err('Json: %s\'s md5 is not equal to calculated value' % json_file)
-		raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file)
+		fw_dict = {key: value for (key, value) in (json_decoded.items())}
+		if dry_run == False:
+			print_debug(target_name + "'s md5 =" + fw_dict[target_name + "_md5"])
+			print_debug(target_name + "'s metadata =" + fw_dict[target_name + "_metadata"])
+		json_md5 = fw_dict[target_name + "_md5"]
+		json_based64 = fw_dict[target_name + "_fw"]
+		try:
+			json_binary = base64.standard_b64decode(json_based64)
+		except Exception as e:
+			raise Exception("Base64 decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
+		try:
+			fileMd5 = md5.new()
+			fileMd5.update(json_binary)
+			md5_calculated = fileMd5.hexdigest()
+		except Exception as e:
+			raise Exception("MD5 calculated file \"%s\" error: %s" % (json_file_name, str(e.message)))
 
-	# if it is only for validating, no need to write to file
-	if dry_run == True:
+		# Check md5
+		if md5_calculated != json_md5:
+			print_err('Json: %s\'s md5 is not equal to calculated value' % json_file)
+			raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file)
+
+		# if it is only for validating, no need to write to file
+		if dry_run == True:
+			return True, json_file[:len(json_file) - 1]
+
+		# Everything is ok, write to target_name file
+		try:
+			fh = open(target_name, 'wb')
+			fh.write(json_binary)
+			fh.close()
+
+			os.chmod(target_name, 0777)
+		except Exception as e:
+			raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (target_name, json_file_name, str(e.message)))
+
+		print_ok("Restore binary file \"%s\" ok" % (target_name))
 		return True, json_file[:len(json_file) - 1]
 
-	# Everything is ok, write to target_name file
-	try:
-		fh = open(target_name, 'wb')
-		fh.write(json_binary)
-		fh.close()
-
-		os.chmod(target_name, 0777)
-	except Exception as e:
-		raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (target_name, json_file_name, str(e.message)))
-
-	print_ok("Restore binary file \"%s\" ok" % (target_name))
-	return True, json_file[:len(json_file) - 1]
-
-def CheckFilePresence(file_path):
-	if os.path.isfile(file_path) is not True:
-		return FILE_ABSENT
-	return FILE_PRESENT
-
-def CheckListFilePresent(fileList):
-	for file in fileList:
-		# if absent, return right away
-		if CheckFilePresence(file) == FILE_ABSENT:
+	@staticmethod
+	def CheckFilePresence(file_path):
+		if os.path.isfile(file_path) is not True:
 			return FILE_ABSENT
-	return FILE_PRESENT
+		return FILE_PRESENT
 
-def RestoreJsonFromCompressed(file_restored, file_name, dry_run=False):
-	"""
-	:param file_restored: compress file to restore from
-	:param file_name: the prefix of json in the firmware, and the output firmware
-	:param dry_run: if true, the output file will be created. Otherwise, it won't
+	@staticmethod
+	def CheckListFilePresent(fileList):
+		for file in fileList:
+			# if absent, return right away
+			if SiriusFwValidator.CheckFilePresence(file) == FILE_ABSENT:
+				return FILE_ABSENT
+		return FILE_PRESENT
 
-	:return: valid(bool), filename(string)
-	"""
+	@staticmethod
+	def RestoreJsonFromCompressed(file_restored, file_name, dry_run=False):
+		"""
+		:param file_restored: compress file to restore from
+		:param file_name: the prefix of json in the firmware, and the output firmware
+		:param dry_run: if true, the output file will be created. Otherwise, it won't
 
-	# Try to restore
-	if os.path.isfile(file_restored) is not True:
-		print_warn("Firmware \"%s\" backup not found" % (file_restored))
-		raise Exception("File %s not found" % (file_restored))
+		:return: valid(bool), filename(string)
+		"""
 
-	# Extract tar file
-	if dry_run == False:
-		print_noti("Going to restore \"%s\" from \"%s\"" % (file_name, file_restored))
-	extracted_file = Extractfile(file_restored)
-	if extracted_file is None:
-		raise Exception("Can\'t extract %s" % file_restored)
+		# Try to restore
+		if os.path.isfile(file_restored) is not True:
+			print_warn("Firmware \"%s\" backup not found" % (file_restored))
+			raise Exception("File %s not found" % (file_restored))
 
-	# Decode json file
-	return DecodeJsonAndWriteToFile(extracted_file, file_name, dry_run)
+		# Extract tar file
+		if dry_run == False:
+			print_noti("Going to restore \"%s\" from \"%s\"" % (file_name, file_restored))
+		extracted_file = SiriusFwValidator.Extractfile(file_restored)
+		if extracted_file is None:
+			raise Exception("Can\'t extract %s" % file_restored)
 
-def IsScpFolderValid(extract_result):
-	folder_name = ""
-	idx = 0
-	for line in extract_result.splitlines():
-		match = re.search(r'^(\w+[^/])', line)
-		if match:
-			# First match, this will be the "based" folder
-			if idx == 0:
-				folder_name = match.group()
-			# If there is other file/folder in this compress file, exit
-			if match.group() != folder_name:
-				return False, ""
-		else:
-			# Not match, return right away
-			return False, ""
-	return True, folder_name
+		# Decode json file
+		return SiriusFwValidator.DecodeJsonAndWriteToFile(extracted_file, file_name, dry_run)
 
-def UpgradeSuribl(compress_file):
-	# Clean the old bootloader firmware folder
-	os.system("rm -rf %s" % (RF_SCP_EXTRACT_PATH))
-	os.system("mkdir -p %s" % (RF_SCP_EXTRACT_PATH))
-
-	# detect the content of SCP bootloader firmware
-	tarExamineCmd = "bsdtar -tf " + compress_file
-	pListFile = subprocess.Popen(['bsdtar', '-tf', compress_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	output, err = pListFile.communicate()
-	rc = pListFile.returncode
-	ret, folder_name = IsSCPFolderValid(output)
-	if ret != True:
-		print_err("Content in suribl is not valid !!!")
-		return False
-
-	# now, extract the firmware
-	tarCmd = "bsdtar -xvf " + compress_file + " -C " + RF_SCP_EXTRACT_PATH
-	rc = os.system(tarCmd)
-	if rc != 0:
-		print_err("err when extracting file " + compress_file)
-		return None
-
-	# append RF_SCP_EXTRACT_PATH to folder_name to get absolute path
-	rf_bl_folder = RF_SCP_EXTRACT_PATH + folder_name
-	scpCmd = "bash " + SEND_SCP_SCRIPT + " " + SEND_SCP_UART_PORT + " " + rf_bl_folder + " y"
-	# and upgrade...
-	rc = os.system(scpCmd)
-	if rc != 0:
-		print_err("err when using SCP session")
-		return None
-
-	return True
-
-def KillSvcXmsdk():
-	os.system("killall xmsdk")
-	os.system("killall svc")
-
-def RunSvc(file_path):
-	os.system("./" + file_path + " &")
-
-def UpgradeSurisdk(file_path):
-	return os.system("./rfp_fwupgrade " + file_path)
-
-def TestBlink():
-	blink_led = BlinkLedThread("Led blinker")
-	blink_led.start()
-	try:
-		while True:
-			time.sleep(1)
-	except:
-		blink_led.StopThread()
-		sys.exit(0)
-	print_ok("Bootup check ok")
-
-def ValidateFirmware():
-	present = 0
-	for idx, firmware in enumerate(ffirmware.UPDATED_FIRMWARE):
-		try:
-			# check validity of firmwares in folder
-			ret, json = RestoreJsonFromCompressed(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx], dry_run=True)
-			if ret != True:
-				print_err("Err when extract file")
-			present += 1
-		except Exception as e:
-			err_msg = e.message
-			if "not found" in err_msg:
-				continue
+	@staticmethod
+	def IsScpFolderValid(extract_result):
+		folder_name = ""
+		idx = 0
+		for line in extract_result.splitlines():
+			match = re.search(r'^(\w+[^/])', line)
+			if match:
+				# First match, this will be the "based" folder
+				if idx == 0:
+					folder_name = match.group()
+				# If there is other file/folder in this compress file, exit
+				if match.group() != folder_name:
+					return False, ""
 			else:
-				print_err(str(err_msg))
-				return False
-	# This avoid case there is no upgrades firmware, but return True
-	# => The main code will print no file present again => confused
-	# => If no file present, just use the factory firmware
-	if present != 0:
-		return True
-	else:
-		return False
+				# Not match, return right away
+				return False, ""
+		return True, folder_name
 
-def RollbackFirmware(firmwareList, firmwareName):
-	"""
-	firmwareList should be the array with 4 element with the firmware order:
-		1. XMSDK
-		2. SVC
-		3. SURIFW
-		4. SURIBL
-	"""
-	print_noti("Going to rollback using \"%s firmwares\"" % (firmwareName))
-	output_json_filename = ["", "", "", ""]
+	@staticmethod
+	def ValidateFirmware():
+		present = 0
+		for idx, firmware in enumerate(ffirmware.UPDATED_FIRMWARE):
+			try:
+				# check validity of firmwares in folder
+				ret, json = SiriusFwValidator.RestoreJsonFromCompressed(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx], dry_run=True)
+				if ret != True:
+					print_err("Err when extract file")
+				present += 1
+			except Exception as e:
+				err_msg = e.message
+				if "not found" in err_msg:
+					continue
+				else:
+					print_err(str(err_msg))
+					return False
+		# This avoid case there is no upgrades firmware, but return True
+		# => The main code will print no file present again => confused
+		# => If no file present, just use the factory firmware
+		if present != 0:
+			return True
+		else:
+			return False
 
-	if CheckListFilePresent(firmwareList) != FILE_PRESENT:
-		print_err("Not all factory backup file present")
-		return -1
+class SiriusFwRecoveryExecuter():
 
-	KillSvcXmsdk()
+	@staticmethod
+	def UpgradeSuribl(compress_file):
+		# Clean the old bootloader firmware folder
+		os.system("rm -rf %s" % (RF_SCP_EXTRACT_PATH))
+		os.system("mkdir -p %s" % (RF_SCP_EXTRACT_PATH))
 
-	########################################################################
-	# Step 1
-	# Extract firmware from list of compressed files
-	for idx, firmware in enumerate(firmwareList):
-		ret, output_json_filename[idx] = RestoreJsonFromCompressed(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx])
+		# detect the content of SCP bootloader firmware
+		tarExamineCmd = "bsdtar -tf " + compress_file
+		pListFile = subprocess.Popen(['bsdtar', '-tf', compress_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		output, err = pListFile.communicate()
+		rc = pListFile.returncode
+		ret, folder_name = SiriusFwValidator.IsSCPFolderValid(output)
 		if ret != True:
-			print_err("Err when extract %s" % (ffirmware.FIRMWARE_JSON_PREFIX[idx]))
+			print_err("Content in suribl is not valid !!!")
+			return False
+
+		# now, extract the firmware
+		tarCmd = "bsdtar -xvf " + compress_file + " -C " + RF_SCP_EXTRACT_PATH
+		rc = os.system(tarCmd)
+		if rc != 0:
+			print_err("err when extracting file " + compress_file)
+			return None
+
+		# append RF_SCP_EXTRACT_PATH to folder_name to get absolute path
+		rf_bl_folder = RF_SCP_EXTRACT_PATH + folder_name
+		scpCmd = "bash " + SEND_SCP_SCRIPT + " " + SEND_SCP_UART_PORT + " " + rf_bl_folder + " y"
+		# and upgrade...
+		rc = os.system(scpCmd)
+		if rc != 0:
+			print_err("err when using SCP session")
+			return None
+
+		return True
+
+	@staticmethod
+	def KillSvcXmsdk():
+		os.system("killall xmsdk")
+		os.system("killall svc")
+
+	@staticmethod
+	def RunSvc(file_path):
+		os.system("./" + file_path + " &")
+
+	@staticmethod
+	def UpgradeSurisdk(file_path):
+		return os.system("./rfp_fwupgrade " + file_path)
+
+	@staticmethod
+	def RollbackFirmware(firmwareList, firmwareName):
+		"""
+		firmwareList should be the array with 4 element with the firmware order:
+			1. XMSDK
+			2. SVC
+			3. SURIFW
+			4. SURIBL
+		"""
+		print_noti("Going to rollback using \"%s firmwares\"" % (firmwareName))
+		output_json_filename = ["", "", "", ""]
+
+		if SiriusFwValidator.CheckListFilePresent(firmwareList) != FILE_PRESENT:
+			print_err("Not all factory backup file present")
 			return -1
 
-	########################################################################
-	# Step 2
-	# Start roll back the firmware
-	# first, try eraser the firmware in maxim
-	# Note: If this step fail due to file not found, it is not a big deal, may be the flasher,...
-	# Just continue with other firmwares
-	print_noti("Going to erase Maxim firmware using \"%s\"" % (SURI_ERASER_PATH))
-	ret = UpgradeSuribl(SURI_ERASER_PATH)
-	if ret != True:
-		print_err("Err when erase maxim firwmare")
-	print_ok("Erase Maxim firmware using \"%s\" successfully" % (SURI_ERASER_PATH))
+		SiriusFwRecoveryExecuter.KillSvcXmsdk()
 
-	# suribl
-	print_noti("Going to roll back suribl firmware using \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL]))
-	ret = UpgradeSuribl(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL])
-	if ret != True:
-		print_err("Err when roll back suribl")
-		return -1
-	print_ok("Roll back firmware \"%s\" ok" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL]))
+		########################################################################
+		# Step 1
+		# Extract firmware from list of compressed files
+		for idx, firmware in enumerate(firmwareList):
+			ret, output_json_filename[idx] = SiriusFwValidator.RestoreJsonFromCompressed(firmware, ffirmware.FIRMWARE_JSON_PREFIX[idx])
+			if ret != True:
+				print_err("Err when extract %s" % (ffirmware.FIRMWARE_JSON_PREFIX[idx]))
+				return -1
 
-	# svc
-	print_noti("Start svc service \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC]))
-	RunSvc(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC])
+		########################################################################
+		# Step 2
+		# Start roll back the firmware
+		# first, try eraser the firmware in maxim
+		# Note: If this step fail due to file not found, it is not a big deal, may be the flasher,...
+		# Just continue with other firmwares
+		print_noti("Going to erase Maxim firmware using \"%s\"" % (SURI_ERASER_PATH))
+		ret = SiriusFwRecoveryExecuter.UpgradeSuribl(SURI_ERASER_PATH)
+		if ret != True:
+			print_err("Err when erase maxim firwmare")
+		print_ok("Erase Maxim firmware using \"%s\" successfully" % (SURI_ERASER_PATH))
 
-	# surisdk
-	print_noti("Going to roll back surisdk firmware using \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK]))
-	ret = UpgradeSurisdk(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK])
-	if ret != 0:
-		print_err("Err when roll back surisdk")
-		return -1
-	print_ok("Roll back firmware \"%s\" ok" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK]))
+		# suribl
+		print_noti("Going to roll back suribl firmware using \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL]))
+		ret = SiriusFwRecoveryExecuter.UpgradeSuribl(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL])
+		if ret != True:
+			print_err("Err when roll back suribl")
+			return -1
+		print_ok("Roll back firmware \"%s\" ok" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL]))
 
-	# xmsdk will be start later, after exit this script, done by startup.sh
+		# svc
+		print_noti("Start svc service \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC]))
+		SiriusFwRecoveryExecuter.RunSvc(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SVC])
 
-	########################################################################
-	# Step 3
-	# Clean up everything
-	os.remove(FIRMWARE_UPGRADING_FLAG)
-	os.remove(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK])
-	os.remove(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL])
+		# surisdk
+		print_noti("Going to roll back surisdk firmware using \"%s\"" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK]))
+		ret = SiriusFwRecoveryExecuter.UpgradeSurisdk(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK])
+		if ret != 0:
+			print_err("Err when roll back surisdk")
+			return -1
+		print_ok("Roll back firmware \"%s\" ok" % (ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK]))
 
-	for json_file in output_json_filename:
-		# os.remove(xm_json)
-		# os.remove(svc_json)
-		# os.remove(surifw_json)
-		# os.remove(suribl_json)
-		os.remove(json_file)
+		# xmsdk will be start later, after exit this script, done by startup.sh
 
-	KillSvcXmsdk()
-	print_ok("Rollback using \"%s firmwares\" successfully" % (firmwareName))
-	return 0
+		########################################################################
+		# Step 3
+		# Clean up everything
+		os.remove(FIRMWARE_UPGRADING_FLAG)
+		os.remove(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURISDK])
+		os.remove(ffirmware.FIRMWARE_JSON_PREFIX[ffirmware.IDX_SURIBL])
+
+		for json_file in output_json_filename:
+			# os.remove(xm_json)
+			# os.remove(svc_json)
+			# os.remove(surifw_json)
+			# os.remove(suribl_json)
+			os.remove(json_file)
+
+		SiriusFwRecoveryExecuter.KillSvcXmsdk()
+		print_ok("Rollback using \"%s firmwares\" successfully" % (firmwareName))
+		return 0
 
 # ---- MAIN
 def main():
@@ -561,9 +566,9 @@ def main():
 		]
 
 		for flow in SiriusRecoveryFlowPipeline:
-			if ValidateFirmware() == True:
+			if SiriusFwValidator.ValidateFirmware() == True:
 				# Do the recovery with current...
-				retVal = RollbackFirmware(ffirmware.FACTORY_FIRMWARE, "factory")
+				retVal = SiriusFwRecoveryExecuter.RollbackFirmware(ffirmware.FACTORY_FIRMWARE, "factory")
 
 				# If there is  teardown function, call it
 
