@@ -16,6 +16,7 @@ import md5
 import threading
 import logging
 import datetime
+import traceback
 from logging.handlers import RotatingFileHandler
 
 # ---- CONSTANTS
@@ -69,8 +70,7 @@ class SiriusFirmwareRecovery():
 
 	FIRMWARE_UPGRADING_FLAG 	= FIRMWARE_BASE_BACKUP_FOLDER + "upg_flag"
 
-	SURI_ERASER_NAME			= "erasersigned.tar"
-	SURI_ERASER_PATH			= FACTORY_FOLDER + SURI_ERASER_NAME
+	SURI_ERASER_NAME			= "eraser.json.tar.xz"
 	SURIBL_FW_FILE_NAME			= "suribootloader.json.tar.xz"
 	SURISDK_FW_FILE_NAME		= "surisdk.json.tar.xz"
 	PN5180_FW_FILE_NAME			= "pn5180.json.tar.xz"
@@ -122,7 +122,7 @@ class SiriusFirmwareRecovery():
 		ret: return the dictionary of recovery firmwares, all of them are contain in `inFolder`
 		"""
 		return {
-			"ERASER": SiriusFirmwareRecovery.SURI_ERASER_PATH,
+			"ERASER": inFolder + SiriusFirmwareRecovery.SURI_ERASER_NAME,
 			"SURIBL": inFolder + SiriusFirmwareRecovery.SURIBL_FW_FILE_NAME,
 			"SURISDK": inFolder + SiriusFirmwareRecovery.SURISDK_FW_FILE_NAME,
 			"PN5180": inFolder + SiriusFirmwareRecovery.PN5180_FW_FILE_NAME,
@@ -177,7 +177,7 @@ class SiriusFirmwareRecovery():
 		}
 
 	@staticmethod
-	def RecoveryFlowModel(fwInFolder, nextFolderName, curFolderName, tearDownFunc=None):
+	def RecoveryFlowModel(fwInFolder, curFolderName, nextFolderName, tearDownFunc=None):
 		fwAccess = SiriusFirmwareRecovery.FirmwareAccess()
 		listFw = SiriusFirmwareRecovery.FirmwareRecoverList(fwInFolder)
 		upgFunc = SiriusFirmwareRecovery.FirmwareUpgradeFunction()
@@ -336,7 +336,7 @@ class SiriusFwValidator():
 		return output
 
 	@staticmethod
-	def DecodeJsonAndWriteToFile(json_file, target_name, dry_run=False):
+	def DecodeJsonAndWriteToFile(json_file, json_prefix, dry_run=False):
 		json_file_name = json_file.replace("\r", "").replace("\n", "")
 
 		try:
@@ -346,43 +346,53 @@ class SiriusFwValidator():
 			raise Exception("Json decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
 
 		fw_dict = {key: value for (key, value) in (json_decoded.items())}
-		if dry_run == False:
-			print_debug(target_name + "'s md5 =" + fw_dict[target_name + "_md5"])
-			print_debug(target_name + "'s metadata =" + fw_dict[target_name + "_metadata"])
-		json_md5 = fw_dict[target_name + "_md5"]
-		json_based64 = fw_dict[target_name + "_fw"]
-		try:
-			json_binary = base64.standard_b64decode(json_based64)
-		except Exception as e:
-			raise Exception("Base64 decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
-		try:
-			fileMd5 = md5.new()
-			fileMd5.update(json_binary)
-			md5_calculated = fileMd5.hexdigest()
-		except Exception as e:
-			raise Exception("MD5 calculated file \"%s\" error: %s" % (json_file_name, str(e.message)))
+		if dry_run == False and json_prefix != "":
+			print_debug(json_prefix + "'s md5 =" + fw_dict[json_prefix + "_md5"])
+			print_debug(json_prefix + "'s metadata =" + fw_dict[json_prefix + "_metadata"])
 
-		# Check md5
-		if md5_calculated != json_md5:
-			print_err('Json: %s\'s md5 is not equal to calculated value' % json_file)
-			raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file)
+		# Emvconf don't follow the format, so if `json_prefix` is empty, bypass the md5 and base64 checking
+		# The emv upgrader will check for us
+		if json_prefix != "":
+			json_md5 = fw_dict[json_prefix + "_md5"]
+			json_based64 = fw_dict[json_prefix + "_fw"]
+			try:
+				json_binary = base64.standard_b64decode(json_based64)
+			except Exception as e:
+				raise Exception("Base64 decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
+			try:
+				fileMd5 = md5.new()
+				fileMd5.update(json_binary)
+				md5_calculated = fileMd5.hexdigest()
+			except Exception as e:
+				raise Exception("MD5 calculated file \"%s\" error: %s" % (json_file_name, str(e.message)))
+
+			# Check md5
+			if md5_calculated != json_md5:
+				print_err('Json: %s\'s md5 is not equal to calculated value' % json_file)
+				raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file)
 
 		# if it is only for validating, no need to write to file
 		if dry_run == True:
-			return True, json_file[:len(json_file) - 1]
+			return True, json_file[:len(json_file) - 1], ""
 
-		# Everything is ok, write to target_name file
-		try:
-			fh = open(target_name, 'wb')
-			fh.write(json_binary)
-			fh.close()
+		# Emvconf don't follow the format, so if `json_prefix` is empty, don't write the binary to file
+		# The emv upgrader use the json directly
+		if json_prefix == "":
+			fileToWrite = json_file[:len(json_file) - 1]
+		else:
+			# Everything is ok, write to json_prefix file
+			try:
+				fileToWrite = json_prefix + ".bin"
+				fh = open(fileToWrite, 'wb')
+				fh.write(json_binary)
+				fh.close()
 
-			os.chmod(target_name, 0777)
-		except Exception as e:
-			raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (target_name, json_file_name, str(e.message)))
+				os.chmod(fileToWrite, 0777)
+			except Exception as e:
+				raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (fileToWrite, json_file_name, str(e.message)))
 
-		print_ok("Restore binary file \"%s\" ok" % (target_name))
-		return True, json_file[:len(json_file) - 1]
+		print_ok("Restore binary file \"%s\" ok" % (json_file.rstrip()))
+		return True, json_file[:len(json_file) - 1], fileToWrite
 
 	@staticmethod
 	def CheckFilePresence(file_path):
@@ -434,12 +444,15 @@ class SiriusFwValidator():
 		return True, folder_name
 
 	@staticmethod
-	def ValidateFirmware(fwRecoveryModel):
+	def ValidateFirmware(fwRecoveryModels):
 		present = 0
-		for idx, model in enumerate(fwRecoveryModel):
+		for idx, model in enumerate(fwRecoveryModels):
 			try:
+				if model["JSON_PREFIX"] == "":
+					continue
+
 				# check validity of model in folder
-				ret, json = SiriusFwValidator.RestoreJsonFromCompressed(model["FIRMWARE_FILE"], model["JSON_PREFIX"], dry_run=True)
+				ret, jsonOut, binOut = SiriusFwValidator.RestoreJsonFromCompressed(model["FIRMWARE_FILE"], model["JSON_PREFIX"], dry_run=True)
 				if ret != True:
 					print_err("Err when extract file")
 				present += 1
@@ -471,7 +484,7 @@ class SiriusFwRecoveryExecuter():
 		pListFile = subprocess.Popen(['bsdtar', '-tf', compress_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		output, err = pListFile.communicate()
 		rc = pListFile.returncode
-		ret, folder_name = SiriusFwValidator.IsSCPFolderValid(output)
+		ret, folder_name = SiriusFwValidator.IsScpFolderValid(output)
 		if ret != True:
 			print_err("Content in suribl is not valid !!!")
 			return False
@@ -519,17 +532,18 @@ class SiriusFwRecoveryExecuter():
 		return os.system("./rfp_fwupgrade " + file_path)
 
 	@staticmethod
-	def RecoveryFirmware(fwRecoveryModel, firmwareName):
+	def RecoveryFirmware(fwRecoveryModels, firmwareName):
 		"""
-		fwRecoveryModel should be the array which contains a type:
+		fwRecoveryModels should be the array which contains a type:
 
 		"""
 		print_noti("Going to rollback using \"%s firmwares\"" % (firmwareName))
 		output_json_filename = []
+		output_bin_filename = []
 
-		for idx, model in enumerate(fwRecoveryModel):
+		for idx, model in enumerate(fwRecoveryModels):
 			if SiriusFwValidator.CheckFilePresence(model["FIRMWARE_FILE"]) != FILE_PRESENT:
-				print_err("Not all %s files present" % firmwareName)
+				print_err("Firmware %s missing" % model["FIRMWARE_FILE"])
 				return -1
 
 		SiriusFwRecoveryExecuter.KillSvcXmsdk()
@@ -537,11 +551,13 @@ class SiriusFwRecoveryExecuter():
 		########################################################################
 		# Step 1
 		# Extract firmware from list of compressed files
-		for idx, model in enumerate(fwRecoveryModel):
-			ret, output_json_filename[idx] = SiriusFwValidator.RestoreJsonFromCompressed(
+		for idx, model in enumerate(fwRecoveryModels):
+			ret, outJsonName, outBinName = SiriusFwValidator.RestoreJsonFromCompressed(
 				model["FIRMWARE_FILE"],
 				model["JSON_PREFIX"]
 			)
+			output_json_filename.append(outJsonName)
+			output_bin_filename.append(outBinName)
 			if ret != True:
 				print_err("Err when extract %s" % model["FIRMWARE_FILE"])
 				return -1
@@ -549,9 +565,9 @@ class SiriusFwRecoveryExecuter():
 		########################################################################
 		# Step 2
 		# Start roll back the firmware one by one
-		for idx, model in enumerate(fwRecoveryModel):
+		for idx, model in enumerate(fwRecoveryModels):
 			print_noti("Going to %s using \"%s\"" % (model["ACTION_NAME"], model["FIRMWARE_FILE"]))
-			model["UPG_FUNC"](output_json_filename[idx])
+			ret = model["UPG_FUNC"](output_json_filename[idx])
 			if ret != True:
 				print_err("Err when %s" % model["ACTION_NAME"])
 				return -1
@@ -562,6 +578,8 @@ class SiriusFwRecoveryExecuter():
 		# Clean up everything
 		for json_file in output_json_filename:
 			os.remove(json_file)
+		for bin_file in output_bin_filename:
+			os.remove(bin_file)
 
 		SiriusFwRecoveryExecuter.KillSvcXmsdk()
 		print_ok("Rollback using \"%s firmwares\" successfully" % (firmwareName))
@@ -614,16 +632,16 @@ def main():
 		print_warn("Last upgrade is not complete yet, rollback previous stable version")
 
 		backupFolderRecoveryFlow = SiriusFirmwareRecovery.RecoveryFlowModel(SiriusFirmwareRecovery.BACKUP_FOLDER,
-																			"BASELINE_FOLDER",
 																			"BACKUP_FOLDER",
+																			"BASELINE_FOLDER",
 																			None)
 		baselineFolderRecoveryFlow = SiriusFirmwareRecovery.RecoveryFlowModel(SiriusFirmwareRecovery.BASELINE_FOLDER,
-																			"FACTORY_FOLDER",
 																			"BASELINE_FOLDER",
+																			"FACTORY_FOLDER",
 																			None)
 		factoryFolderRecoveryFlow = SiriusFirmwareRecovery.RecoveryFlowModel(SiriusFirmwareRecovery.FACTORY_FOLDER,
-																			None,
 																			"FACTORY_FOLDER",
+																			None,
 																			None)
 
 		SiriusRecoveryFlowPipeline = [
@@ -633,6 +651,7 @@ def main():
 		]
 
 		for flow in SiriusRecoveryFlowPipeline:
+			print_noti("Try using \"%s\" to recovery firwmare to Sirius" % (flow["CUR_FOLDER_NAME"]))
 			if SiriusFwValidator.ValidateFirmware(flow["FW_RECOVERY_MODELS"]) == True:
 				# Do the recovery with current...
 				retVal = SiriusFwRecoveryExecuter.RecoveryFirmware(flow["FW_RECOVERY_MODELS"], "")
@@ -645,6 +664,7 @@ def main():
 
 	except Exception as e:
 		print_err(e.message)
+		print(traceback.format_exc())
 	finally:
 		os.remove(SiriusFirmwareRecovery.FIRMWARE_UPGRADING_FLAG)
 		time_now = datetime.datetime.now()
