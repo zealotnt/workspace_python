@@ -23,10 +23,6 @@ from logging.handlers import RotatingFileHandler
 FILE_PRESENT 				= 0
 FILE_ABSENT 				= 1
 
-SEND_SCP_SCRIPT 			= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/sendscp_mod.sh"
-RF_SCP_EXTRACT_PATH 		= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/buildSCP/rf_fw/"
-SEND_SCP_UART_PORT 			= "/dev/ttymxc3"
-
 def print_warn(text, fileLog=True):
 	print_text = SCRIPT_PREFIX("WARN", bcolors.WARNING) + text
 	print(print_text)
@@ -56,7 +52,6 @@ def print_ok(text, fileLog=True):
 	print(print_text)
 	if fileLog == True:
 		gLogger.info(print_text)
-
 
 def SCRIPT_PREFIX(debugType="", color=""):
 	return "[%sBOOTUP_%s%s] " % (color, debugType, bcolors.ENDC)
@@ -99,120 +94,131 @@ class SiriusFirmwareRecovery():
 		]
 
 	@staticmethod
-	def FirmwareUpgradeFunction():
+	def FirmwareRecoveryModels(inFolder):
 		return {
-			"ERASER": SiriusFwRecoveryExecuter.UpgradeSuribl,
-			"SURIBL": SiriusFwRecoveryExecuter.UpgradeSuribl,
-			"SURISDK": SiriusFwRecoveryExecuter.UpgradeSurisdk,
-			"PN5180": SiriusFwRecoveryExecuter.UpgradePn5180,
-			"EMV_CONF0": SiriusFwRecoveryExecuter.UpgradeEmv,
-			"EMV_CONF1": SiriusFwRecoveryExecuter.UpgradeEmv,
-			"EMV_CONF2": SiriusFwRecoveryExecuter.UpgradeEmv,
-			"EMV_CONF3": SiriusFwRecoveryExecuter.UpgradeEmv,
-			"EMV_CAPK": SiriusFwRecoveryExecuter.UpgradeEmv,
-			"SVC": SiriusFwRecoveryExecuter.RunSvc,
-			"XMSDK": None,
-		}
-
-	@staticmethod
-	def FirmwareRecoverList(inFolder):
-		"""
-		inFolder: path (best if absolute path) to folder contains all of the folder
-
-		ret: return the dictionary of recovery firmwares, all of them are contain in `inFolder`
-		"""
-		return {
-			"ERASER": inFolder + SiriusFirmwareRecovery.SURI_ERASER_NAME,
-			"SURIBL": inFolder + SiriusFirmwareRecovery.SURIBL_FW_FILE_NAME,
-			"SURISDK": inFolder + SiriusFirmwareRecovery.SURISDK_FW_FILE_NAME,
-			"PN5180": inFolder + SiriusFirmwareRecovery.PN5180_FW_FILE_NAME,
-			"EMV_CONF0": inFolder + SiriusFirmwareRecovery.EMV_CONF0_FILE_NAME,
-			"EMV_CONF1": inFolder + SiriusFirmwareRecovery.EMV_CONF1_FILE_NAME,
-			"EMV_CONF2": inFolder + SiriusFirmwareRecovery.EMV_CONF2_FILE_NAME,
-			"EMV_CONF3": inFolder + SiriusFirmwareRecovery.EMV_CONF3_FILE_NAME,
-			"EMV_CAPK": inFolder + SiriusFirmwareRecovery.EMV_CAPK_FILE_NAME,
-			"SVC": inFolder + SiriusFirmwareRecovery.SVC_FW_FILE_NAME,
-			"XMSDK": inFolder + SiriusFirmwareRecovery.XMSDK_FW_FILE_NAME,
-		}
-
-	@staticmethod
-	def FirmwareJsonPrefix():
-		return {
-			"ERASER": "suribl",
-			"SURIBL": "suribl",
-			"SURISDK": "surisdk",
-			"PN5180": "pn5180",
-			"EMV_CONF0": "",
-			"EMV_CONF1": "",
-			"EMV_CONF2": "",
-			"EMV_CONF3": "",
-			"EMV_CAPK": "",
-			"SVC": "svc",
-			"XMSDK": "xmsdk"
-		}
-
-	@staticmethod
-	def FirmwareBinaryOut():
-		return {
-			"ERASER": "eraser.tar.xz",
-			"SURIBL": "suribl.tar.xz",
-			"SURISDK": "surisdk.bin",
-			"PN5180": "pn5180.bin",
-			"EMV_CONF0": "",
-			"EMV_CONF1": "",
-			"EMV_CONF2": "",
-			"EMV_CONF3": "",
-			"EMV_CAPK": "",
-			"SVC": "svc",
-			"XMSDK": "xmsdk"
-		}
-
-	@staticmethod
-	def UpgradeActionName():
-		return {
-			"ERASER": "Erase RF Processor flash memory",
-			"SURIBL": "Recovery suri bootloader",
-			"SURISDK": "Recovery surisdk",
-			"PN5180": "Recovery pn5180 firmware",
-			"EMV_CONF0": "Recovery emvConf0",
-			"EMV_CONF1": "Recovery emvConf1",
-			"EMV_CONF2": "Recovery emvConf2",
-			"EMV_CONF3": "Recovery emvConf3",
-			"EMV_CAPK": "Recovery emvCapk",
-			"SVC": "",
-			"XMSDK": ""
-		}
-
-	@staticmethod
-	def FirmwareRecoveryModel(upgFunc, fwFile, jsonPrefix, binaryFile, actionName):
-		return {
-			"UPG_FUNC": upgFunc,
-			"FIRMWARE_FILE": fwFile,
-			"JSON_PREFIX": jsonPrefix,
-			"BINARY_FILE": binaryFile,
-			"ACTION_NAME": actionName,
+			"ERASER": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSuribl,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SURI_ERASER_NAME,
+				"JSON_PREFIX": "suribl",
+				"BINARY_FILE": "eraser.tar.xz",
+				"ACTION_NAME": "Erase RF Processor flash memory",
+				"FILE_USED": "BINARY",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"SURIBL": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSuribl,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SURIBL_FW_FILE_NAME,
+				"JSON_PREFIX": "suribl",
+				"BINARY_FILE": "suribl.tar.xz",
+				"ACTION_NAME": "Recovery suri bootloader",
+				"FILE_USED": "BINARY",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"SURISDK": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSurisdk,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SURISDK_FW_FILE_NAME,
+				"JSON_PREFIX": "surisdk",
+				"BINARY_FILE": "surisdk.bin",
+				"ACTION_NAME": "Recovery surisdk",
+				"FILE_USED": "BINARY",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"PN5180": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradePn5180,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.PN5180_FW_FILE_NAME,
+				"JSON_PREFIX": "pn5180",
+				"BINARY_FILE": "pn5180.bin",
+				"ACTION_NAME": "Recovery pn5180 firmware",
+				"FILE_USED": "BINARY",
+				"MAX_RETRY_TIMES": 5,
+				"RETRY_DELAY": 10,
+			},
+			"EMV_CONF0": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF0_FILE_NAME,
+				"JSON_PREFIX": "",
+				"BINARY_FILE": "",
+				"ACTION_NAME": "Recovery emvConf0",
+				"FILE_USED": "JSON",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"EMV_CONF1": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF1_FILE_NAME,
+				"JSON_PREFIX": "",
+				"BINARY_FILE": "",
+				"ACTION_NAME": "Recovery emvConf1",
+				"FILE_USED": "JSON",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"EMV_CONF2": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF2_FILE_NAME,
+				"JSON_PREFIX": "",
+				"BINARY_FILE": "",
+				"ACTION_NAME": "Recovery emvConf2",
+				"FILE_USED": "JSON",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"EMV_CONF3": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF3_FILE_NAME,
+				"JSON_PREFIX": "",
+				"BINARY_FILE": "",
+				"ACTION_NAME": "Recovery emvConf3",
+				"FILE_USED": "JSON",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"EMV_CAPK": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CAPK_FILE_NAME,
+				"JSON_PREFIX": "",
+				"BINARY_FILE": "",
+				"ACTION_NAME": "Recovery emvCapk",
+				"FILE_USED": "JSON",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"SVC": {
+				"UPG_FUNC": SiriusFwRecoveryExecuter.RunSvc,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SVC_FW_FILE_NAME,
+				"JSON_PREFIX": "svc",
+				"BINARY_FILE": "svc",
+				"ACTION_NAME": "",
+				"FILE_USED": "BINARY",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
+			"XMSDK": {
+				"UPG_FUNC": None,
+				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.XMSDK_FW_FILE_NAME,
+				"JSON_PREFIX": "xmsdk",
+				"BINARY_FILE": "xmsdk",
+				"ACTION_NAME": "",
+				"FILE_USED": "BINARY",
+				"MAX_RETRY_TIMES": 0,
+				"RETRY_DELAY": 0,
+			},
 		}
 
 	@staticmethod
 	def RecoveryFlowModel(fwInFolder, curFolderName, nextFolderName, tearDownFunc=None):
 		fwAccess = SiriusFirmwareRecovery.FirmwareAccessOrder()
-		listFw = SiriusFirmwareRecovery.FirmwareRecoverList(fwInFolder)
-		upgFunc = SiriusFirmwareRecovery.FirmwareUpgradeFunction()
-		jsonNames = SiriusFirmwareRecovery.FirmwareJsonPrefix()
-		binOutNames = SiriusFirmwareRecovery.FirmwareBinaryOut()
-		actionNames = SiriusFirmwareRecovery.UpgradeActionName()
-		fwRecoveryModels = []
+		modelsDict = SiriusFirmwareRecovery.FirmwareRecoveryModels(fwInFolder)
+		modelsArray = []
 		for idx, accessName in enumerate(fwAccess):
-			fwRecoveryModels.append(
-				SiriusFirmwareRecovery.FirmwareRecoveryModel(upgFunc[accessName],
-									  listFw[accessName],
-									  jsonNames[accessName],
-									  binOutNames[accessName],
-									  actionNames[accessName])
-			)
+			modelsArray.append(modelsDict[accessName])
 
 		return {
-			"FW_RECOVERY_MODELS": fwRecoveryModels,
+			"FW_IN_FOLDER": fwInFolder,
+			"FW_RECOVERY_MODELS": modelsArray,
 			"NEXT_FOLDER_NAME": nextFolderName,
 			"CUR_FOLDER_NAME": curFolderName,
 			"TEAR_DOWN_FUNC": tearDownFunc,
@@ -257,7 +263,7 @@ class FileLogging():
 		self.logger.setLevel(logging.DEBUG)
 
 		# add a rotating handler
-		self.handler = RotatingFileHandler(logFilePath, maxBytes, backupCount)
+		self.handler = RotatingFileHandler(logFilePath, maxBytes=maxBytes, backupCount=backupCount)
 		self.logger.addHandler(self.handler)
 
 	def debug(self, text):
@@ -387,17 +393,17 @@ class SiriusFwValidator():
 
 			# Check md5
 			if md5_calculated != json_md5:
-				print_err('Json: %s\'s md5 is not equal to calculated value' % json_file)
-				raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file)
+				print_err('Json: %s\'s md5 is not equal to calculated value\n\tCalculated: %s\n\tJson value: %s)' % (json_file_name, md5_calculated, json_md5))
+				raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file_name)
 
 		# if it is only for validating, no need to write to file
 		if dry_run == True:
-			return True, json_file[:len(json_file) - 1], ""
+			return True, json_file_name, ""
 
 		# Emvconf don't follow the format, so if `json_prefix` is empty, don't write the binary to file
 		# The emv upgrader use the json directly
 		if (json_prefix == "") or (binary_out_name == ""):
-			return True, json_file[:len(json_file) - 1], ""
+			return True, json_file_name, ""
 		else:
 			# write the content of json-based64-encoded data to a `binary_out_name`
 			try:
@@ -409,8 +415,8 @@ class SiriusFwValidator():
 			except Exception as e:
 				raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (binary_out_name, json_file_name, str(e.message)))
 
-		print_ok("Restore binary file \"%s\" ok" % (json_file.rstrip()))
-		return True, json_file[:len(json_file) - 1], binary_out_name
+		print_ok("Restore binary file \"%s\" ok" % (json_file_name))
+		return True, json_file_name, binary_out_name
 
 	@staticmethod
 	def CheckFilePresence(file_path):
@@ -460,9 +466,93 @@ class SiriusFwValidator():
 		return True, folder_name
 
 	@staticmethod
-	def ValidateFirmware(fwRecoveryModels):
+	def Md5sumFileValidate(modelsArray, inFolder):
+		md5SumAllFilePath = inFolder + "md5sumAllFw.sum"
+		if os.path.isfile(md5SumAllFilePath) is not True:
+			return False
+
+		f = open(md5SumAllFilePath, 'rU')
+		md5sumContent = f.read()
+		f.close()
+
+		def GetFilenameChecksumList(content):
+			ret = []
+			match = re.findall(r'^(.+)\s+[/\w\.]+/([\w\.\d]+)$', content, re.MULTILINE)
+			for item in match:
+				model = {
+					"FILE_NAME": "",
+					"FILE_CHK_SUM": ""
+				}
+
+				model["FILE_NAME"] = item[1]
+				model["FILE_CHK_SUM"] = item[0]
+				ret.append(model)
+			if ret == []:
+				return None
+			return ret
+
+		def GetFilenameChecksumFromModelsArray(modelsArray):
+			ret = []
+			for model in modelsArray:
+				if os.path.isfile(model["FIRMWARE_FILE"]) is not True:
+					print ("Not found: ", model["FIRMWARE_FILE"])
+					return None
+				f=open(model["FIRMWARE_FILE"], 'rb')
+				fw_binary=f.read()
+				f.close()
+				fileMd5 = md5.new()
+				fileMd5.update(fw_binary)
+				md5_calculated = fileMd5.hexdigest()
+				retModel = {
+					"FILE_NAME": os.path.basename(model["FIRMWARE_FILE"]),
+					"FILE_CHK_SUM": md5_calculated
+				}
+				ret.append(retModel)
+			return ret
+
+		retFromFile = GetFilenameChecksumList(md5sumContent)
+		retFromModel = GetFilenameChecksumFromModelsArray(modelsArray)
+		if retFromFile is None or retFromModel is None:
+			print ("ret: ", retFromFile, retFromModel)
+			print (1)
+			return False
+		# retFromFile could have more item than retFromModel
+		# because sometimes, there is additional entry of the md5sumAllFw.sum itself
+		if len(retFromFile) < len(retFromModel):
+			print ("Len: ", len(retFromFile), len(retFromModel))
+			print (2)
+			return False
+
+		matchItem = 0
+		missing = []
+		for idx, item in enumerate(retFromModel):
+			found = False
+			for idx2, item2 in enumerate(retFromFile):
+				if item2["FILE_NAME"].lower().rstrip() == item["FILE_NAME"].lower().rstrip():
+					if item2["FILE_CHK_SUM"].lower().rstrip() == item["FILE_CHK_SUM"].lower().rstrip():
+						print("Pass!!! Sum:%s File: %s" % (item2["FILE_CHK_SUM"], item2["FILE_NAME"]))
+						matchItem += 1
+						found = True
+			if found == False:
+				missing.append(item["FILE_NAME"].lower().rstrip())
+
+		if matchItem != len(retFromModel):
+			print_warn("Not enough md5sumAllFw.sum matching\n\tWant:%d\n\tHave:%d\n\tMissing: %s" %
+				(len(retFromModel), matchItem, "\n\t\t ".join(missing))
+			)
+			return False
+		else:
+			return True
+
+	@staticmethod
+	def ValidateFirmware(modelsArray, inFolder):
+		# This function will validate the `md5sumAllFw.sum` with the files in `modelsArray`
+		if SiriusFwValidator.Md5sumFileValidate(modelsArray, inFolder) != True:
+			return False
+
+		# This loop will check the content inside the files (try extract, try check md5sum binary) in `modelsArray`
 		present = 0
-		for idx, model in enumerate(fwRecoveryModels):
+		for idx, model in enumerate(modelsArray):
 			try:
 				if model["JSON_PREFIX"] == "":
 					continue
@@ -495,6 +585,10 @@ class SiriusFwRecoveryExecuter():
 
 	@staticmethod
 	def UpgradeSuribl(compress_file):
+		SEND_SCP_SCRIPT 			= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/sendscp_mod.sh"
+		RF_SCP_EXTRACT_PATH 		= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/buildSCP/rf_fw/"
+		SEND_SCP_UART_PORT 			= "/dev/ttymxc3"
+
 		# Clean the old bootloader firmware folder
 		os.system("rm -rf %s" % (RF_SCP_EXTRACT_PATH))
 		os.system("mkdir -p %s" % (RF_SCP_EXTRACT_PATH))
@@ -529,8 +623,8 @@ class SiriusFwRecoveryExecuter():
 
 	@staticmethod
 	def KillSvcXmsdk():
-		os.system("killall xmsdk*")
-		os.system("killall svc*")
+		os.system("killall xmsdk")
+		os.system("killall svc")
 
 	@staticmethod
 	def RunSvc(file_path):
@@ -543,30 +637,36 @@ class SiriusFwRecoveryExecuter():
 
 	@staticmethod
 	def UpgradeSurisdk(file_path):
-		return True if os.system("./rfp_fwupgrade " + file_path) == 0 else False
+		return True if os.system("/home/root/rfp_fwupgrade " + file_path) == 0 else False
 
 	@staticmethod
 	def UpgradePn5180(file_path):
-		return True if os.system("./pn5180UpgradeApp 0 0" + file_path) == 0 else False
+		ret = os.system("/home/root/pn5180/pn5180UpgradeApp 0 0 " + file_path)
+		if ret == 0:
+			return True
+		else:
+			print_warn("pn5180 ret = %d" % ret)
+			return False
 
 	@staticmethod
 	def UpgradeEmv(file_path):
 		"""
 		This function is used to upgrade emvconf0-3 or emvcapk
 		"""
-		return True if os.system("./rfp_fwupgrade " + file_path) == 0 else False
+		return True if os.system("/home/root/emv/emv_upgrade_config_json " + file_path) == 0 else False
 
 	@staticmethod
-	def RecoveryFirmware(fwRecoveryModels, firmwareName):
+	def RecoveryFirmware(modelsArray, firmwareName):
 		"""
-		fwRecoveryModels should be the array which contains a type:
+		modelsArray should be the array which contains a dictionary:
 
+		return 0 on success, others on error
 		"""
 		print_noti("Going to rollback using \"%s firmwares\"" % (firmwareName))
 		output_json_filename = []
 		output_bin_filename = []
 
-		for idx, model in enumerate(fwRecoveryModels):
+		for idx, model in enumerate(modelsArray):
 			if SiriusFwValidator.CheckFilePresence(model["FIRMWARE_FILE"]) != FILE_PRESENT:
 				print_err("Firmware %s missing" % model["FIRMWARE_FILE"])
 				return -1
@@ -576,7 +676,7 @@ class SiriusFwRecoveryExecuter():
 		########################################################################
 		# Step 1
 		# Extract firmware from list of compressed files
-		for idx, model in enumerate(fwRecoveryModels):
+		for idx, model in enumerate(modelsArray):
 			if model["JSON_PREFIX"] != "":
 				print_noti("Step1-%d: Going to restore \"%s\" from \"%s\"" % (idx+1, model["JSON_PREFIX"], model["FIRMWARE_FILE"]))
 			else:
@@ -596,25 +696,48 @@ class SiriusFwRecoveryExecuter():
 		########################################################################
 		# Step 2
 		# Start roll back the firmware one by one
-		for idx, model in enumerate(fwRecoveryModels):
+		for idx, model in enumerate(modelsArray):
+			maxRetryTimes = model["MAX_RETRY_TIMES"]
 			print_noti("Step2-%d: Going to %s using \"%s\"" % (idx+1, model["ACTION_NAME"], model["FIRMWARE_FILE"]))
-			if model["UPG_FUNC"] is None:
-				print_noti("Ignore firmware %s cause null upgrade handler" % model["FIRMWARE_FILE"])
-				continue
 
-			ret = model["UPG_FUNC"](output_bin_filename[idx])
-			if ret != True:
-				print_err("Err when %s" % model["ACTION_NAME"])
-				return -1
-			print_ok("%s using \"%s\" successfully" % (model["ACTION_NAME"], model["FIRMWARE_FILE"]))
+			while True:
+				if model["UPG_FUNC"] is None:
+					print_noti("Ignore firmware %s cause null upgrade handler" % model["FIRMWARE_FILE"])
+					break # go to next firmware
+
+				if model["FILE_USED"] == "BINARY":
+					ret = model["UPG_FUNC"](output_bin_filename[idx])
+				elif model["FILE_USED"] == "JSON":
+					ret = model["UPG_FUNC"](output_json_filename[idx])
+				else:
+					raise Exception("Unregcognize FILE_USED: %s for firmware: %s" % (model["FILE_USED"], model["FIRMWARE_FILE"]))
+
+				if ret != True:
+					if maxRetryTimes > 0:
+						maxRetryTimes -= 1
+						print_noti("Fail when %s, wait for %ds then retrying, %d times left" % (model["ACTION_NAME"], model["RETRY_DELAY"], maxRetryTimes))
+						time.sleep(model["RETRY_DELAY"])
+						continue # retry
+					print_err("Err when %s" % model["ACTION_NAME"])
+					return -1 # error => return right away
+
+				print_ok("%s using \"%s\" successfully" % (model["ACTION_NAME"], model["FIRMWARE_FILE"]))
+				break # go to next firmware
 
 		########################################################################
 		# Step 3
 		# Clean up everything
 		for json_file in output_json_filename:
-			os.remove(json_file)
+			if SiriusFwValidator.CheckFilePresence(json_file) == FILE_PRESENT:
+				os.remove(json_file)
 		for bin_file in output_bin_filename:
-			os.remove(bin_file)
+			# Just a temp solution for not accidential remove svc and xmsdk
+			if "svc" in bin_file:
+				continue
+			if "xmsdk" in bin_file:
+				continue
+			if SiriusFwValidator.CheckFilePresence(bin_file) == FILE_PRESENT:
+				os.remove(bin_file)
 
 		SiriusFwRecoveryExecuter.KillSvcXmsdk()
 		print_ok("Rollback using \"%s firmwares\" successfully" % (firmwareName))
@@ -687,13 +810,19 @@ def main():
 
 		for flow in SiriusRecoveryFlowPipeline:
 			print_noti("Try using \"%s\" to recovery firwmare to Sirius" % (flow["CUR_FOLDER_NAME"]))
-			if SiriusFwValidator.ValidateFirmware(flow["FW_RECOVERY_MODELS"]) == True:
+			if SiriusFwValidator.ValidateFirmware(flow["FW_RECOVERY_MODELS"], flow["FW_IN_FOLDER"]) == True:
+
 				# Do the recovery with current...
-				retVal = SiriusFwRecoveryExecuter.RecoveryFirmware(flow["FW_RECOVERY_MODELS"], "")
+				retVal = SiriusFwRecoveryExecuter.RecoveryFirmware(flow["FW_RECOVERY_MODELS"], flow["CUR_FOLDER_NAME"])
 
-				# If there is  teardown function, call it
+				# If fail, go to next folder...
+				if retVal == 0:
+					return retVal
+				if flow["NEXT_FOLDER_NAME"] == None:
+					return retVal
 
-			# If fail, go to next folder...
+				print_warn("Recovery operation of \"%s\" fail, use \"%s\" instead" % (flow["CUR_FOLDER_NAME"], flow["NEXT_FOLDER_NAME"]))
+				continue
 			else:
 				print_warn("Validation of \"%s\" fail, use \"%s\" instead" % (flow["CUR_FOLDER_NAME"], flow["NEXT_FOLDER_NAME"]))
 
@@ -701,7 +830,10 @@ def main():
 		print_err(e.message)
 		print(traceback.format_exc())
 	finally:
-		os.remove(SiriusFirmwareRecovery.FIRMWARE_UPGRADING_FLAG)
+		try:
+			os.remove(SiriusFirmwareRecovery.FIRMWARE_UPGRADING_FLAG)
+		except OSError:
+			pass
 		time_now = datetime.datetime.now()
 		print_noti("Event: End logging. Time: %s" % (time_now.strftime("%d, %b %Y; %-Hh:%-Mm:%-Ss")))
 		print_noti("<"*70)
