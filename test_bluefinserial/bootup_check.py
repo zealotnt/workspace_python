@@ -83,10 +83,11 @@ class SiriusFirmwareRecovery():
 	XMSDK_FW_FILE_NAME			= "xmsdk.json.tar.xz"
 
 	@staticmethod
-	def FirmwareAccess():
+	def FirmwareAccessOrder():
 		return [
 			"ERASER",
 			"SURIBL",
+			"SVC",
 			"SURISDK",
 			"PN5180",
 			"EMV_CONF0",
@@ -94,7 +95,6 @@ class SiriusFirmwareRecovery():
 			"EMV_CONF2",
 			"EMV_CONF3",
 			"EMV_CAPK",
-			"SVC",
 			"XMSDK"
 		]
 
@@ -110,7 +110,7 @@ class SiriusFirmwareRecovery():
 			"EMV_CONF2": SiriusFwRecoveryExecuter.UpgradeEmv,
 			"EMV_CONF3": SiriusFwRecoveryExecuter.UpgradeEmv,
 			"EMV_CAPK": SiriusFwRecoveryExecuter.UpgradeEmv,
-			"SVC": None,
+			"SVC": SiriusFwRecoveryExecuter.RunSvc,
 			"XMSDK": None,
 		}
 
@@ -152,6 +152,22 @@ class SiriusFirmwareRecovery():
 		}
 
 	@staticmethod
+	def FirmwareBinaryOut():
+		return {
+			"ERASER": "eraser.tar.xz",
+			"SURIBL": "suribl.tar.xz",
+			"SURISDK": "surisdk.bin",
+			"PN5180": "pn5180.bin",
+			"EMV_CONF0": "",
+			"EMV_CONF1": "",
+			"EMV_CONF2": "",
+			"EMV_CONF3": "",
+			"EMV_CAPK": "",
+			"SVC": "svc",
+			"XMSDK": "xmsdk"
+		}
+
+	@staticmethod
 	def UpgradeActionName():
 		return {
 			"ERASER": "Erase RF Processor flash memory",
@@ -168,20 +184,22 @@ class SiriusFirmwareRecovery():
 		}
 
 	@staticmethod
-	def FirmwareRecoveryModel(upgFunc, fwFile, jsonPrefix, actionName):
+	def FirmwareRecoveryModel(upgFunc, fwFile, jsonPrefix, binaryFile, actionName):
 		return {
 			"UPG_FUNC": upgFunc,
 			"FIRMWARE_FILE": fwFile,
 			"JSON_PREFIX": jsonPrefix,
+			"BINARY_FILE": binaryFile,
 			"ACTION_NAME": actionName,
 		}
 
 	@staticmethod
 	def RecoveryFlowModel(fwInFolder, curFolderName, nextFolderName, tearDownFunc=None):
-		fwAccess = SiriusFirmwareRecovery.FirmwareAccess()
+		fwAccess = SiriusFirmwareRecovery.FirmwareAccessOrder()
 		listFw = SiriusFirmwareRecovery.FirmwareRecoverList(fwInFolder)
 		upgFunc = SiriusFirmwareRecovery.FirmwareUpgradeFunction()
 		jsonNames = SiriusFirmwareRecovery.FirmwareJsonPrefix()
+		binOutNames = SiriusFirmwareRecovery.FirmwareBinaryOut()
 		actionNames = SiriusFirmwareRecovery.UpgradeActionName()
 		fwRecoveryModels = []
 		for idx, accessName in enumerate(fwAccess):
@@ -189,6 +207,7 @@ class SiriusFirmwareRecovery():
 				SiriusFirmwareRecovery.FirmwareRecoveryModel(upgFunc[accessName],
 									  listFw[accessName],
 									  jsonNames[accessName],
+									  binOutNames[accessName],
 									  actionNames[accessName])
 			)
 
@@ -336,7 +355,7 @@ class SiriusFwValidator():
 		return output
 
 	@staticmethod
-	def DecodeJsonAndWriteToFile(json_file, json_prefix, dry_run=False):
+	def DecodeJsonAndWriteToFile(json_file, json_prefix, binary_out_name, dry_run=False):
 		json_file_name = json_file.replace("\r", "").replace("\n", "")
 
 		try:
@@ -377,22 +396,21 @@ class SiriusFwValidator():
 
 		# Emvconf don't follow the format, so if `json_prefix` is empty, don't write the binary to file
 		# The emv upgrader use the json directly
-		if json_prefix == "":
-			fileToWrite = json_file[:len(json_file) - 1]
+		if (json_prefix == "") or (binary_out_name == ""):
+			return True, json_file[:len(json_file) - 1], ""
 		else:
-			# Everything is ok, write to json_prefix file
+			# write the content of json-based64-encoded data to a `binary_out_name`
 			try:
-				fileToWrite = json_prefix + ".bin"
-				fh = open(fileToWrite, 'wb')
+				fh = open(binary_out_name, 'wb')
 				fh.write(json_binary)
 				fh.close()
 
-				os.chmod(fileToWrite, 0777)
+				os.chmod(binary_out_name, 0777)
 			except Exception as e:
-				raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (fileToWrite, json_file_name, str(e.message)))
+				raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (binary_out_name, json_file_name, str(e.message)))
 
 		print_ok("Restore binary file \"%s\" ok" % (json_file.rstrip()))
-		return True, json_file[:len(json_file) - 1], fileToWrite
+		return True, json_file[:len(json_file) - 1], binary_out_name
 
 	@staticmethod
 	def CheckFilePresence(file_path):
@@ -401,7 +419,7 @@ class SiriusFwValidator():
 		return FILE_PRESENT
 
 	@staticmethod
-	def RestoreJsonFromCompressed(file_compressed, json_prefix, dry_run=False):
+	def RestoreJsonFromCompressed(file_compressed, json_prefix, binary_out_name, dry_run=False):
 		"""
 		:param file_compressed: compress file to restore from
 		:param json_prefix: the prefix of json in the firmware, and the output firmware
@@ -416,14 +434,12 @@ class SiriusFwValidator():
 			raise Exception("File %s not found" % (file_compressed))
 
 		# Extract tar file
-		if dry_run == False:
-			print_noti("Going to restore \"%s\" from \"%s\"" % (json_prefix, file_compressed))
 		extracted_file = SiriusFwValidator.Extractfile(file_compressed)
 		if extracted_file is None:
 			raise Exception("Can\'t extract %s" % file_compressed)
 
 		# Decode json file
-		return SiriusFwValidator.DecodeJsonAndWriteToFile(extracted_file, json_prefix, dry_run)
+		return SiriusFwValidator.DecodeJsonAndWriteToFile(extracted_file, json_prefix, binary_out_name, dry_run)
 
 	@staticmethod
 	def IsScpFolderValid(extract_result):
@@ -452,7 +468,10 @@ class SiriusFwValidator():
 					continue
 
 				# check validity of model in folder
-				ret, jsonOut, binOut = SiriusFwValidator.RestoreJsonFromCompressed(model["FIRMWARE_FILE"], model["JSON_PREFIX"], dry_run=True)
+				ret, jsonOut, binOut = SiriusFwValidator.RestoreJsonFromCompressed(model["FIRMWARE_FILE"],
+																				   model["JSON_PREFIX"],
+																				   model["BINARY_FILE"],
+																				   dry_run=True)
 				if ret != True:
 					print_err("Err when extract file")
 				present += 1
@@ -462,6 +481,7 @@ class SiriusFwValidator():
 					continue
 				else:
 					print_err(str(err_msg))
+					print(traceback.format_exc())
 					return False
 		# This avoid case there is no upgrades firmware, but return True
 		# => The main code will print no file present again => confused
@@ -509,27 +529,32 @@ class SiriusFwRecoveryExecuter():
 
 	@staticmethod
 	def KillSvcXmsdk():
-		os.system("killall xmsdk")
-		os.system("killall svc")
+		os.system("killall xmsdk*")
+		os.system("killall svc*")
 
 	@staticmethod
 	def RunSvc(file_path):
-		os.system("./" + file_path + " &")
+		ret = os.system("./" + file_path + " &")
+		if ret == 0:
+			time.sleep(0.5)
+			return True
+		else:
+			return False
 
 	@staticmethod
 	def UpgradeSurisdk(file_path):
-		return os.system("./rfp_fwupgrade " + file_path)
+		return True if os.system("./rfp_fwupgrade " + file_path) == 0 else False
 
 	@staticmethod
 	def UpgradePn5180(file_path):
-		return os.system("./rfp_fwupgrade " + file_path)
+		return True if os.system("./pn5180UpgradeApp 0 0" + file_path) == 0 else False
 
 	@staticmethod
 	def UpgradeEmv(file_path):
 		"""
 		This function is used to upgrade emvconf0-3 or emvcapk
 		"""
-		return os.system("./rfp_fwupgrade " + file_path)
+		return True if os.system("./rfp_fwupgrade " + file_path) == 0 else False
 
 	@staticmethod
 	def RecoveryFirmware(fwRecoveryModels, firmwareName):
@@ -552,9 +577,15 @@ class SiriusFwRecoveryExecuter():
 		# Step 1
 		# Extract firmware from list of compressed files
 		for idx, model in enumerate(fwRecoveryModels):
+			if model["JSON_PREFIX"] != "":
+				print_noti("Step1-%d: Going to restore \"%s\" from \"%s\"" % (idx+1, model["JSON_PREFIX"], model["FIRMWARE_FILE"]))
+			else:
+				print_noti("Step1-%d: Going to extract from file \"%s\"" % (idx+1, model["FIRMWARE_FILE"]))
+
 			ret, outJsonName, outBinName = SiriusFwValidator.RestoreJsonFromCompressed(
 				model["FIRMWARE_FILE"],
-				model["JSON_PREFIX"]
+				model["JSON_PREFIX"],
+				model["BINARY_FILE"],
 			)
 			output_json_filename.append(outJsonName)
 			output_bin_filename.append(outBinName)
@@ -566,8 +597,12 @@ class SiriusFwRecoveryExecuter():
 		# Step 2
 		# Start roll back the firmware one by one
 		for idx, model in enumerate(fwRecoveryModels):
-			print_noti("Going to %s using \"%s\"" % (model["ACTION_NAME"], model["FIRMWARE_FILE"]))
-			ret = model["UPG_FUNC"](output_json_filename[idx])
+			print_noti("Step2-%d: Going to %s using \"%s\"" % (idx+1, model["ACTION_NAME"], model["FIRMWARE_FILE"]))
+			if model["UPG_FUNC"] is None:
+				print_noti("Ignore firmware %s cause null upgrade handler" % model["FIRMWARE_FILE"])
+				continue
+
+			ret = model["UPG_FUNC"](output_bin_filename[idx])
 			if ret != True:
 				print_err("Err when %s" % model["ACTION_NAME"])
 				return -1
