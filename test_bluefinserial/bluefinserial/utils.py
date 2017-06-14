@@ -5,6 +5,8 @@ import os
 import binascii
 import re
 import ctypes
+import ntpath
+import inspect
 
 VERBOSE = 0
 EXTRA_VERBOSE = 0
@@ -358,3 +360,35 @@ def ProcessFilePath(path):
 	if path.startswith(fileProtocolPrefix):
 		path = path[len(fileProtocolPrefix)-1:]
 	return path
+
+def CompressFileWithExtension(extensionStr, filePath):
+	"""
+	This function will test if the `filePath` has extension of `extensionStr`
+	If yes, the function will try compress
+	and save the same filename and same folder
+	with extension ".tar.xz"
+
+	Ex:
+	extensionStr: ".json"
+	filePath: "~/xmsdk.json"
+
+	output: "~/xmsdk.tar.xz"
+	"""
+	if filePath.endswith(extensionStr):
+		# strip the .json
+		fileOutName = filePath[:len(filePath) - len(extensionStr)] + ".tar.xz"
+		tarCmd = "tar -cvf %s -C %s %s" % (fileOutName, os.path.dirname(filePath), ntpath.basename(filePath))
+		print(tarCmd)
+		# [Ref](http://stackoverflow.com/questions/18681595/tar-a-directory-but-dont-store-full-absolute-paths-in-the-archive)
+		ret = os.system(tarCmd)
+		if ret != 0:
+			print_err("Compress file error, quit")
+			return None
+		# return the generated file name
+		return fileOutName
+	else:
+		print_err("Input file not .json, ignore compressing")
+		return None
+
+# [Ref](http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-traceback)
+MYNAME = lambda: inspect.stack()[1][3]

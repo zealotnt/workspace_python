@@ -99,11 +99,9 @@ class SiriusAPIFwUpgrade():
 
 	def BeginUpgrade(self, paramId):
 		# Build the packet
-		pkt = ""
 		pkt = BluefinserialCommand(0xC5)
 		cmd = pkt.Packet('\x10', '\x60', chr(paramId))
 
-		rsp = ''
 		rsp = self._datalink.Exchange(cmd)
 		if rsp is None:
 			print_err("Firmware request execute fail")
@@ -117,13 +115,11 @@ class SiriusAPIFwUpgrade():
 
 	def PollForStatus(self, paramId):
 		# Build the packet
-		pkt = ""
 		pkt = BluefinserialCommand(0xC5)
 		cmd = pkt.Packet('\x10', '\x64', chr(paramId) + '\x00')
 
 		while True:
 			time.sleep(1)
-			rsp = ''
 			rsp = self._datalink.Exchange(cmd)
 			if rsp is None:
 				print_err("Firmware request execute fail")
@@ -133,6 +129,34 @@ class SiriusAPIFwUpgrade():
 
 			if rsp[2] == '\x00':
 				return True
+
+	def SendSTART(self):
+		# Build the packet
+		pkt = BluefinserialCommand(0xC5)
+		cmd = pkt.Packet('\x10', '\xD0', '\x50\x00')
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("%s fail" % MYNAME())
+			return False
+		if len(rsp) < 3:
+			return False
+		if rsp[2] != '\x00':
+			return False
+		return True
+
+	def SendEND(self):
+		# Build the packet
+		pkt = BluefinserialCommand(0xC5)
+		cmd = pkt.Packet('\x10', '\xD0', '\x60\x00')
+		rsp = self._datalink.Exchange(cmd)
+		if rsp is None:
+			print_err("%s fail" % MYNAME())
+			return False
+		if len(rsp) < 3:
+			return False
+		if rsp[2] != '\x00':
+			return False
+		return True
 
 	def UpgradeFirmware(self, firmware_type, file_path):
 		time_start = float(time.time() * 1000)
@@ -150,6 +174,10 @@ class SiriusAPIFwUpgrade():
 			print_err("Invalid firmware_type")
 			return
 
+		if self.SendSTART() != True:
+			print("Start fail")
+			return False
+
 		ret = self.DownloadFirmware(paramId, file_path)
 		if ret is False:
 			return False
@@ -157,6 +185,9 @@ class SiriusAPIFwUpgrade():
 		ret = self.BeginUpgrade(paramId)
 		ret = self.PollForStatus(paramId)
 		if ret is False:
+			return False
+
+		if self.SendEND() != True:
 			return False
 
 		time_end = float(time.time() * 1000)
