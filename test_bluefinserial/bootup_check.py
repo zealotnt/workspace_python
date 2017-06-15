@@ -466,8 +466,18 @@ class SiriusFwValidator():
 		return True, folder_name
 
 	@staticmethod
-	def Md5sumFileValidate(modelsArray, inFolder):
-		md5SumAllFilePath = inFolder + "md5sumAllFw.sum"
+	def Md5sumFileValidate(inFolder):
+		cmd = ("cd %s && "
+		"find *.tar.xz -type f -exec md5sum \{\} \\; | "
+		"sort -k 2 | "
+		"md5sum > /tmp/md5sum.all.sum && "
+		"cmp /tmp/md5sum.all.sum md5sum.all.sum" % (inFolder))
+		print_debug (cmd)
+		return True if os.system(cmd) == 0 else False
+
+	@staticmethod
+	def Md5sumFileValidateOld(modelsArray, inFolder):
+		md5SumAllFilePath = inFolder + "md5sum.all.sum"
 		if os.path.isfile(md5SumAllFilePath) is not True:
 			return False
 
@@ -547,8 +557,10 @@ class SiriusFwValidator():
 	@staticmethod
 	def ValidateFirmware(modelsArray, inFolder):
 		# This function will validate the `md5sumAllFw.sum` with the files in `modelsArray`
-		if SiriusFwValidator.Md5sumFileValidate(modelsArray, inFolder) != True:
+		if SiriusFwValidator.Md5sumFileValidate(inFolder) != True:
+			print_warn("Md5sumFileValidate() err in %s" % inFolder)
 			return False
+		print_noti("Md5sumFileValidate() ok in %s" % inFolder)
 
 		# This loop will check the content inside the files (try extract, try check md5sum binary) in `modelsArray`
 		present = 0
@@ -815,12 +827,26 @@ def main():
 				# Do the recovery with current...
 				retVal = SiriusFwRecoveryExecuter.RecoveryFirmware(flow["FW_RECOVERY_MODELS"], flow["CUR_FOLDER_NAME"])
 
-				# If fail, go to next folder...
+				# if success, move current folder items to BASELINE FOLDER
 				if retVal == 0:
+					if SiriusFirmwareRecovery.BASELINE_FOLDER != flow["FW_IN_FOLDER"]:
+						cmd = "rm -rf %s*" % SiriusFirmwareRecovery.BASELINE_FOLDER
+						print_debug(cmd)
+						os.system(cmd)
+						cmd = "cp -rp %s* %s" % (flow["FW_IN_FOLDER"], SiriusFirmwareRecovery.BASELINE_FOLDER)
+						print_debug(cmd)
+						os.system(cmd)
+					if SiriusFirmwareRecovery.BACKUP_FOLDER == flow["FW_IN_FOLDER"]:
+						cmd = "rm -rf %s*" % SiriusFirmwareRecovery.BACKUP_FOLDER
+						print_debug(cmd)
+						os.system(cmd)
 					return retVal
+
+				# if no more folder, exit
 				if flow["NEXT_FOLDER_NAME"] == None:
 					return retVal
 
+				# If fail, go to next folder...
 				print_warn("Recovery operation of \"%s\" fail, use \"%s\" instead" % (flow["CUR_FOLDER_NAME"], flow["NEXT_FOLDER_NAME"]))
 				continue
 			else:
