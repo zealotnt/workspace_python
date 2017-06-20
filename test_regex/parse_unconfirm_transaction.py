@@ -293,14 +293,14 @@ def main():
 
 	#########################################################
 	# Open and read the file
-	f = open(options.file, 'r')
+	f = open(options.file, 'rU')
 	fileContent = f.read()
 	f.close()
 
 	# replace the weird line endings
-	fileContent = fileContent.replace('\r\n', '\n')
-	fileContent = fileContent.replace('\n\r', '\n')
-	fileContent = fileContent.replace('\r', '\n')
+	# fileContent = fileContent.replace('\r\n', '\n')
+	# fileContent = fileContent.replace('\n\r', '\n')
+	# fileContent = fileContent.replace('\r', '\n')
 
 	#########################################################
 	# Break the result into chunk of Nocard detected
