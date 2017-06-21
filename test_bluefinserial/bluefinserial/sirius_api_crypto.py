@@ -94,10 +94,6 @@ class SiriusAPICrypto():
 		"TDES": tdes_key_length,
 		"AES": aes_key_length
 	}
-	cmac_cipher_block = {
-		"TDES": tdes_block_size,
-		"AES": aes_block_size,
-	}
 
 	# RSA
 	rsa_operations = {
@@ -377,18 +373,15 @@ class SiriusAPICrypto():
 		if len(key) not in SiriusAPICrypto.cmac_key_length[cipher]:
 			print_err("Invalid key length: %d" % len(key))
 			return None
-		if len(message) % SiriusAPICrypto.cmac_cipher_block[cipher] != 0:
-			print_err("Invalid message length: %d" % len(message))
-			return None
 
-		numOfBlock = len(message) / SiriusAPICrypto.cmac_cipher_block[cipher]
+		msgLen = len(message)
 		sirius_target = BluefinserialCommand.TARGET_APPLICATION if target == "APP" else BluefinserialCommand.TARGET_RF
 
 		pkt = BluefinserialCommand(sirius_target, verbose=False)
 		cmac_package = struct.pack('<BBB',
 			SiriusAPICrypto.cmac_operation[cipher], # cipher type
-			numOfBlock, # number of 16-bytes AES or 8-bytess TDES block
-			len(key), # message len
+			msgLen, # message len
+			len(key), # key length
 		) + message + key
 
 		cmd = pkt.Packet('\x8b', '\x44', cmac_package)
