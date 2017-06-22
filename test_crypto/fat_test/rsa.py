@@ -62,12 +62,15 @@ def main():
 
 		# Encrypt message
 		message = b"encrypted data"# randomword(keyLength/8)
+		plaintext = message
 		pubkey_tup = (
 			private_key.private_numbers().public_numbers.n,
 			long(private_key.private_numbers().public_numbers.e)
 		)
 		puc_key_2ndframework = RSA.construct(pubkey_tup)
-		ciphertext = puc_key_2ndframework.encrypt(plain_input, keySize)
+		ciphertext = puc_key_2ndframework.encrypt(plaintext, keyLength)
+		# return a 1 elem tuple, convert it to string
+		ciphertext = ciphertext[0]
 
 		# Dump hex value
 		print("\r\nHex value")
