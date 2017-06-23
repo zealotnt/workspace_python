@@ -495,7 +495,7 @@ class SiriusAPICrypto():
 			print_err("Send fail")
 			return None
 		if rsp[2] != '\x00':
-			print_err("Rsa fail, code 0x%02x" % ord(rsp[2]))
+			print_err("Rsa %s fail, code 0x%02x" % (operation, ord(rsp[2])))
 			return None
 		return rsp[3:]
 
