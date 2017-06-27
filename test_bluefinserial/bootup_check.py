@@ -98,7 +98,7 @@ class SiriusFirmwareRecovery():
 		return {
 			"ERASER": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSuribl,
-				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SURI_ERASER_NAME,
+				"FIRMWARE_FILE": SiriusFirmwareRecovery.FACTORY_FOLDER + SiriusFirmwareRecovery.SURI_ERASER_NAME,
 				"JSON_PREFIX": "suribl",
 				"BINARY_FILE": "eraser.tar.xz",
 				"ACTION_NAME": "Erase RF Processor flash memory",
