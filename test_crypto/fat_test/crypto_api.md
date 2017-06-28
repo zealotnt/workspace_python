@@ -1,5 +1,9 @@
 # Introduction
-This document show instruction and API implementation, API guide for cryptography item on STT.
+- This document show instruction and API implementation, API guide for cryptography item on STT.
+- Version: v0.3
+- References:
+    + [NIST CAVP](http://csrc.nist.gov/groups/STM/cavp/)
+    + [NIST Example](http://csrc.nist.gov/groups/ST/toolkit/examples.html)
 
 # New API:
 ## 1.  True Random Number Generator (TRNG)
@@ -78,7 +82,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Command Code | 1 | Fix value: 0x8b |
 | Command Control Code | 1 | Fix value: 0x44 |
 | CMAC-Cipher | 1 | Type of cipher of CMAC operation<br>0x00: TDES <br>0x01: AES |
-| Number of Block | 1 | Number of 16-bytes (for AES cipher) or 8-bytes (for TDES cipher) block |
+| Length of message | 1 | Length of message data |
 | Key Length | 1 | Length of AES/TDES key<br>8/16/24 bytes for TDES<br>16/24/32 bytes for AES |
 | Input Data | Variable | Input message |
 | AES/TDES Key Value | Variable | Key value |
@@ -92,7 +96,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | Status Response | 1 | Result code |
 | Output Bytes | Variable | MAC for input message |
 
-- References
+- References/Test vectors
     + [Ref-1](https://gist.github.com/ecerulm/90653daf2b808aea0837)
     + [Ref-2](http://stackoverflow.com/questions/28354844/how-to-calculate-aes-cmac-using-openssl)
     + [AES-CMAC](http://csrc.nist.gov/groups/ST/toolkit/documents/Examples/AES_CMAC.pdf)
@@ -122,7 +126,7 @@ This document show instruction and API implementation, API guide for cryptograph
 | 0x08 | 256 bit | 256 bit of ECDSA private key |
 | 0x09 | 2048/3072 bit | n The modulus of RSA public key |
 | 0x0A | 2048/3072 bit | d The Private Exponent of RSA private key |
-| 0x0B | 4 Bytes | Public exponent of RSA |
+| 0x0B | Maximum 3072bit | Public exponent of RSA |
 
 Note:
 - 1024/2048/3072 bit <=> 128/256/384 byte
@@ -207,6 +211,9 @@ Note:
 | Command Control Code | 1 | Fix value: 0x4d |
 | Status Response | 1 | Result code |
 | Output Text | N | N = RSA key size<br>Ciphered Text For encryption<br>Plaintext for decryption |
+
+- References/Test vectors
+    + [RSADP Test vectors](http://csrc.nist.gov/groups/STM/cavp/documents/components/RSADPtestvectors.zip)
 
 ## 9.  SHA message digests
 
