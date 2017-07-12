@@ -19,6 +19,13 @@ from sirius_api_system import *
 from scan import scan
 from utils import *
 
+supportVersionModels = {
+	"RF": [SiriusAPISystem.RfDebugPrintEnable, SiriusAPISystem.GetSurisdkVersion, SiriusAPISystem.GetSuriblVersion],
+	"APP": [SiriusAPISystem.AppDebugPrintEnable, SiriusAPISystem.GetXmsdkVersion, SiriusAPISystem.GetSvcVersion],
+	"APP_SVC": [SiriusAPISystem.GetSvcVersion],
+	"APP_XMSDK": [SiriusAPISystem.GetXmsdkVersion],
+}
+
 if __name__ == "__main__":
 
 	parser = OptionParser()
@@ -39,7 +46,7 @@ if __name__ == "__main__":
 	parser.add_option(  "-t", "--target",
 						dest="target",
 						default="RF",
-						help="specify target to get version from, can be either (RF -- APP -- RF|APP)")
+						help="specify target to get version from, can be either (%s)" % "/".join(list(supportVersionModels)))
 	(options, args) = parser.parse_args()
 
 	try:
@@ -52,20 +59,16 @@ if __name__ == "__main__":
 
 	sirius_system = SiriusAPISystem(comm)
 
-	targets = options.target.split(',')
+	if options.target not in supportVersionModels:
+		print_err("Invalid target: %s" % options.target)
+		parser.print_help()
+		sys.exit(-1)
 
 	while True:
-		if "RF" in targets:
-			# Enable debug print of RF processor
-			sirius_system.RfDebugPrintEnable()
-			sirius_system.GetSurisdkVersion()
-			sirius_system.GetSuriblVersion()
-
-		if "APP" in targets:
-			# Enable debug print of App processor
-			sirius_system.AppDebugPrintEnable()
-			sirius_system.GetXmsdkVersion()
-			sirius_system.GetSvcVersion()
+		for key, value in supportVersionModels.iteritems():
+			if key == options.target:
+				for action in value:
+					action(sirius_system)
 
 		if options.loop == False:
 			break
