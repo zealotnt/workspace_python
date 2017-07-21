@@ -1,0 +1,50 @@
+#include <stdint.h>
+
+"ecdsa_x_256_SHA1":
+c6 07 fa 74 7e ca 0f 20 a8 41 6f 9b 6e a8 8e 86 7d 44 a5 6a d3 41 b3 cd 25 a6 ba 61 ce 34 ed b8
+
+
+"ecdsa_y_256_SHA1":
+1b a5 73 c5 6e be 91 e0 9f ed c2 06 65 85 2b 84 4b bb 83 39 df 86 5e a0 4c 95 a8 d3 9e 91 8c b4
+
+
+"ecdsa_pri_256_SHA1":
+9b 13 5c 24 b8 37 10 81 84 50 b6 53 6e d2 42 fb 82 58 7c 25 be e3 17 27 05 92 ba 45 07 1f 84 03
+
+
+"ecdsa_data_256_SHA1":
+ae d6 d8 f6 79 3d d0 a4 57 ec 9d 0b 21 a8 75 84 cd 88 35 92 90 9f c9 31 d5 25 94 4d 1d a5 80 73 d3 94 bd 8e 13 74 99 0b ed 3c 10 c8 3e cf 25 54 84 35 ec 7f e9 08 d6 af 30 b3 53 10 39 a6 fd 6a 2f e1 17 c6 c3 52 1a 8c 75 28 e9 5a e5 b1 24 cc f7 0f 04 7d 7f 1c 21 de ec 6d 92 98 1e 14 66 a6 79 e9 9b ce 0f 93 f9 21 86 b1 d8 33 67 fb bc f9 b6 53 3f 37 89 7e 86 89 7c 3b ec de 74 9a 62 f8 3c 5a d1 d3 f1 d2 dd 77 40 00 0a 9b 25 0f 83 d9 2e 97 9a 31 de 9c 74 6c e4 c1 d3 5b df b8 89 a1 ba d3 7a a7 d6 c8 84 35 d4 8f c2 41 1a 85 43 64 6b 15 cd 84 c8 c9 6e 9a 34 2d 1c 73 36 2e 30 68 a5 5d 21 35 2c 64 d7 b6 56 51 36 be de 5a e2 e0 81 68 1c 01 f4 64 dd 01 5e 24 70 22 59 c7 09 cf 81 9f e9 98 6c 44 67 a8 1a 55 08 af c2 ca 5a 9e 02 44 df 1b 08 7c d7 6e 25 5d da f2 86 01 f4 99
+
+
+"ecdsa_signature_r_256_SHA1":
+e7 57 b1 a4 98 86 c0 f3 2e d8 f1 d0 88 43 4b 28 52 82 35 3d 8a fc 0e f4 54 37 8a 74 a0 01 7e 99
+
+
+"ecdsa_signature_s_256_SHA1":
+2d 15 17 3a 6a d3 a1 c2 f2 e2 d8 dc 5a d6 58 91 72 62 b9 3f 8c 25 39 c7 ec 55 63 99 8a 0a 96 ca
+
+
+"ecdsa_x_256_SHA256":
+43 53 70 de e5 5f 1f bf d4 bb 6e 82 2a 5c 44 b7 5d 76 99 d2 94 d4 60 01 f0 80 60 fd ec 68 81 88
+
+
+"ecdsa_y_256_SHA256":
+63 b3 e4 90 d1 a7 b5 66 c0 df cc 30 8f 52 a2 b3 61 6d d2 a3 62 56 a8 ec ae 9a da 34 ce 4a 1a 23
+
+
+"ecdsa_pri_256_SHA256":
+e9 fa 13 08 24 44 1a 32 05 6e 3a cf 32 1b f5 a1 18 dd b9 27 2c 35 6e a8 c6 b3 8d d9 cf a4 cb ac
+
+
+"ecdsa_data_256_SHA256":
+6b b7 d0 5a 98 43 2b 4d 68 f8 ec d5 aa d6 9a c9 44 53 e7 0a c3 75 45 f6 10 b5 d2 23 b5 db 69 15 c1 a0 ba 18 7b 01 87 d8 a1 aa a3 c4 99 03 1a 4a bd fb 2b 9f 42 80 77 d1 5b b1 60 ec b5 fd 10 8f 3b 32 0e 16 d0 51 20 42 bb e6 97 c4 9e 47 e6 5c ba e4 dc db c6 02 32 78 8c e3 24 c1 e7 6a d1 82 e4 13 5b 28 fb 7e 31 d5 36 30 d1 9c b8 a3 cc e4 a4 bd 50 29 e7 95 7b ca 0c 88 09 5f c9 30 b7 8d 69 7f a3 3a 80 30 59 47 a4 ba 42 bf 26 11 7c 91 9f 39 bb 43 17 c7 da b4 cd 9b dd 94 18 f6 37 98 84 6f 5d 2f 5a 95 a2 97 d3 5e 54 a8 46 25 06 7f bc 4a 93 37 62 41 f2 62 e2 b7 6f 8c aa 2f c4 4c 9e 2b b4 99 07 1f 01 44 97 5f c1 47 ad 97 40 92 aa c3 52 29 1c da fe 88 30 bd 92 a7 88 99 f8 4e b5 92 b9 d9 43 60 15 50 f2 90 15 33 a3 f1 85 b3 ef 18 d2 6f 6d d4 85 5c 2c a9 16 c2 5b 73 93 cd
+
+
+"ecdsa_signature_r_256_SHA256":
+b8 90 e2 08 c6 23 cc e3 ff 99 5a eb 81 c8 6a 14 3e ec d7 f6 a1 a4 2a 03 6c 2c ae 83 b7 64 f2 8e
+
+
+"ecdsa_signature_s_256_SHA256":
+f0 06 2a 7f d8 1c ad 89 a1 9f cc 88 dc e3 24 e5 37 b0 fd a8 f2 ee 06 d7 b2 fd 29 61 a8 dc a6 29
+
+
