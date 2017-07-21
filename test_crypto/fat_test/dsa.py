@@ -26,6 +26,7 @@ def main():
 	dumpStyle = "C"
 	dumpStyleSupport = [ "C", "raw" ]
 	filePathSave = ""
+	SHA_NAME = ["SHA1", "SHA256", "SHA256"]
 	SHA_FUNCS = [hashes.SHA1(), hashes.SHA256(), hashes.SHA256()]
 	KEY_LENGTHS = [1024, 2048, 3072]
 	DSA_MAX_SIG_LENS = [20, 32, 32]
@@ -84,31 +85,31 @@ def main():
 		print("\r\nHex value")
 		toDump = [[
 				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.p)),
-				'dsa_p_' + str(keyLength)
+				'dsa_p_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.q)),
-				'dsa_q_' + str(keyLength)
+				'dsa_q_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().parameter_numbers.g)),
-				'dsa_g_' + str(keyLength)
+				'dsa_g_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				TrimZeroes(packl_ctypes(private_key.public_key().public_numbers().y)),
-				'dsa_y_' + str(keyLength)
+				'dsa_y_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				TrimZeroes(packl_ctypes(private_key.private_numbers().x)),
-				'dsa_x_' + str(keyLength)
+				'dsa_x_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				data,
-				'dsa_data_' + str(keyLength)
+				'dsa_data_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				FixedBytes(DSA_MAX_SIG_LENS[idx]*2, r_s_str),
-				'dsa_signature_' + str(keyLength),
+				'dsa_signature_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				FixedBytes(DSA_MAX_SIG_LENS[idx], packl_ctypes(sig_r)),
-				'dsa_signature_r_'+ str(keyLength),
+				'dsa_signature_r_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			], [
 				FixedBytes(DSA_MAX_SIG_LENS[idx], packl_ctypes(sig_s)),
-				'dsa_signature_s_'+ str(keyLength),
+				'dsa_signature_s_%s_%s' % (str(keyLength), SHA_NAME[idx])
 			]
 		]
 		for idx, item in enumerate(toDump):

@@ -28,7 +28,6 @@ def main():
 	dumpStyle = "C"
 	dumpStyleSupport = [ "C", "raw" ]
 	filePathSave = ""
-	keyLength = 256
 	if len(sys.argv) == 2:
 		filePathSave = ProcessFilePath(sys.argv[1])
 	elif len(sys.argv) == 3:
@@ -38,59 +37,63 @@ def main():
 			print_err("Not support type %s" % (dumpStyle))
 			sys.exit(-1)
 
-	# Key generation
-	private_key = ec.generate_private_key(
-		ec.SECP256R1(), default_backend()
-	)
-	public_key = private_key.public_key()
-
-	# Keys dumping
-	print("pub_x: ", public_key.public_numbers().x)
-	print("pub_y: ", public_key.public_numbers().y)
-	print("pri:   ", private_key.private_numbers().private_value)
-
-	# Sign
-	data = os.urandom(keyLength)
-	signature = private_key.sign(
-		data,
-		ec.ECDSA(hashes.SHA256())
-	)
-	print("signature", signature)
-	r_s = utils.decode_dss_signature(signature)
-	sig_r = r_s[0]
-	sig_s = r_s[1]
-
-	# Verify
-	print("verify", public_key.verify(signature, data, ec.ECDSA(hashes.SHA256())))
-
-
-	# Dump hex value
-	print("\r\nHex value")
-	to_Dump = [[
-		FixedBytes(keyLength/8, packl_ctypes(public_key.public_numbers().x)),
-		'ecdsa_x_',
-	],[
-		FixedBytes(keyLength/8, packl_ctypes(public_key.public_numbers().y)),
-		'ecdsa_y_',
-	],[
-		FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().private_value)),
-		'ecdsa_pri_',
-	],[
-		data,
-		'ecdsa_data_',
-	],[
-		FixedBytes(keyLength/8, packl_ctypes(sig_r)),
-		'ecdsa_signature_r_',
-	],[
-		FixedBytes(keyLength/8, packl_ctypes(sig_s)),
-		'ecdsa_signature_s_',
-	]]
-	for idx, item in enumerate(to_Dump):
-		dumpFileText += dump_hex(
-			item[0],
-			item[1],
-			preFormat=dumpStyle
+	SHA_FUNCS = [hashes.SHA1(), hashes.SHA256()]
+	SHA_NAME = ["SHA1", "SHA256",]
+	keyLength = 256
+	for idx, shaFunc in enumerate(SHA_FUNCS):
+		# Key generation
+		private_key = ec.generate_private_key(
+			ec.SECP256R1(), default_backend()
 		)
+		public_key = private_key.public_key()
+
+		# Keys dumping
+		print("pub_x: ", public_key.public_numbers().x)
+		print("pub_y: ", public_key.public_numbers().y)
+		print("pri:   ", private_key.private_numbers().private_value)
+
+		# Sign
+		data = os.urandom(keyLength)
+		signature = private_key.sign(
+			data,
+			ec.ECDSA(shaFunc)
+		)
+		print("signature", signature)
+		r_s = utils.decode_dss_signature(signature)
+		sig_r = r_s[0]
+		sig_s = r_s[1]
+
+		# Verify
+		print("verify", public_key.verify(signature, data, ec.ECDSA(shaFunc)))
+
+
+		# Dump hex value
+		print("\r\nHex value")
+		to_Dump = [[
+			FixedBytes(keyLength/8, packl_ctypes(public_key.public_numbers().x)),
+			'ecdsa_x_%s_%s' % (keyLength, SHA_NAME[idx]),
+		],[
+			FixedBytes(keyLength/8, packl_ctypes(public_key.public_numbers().y)),
+			'ecdsa_y_%s_%s' % (keyLength, SHA_NAME[idx]),
+		],[
+			FixedBytes(keyLength/8, packl_ctypes(private_key.private_numbers().private_value)),
+			'ecdsa_pri_%s_%s' % (keyLength, SHA_NAME[idx]),
+		],[
+			data,
+			'ecdsa_data_%s_%s' % (keyLength, SHA_NAME[idx]),
+		],[
+			FixedBytes(keyLength/8, packl_ctypes(sig_r)),
+			'ecdsa_signature_r_%s_%s' % (keyLength, SHA_NAME[idx]),
+		],[
+			FixedBytes(keyLength/8, packl_ctypes(sig_s)),
+			'ecdsa_signature_s_%s_%s' % (keyLength, SHA_NAME[idx]),
+		]]
+		for idx, item in enumerate(to_Dump):
+			dumpFileText += dump_hex(
+				item[0],
+				item[1],
+				preFormat=dumpStyle
+			)
 
 	if filePathSave != "":
 		dumpFileText = "#include <stdint.h>\r\n\r\n" + dumpFileText

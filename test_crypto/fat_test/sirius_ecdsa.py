@@ -152,7 +152,7 @@ def main():
 
 		# Try modify one elem of signature, see if verify failed
 		sigCombine = sig_r_str + sig_s_str
-		sigNum = chr(ord(sigCombine[0]) + 1)
+		sigNum = chr((ord(sigCombine[0]) + 1) % 256)
 		sigCombine = sigNum + sigCombine[1:]
 		verifyStatus = sirius_crypto.EcdsaVerify(
 			target=options.target,

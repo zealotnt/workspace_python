@@ -84,7 +84,7 @@ def main():
 	for idx, KEY_SIZE in enumerate(KEY_SIZE_LENGTHS):
 		print("")
 		print_ok(">"*40)
-		print_ok("Test DSA with keylength = %d" % KEY_SIZE)
+		print_ok("Test DSA with keylength = %d, Hash-algo = %s" % (KEY_SIZE, HASH_SIRIUS[idx]))
 
 		#######################################################
 		# Create key and download to board
@@ -174,7 +174,7 @@ def main():
 
 		# Try modify one elem of signature, see if verify failed
 		sigCombine = sig_r_str + sig_s_str
-		sigNum = chr(ord(sigCombine[0]) + 1)
+		sigNum = chr((ord(sigCombine[0]) + 1) % 256)
 		sigCombine = sigNum + sigCombine[1:]
 		verifyStatus = sirius_crypto.DsaVerify(
 			target=options.target,
