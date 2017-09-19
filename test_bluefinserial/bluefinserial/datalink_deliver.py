@@ -33,6 +33,8 @@ class BluefinserialCommand():
 	TARGET_APPLICATION = 0xC5
 	TARGET_RF = 0x35
 	VERBOSE = False
+	DATA_EXCEPT_CMD = 5100
+	DATA_CMD_MAX_LEN = DATA_EXCEPT_CMD + 2
 
 	def __init__(self, target, verbose=False):
 		"""
@@ -42,8 +44,6 @@ class BluefinserialCommand():
 			return
 
 		self.target = target
-		self.DATA_EXCEPT_CMD = 510
-		self.DATA_CMD_MAX_LEN = 512
 		self.VERBOSE = verbose
 
 	def CheckSum(self, data):

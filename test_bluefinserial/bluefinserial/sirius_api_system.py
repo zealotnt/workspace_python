@@ -193,3 +193,19 @@ class SiriusAPISystem():
 		self.RfWdtGetCount()
 
 		return True
+
+	def RfLedControl(self, on=True):
+		pkt = BluefinserialCommand(BluefinserialCommand.TARGET_RF)
+		# always has null character at the end
+		ob_b = 1 if on == True else 0
+		arg = struct.pack('<B', ob_b)
+		cmd = pkt.Packet('\x8b', '\x1e', arg)
+
+		rsp = self._datalink.Exchange(cmd)
+		if (rsp is None):
+			print_err("Send fail")
+			return None
+		if rsp[2] != '\x00':
+			print_err("RfLedControl execute fail, code 0x%02x" % ord(rsp[2]))
+			return None
+		return True

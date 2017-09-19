@@ -115,14 +115,14 @@ if __name__ == "__main__":
 	if cmd_len < 10:
 		print_err("Command len should be bigger than 10")
 		sys.exit(-1)
-	if cmd_len > 510:
-		print_err("Command len should be less than or equal to 510")
+	if cmd_len > BluefinserialCommand.DATA_CMD_MAX_LEN:
+		print_err("Command len should be less than or equal to %d" % BluefinserialCommand.DATA_CMD_MAX_LEN)
 		sys.exit(-1)
 	if rsp_len < 6:
 		print_err("Expected response len should be bigger than 6 (2 bytes Cmd + Ctr, 4 bytes len)")
 		sys.exit(-1)
-	if rsp_len > 510:
-		print_err("Expected response len should be less than or equal to 510")
+	if rsp_len > BluefinserialCommand.DATA_CMD_MAX_LEN:
+		print_err("Expected response len should be less than or equal to %d" % BluefinserialCommand.DATA_CMD_MAX_LEN)
 		sys.exit(-1)
 
 	# Init the com port

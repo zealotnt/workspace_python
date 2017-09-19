@@ -99,6 +99,7 @@ class SiriusFirmwareRecovery():
 			"ERASER": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSuribl,
 				"FIRMWARE_FILE": SiriusFirmwareRecovery.FACTORY_FOLDER + SiriusFirmwareRecovery.SURI_ERASER_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "suribl",
 				"BINARY_FILE": "eraser.tar.xz",
 				"ACTION_NAME": "Erase RF Processor flash memory",
@@ -109,6 +110,7 @@ class SiriusFirmwareRecovery():
 			"SURIBL": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSuribl,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SURIBL_FW_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "suribl",
 				"BINARY_FILE": "suribl.tar.xz",
 				"ACTION_NAME": "Recovery suri bootloader",
@@ -119,6 +121,7 @@ class SiriusFirmwareRecovery():
 			"SURISDK": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeSurisdk,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SURISDK_FW_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "surisdk",
 				"BINARY_FILE": "surisdk.bin",
 				"ACTION_NAME": "Recovery surisdk",
@@ -129,6 +132,7 @@ class SiriusFirmwareRecovery():
 			"PN5180": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradePn5180,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.PN5180_FW_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": SiriusFwRecoveryExecuter.Pn5180AntennaGet,
 				"JSON_PREFIX": "pn5180",
 				"BINARY_FILE": "pn5180.bin",
 				"ACTION_NAME": "Recovery pn5180 firmware",
@@ -139,6 +143,7 @@ class SiriusFirmwareRecovery():
 			"EMV_CONF0": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF0_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "",
 				"BINARY_FILE": "",
 				"ACTION_NAME": "Recovery emvConf0",
@@ -149,6 +154,7 @@ class SiriusFirmwareRecovery():
 			"EMV_CONF1": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF1_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "",
 				"BINARY_FILE": "",
 				"ACTION_NAME": "Recovery emvConf1",
@@ -159,6 +165,7 @@ class SiriusFirmwareRecovery():
 			"EMV_CONF2": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF2_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "",
 				"BINARY_FILE": "",
 				"ACTION_NAME": "Recovery emvConf2",
@@ -169,6 +176,7 @@ class SiriusFirmwareRecovery():
 			"EMV_CONF3": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CONF3_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "",
 				"BINARY_FILE": "",
 				"ACTION_NAME": "Recovery emvConf3",
@@ -179,6 +187,7 @@ class SiriusFirmwareRecovery():
 			"EMV_CAPK": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.UpgradeEmv,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.EMV_CAPK_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "",
 				"BINARY_FILE": "",
 				"ACTION_NAME": "Recovery emvCapk",
@@ -189,6 +198,7 @@ class SiriusFirmwareRecovery():
 			"SVC": {
 				"UPG_FUNC": SiriusFwRecoveryExecuter.RunSvc,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.SVC_FW_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "svc",
 				"BINARY_FILE": "svc",
 				"ACTION_NAME": "",
@@ -199,6 +209,7 @@ class SiriusFirmwareRecovery():
 			"XMSDK": {
 				"UPG_FUNC": None,
 				"FIRMWARE_FILE": inFolder + SiriusFirmwareRecovery.XMSDK_FW_FILE_NAME,
+				"EXTRA_INFO_EXTRACT_FUNC": None,
 				"JSON_PREFIX": "xmsdk",
 				"BINARY_FILE": "xmsdk",
 				"ACTION_NAME": "",
@@ -361,7 +372,7 @@ class SiriusFwValidator():
 		return output
 
 	@staticmethod
-	def DecodeJsonAndWriteToFile(json_file, json_prefix, binary_out_name, dry_run=False):
+	def DecodeJsonAndWriteToFile(json_file, json_prefix, binary_out_name, extra_info_extract_func, dry_run=False):
 		json_file_name = json_file.replace("\r", "").replace("\n", "")
 
 		try:
@@ -396,14 +407,18 @@ class SiriusFwValidator():
 				print_err('Json: %s\'s md5 is not equal to calculated value\n\tCalculated: %s\n\tJson value: %s)' % (json_file_name, md5_calculated, json_md5))
 				raise Exception('Json: %s\'s md5 is not equal to calculated value' % json_file_name)
 
+		extra_info = None
+		if extra_info_extract_func != None:
+			extra_info = extra_info_extract_func(fw_dict)
+
 		# if it is only for validating, no need to write to file
 		if dry_run == True:
-			return True, json_file_name, ""
+			return True, json_file_name, "", extra_info
 
 		# Emvconf don't follow the format, so if `json_prefix` is empty, don't write the binary to file
 		# The emv upgrader use the json directly
 		if (json_prefix == "") or (binary_out_name == ""):
-			return True, json_file_name, ""
+			return True, json_file_name, "", extra_info
 		else:
 			# write the content of json-based64-encoded data to a `binary_out_name`
 			try:
@@ -416,7 +431,7 @@ class SiriusFwValidator():
 				raise Exception("Write result file \"%s\" from \"%s\" err: %s" % (binary_out_name, json_file_name, str(e.message)))
 
 		print_ok("Restore binary file \"%s\" ok" % (json_file_name))
-		return True, json_file_name, binary_out_name
+		return True, json_file_name, binary_out_name, extra_info
 
 	@staticmethod
 	def CheckFilePresence(file_path):
@@ -425,7 +440,7 @@ class SiriusFwValidator():
 		return FILE_PRESENT
 
 	@staticmethod
-	def RestoreJsonFromCompressed(file_compressed, json_prefix, binary_out_name, dry_run=False):
+	def RestoreJsonFromCompressed(file_compressed, json_prefix, binary_out_name, extra_info_extract_func=None, dry_run=False):
 		"""
 		:param file_compressed: compress file to restore from
 		:param json_prefix: the prefix of json in the firmware, and the output firmware
@@ -445,7 +460,7 @@ class SiriusFwValidator():
 			raise Exception("Can\'t extract %s" % file_compressed)
 
 		# Decode json file
-		return SiriusFwValidator.DecodeJsonAndWriteToFile(extracted_file, json_prefix, binary_out_name, dry_run)
+		return SiriusFwValidator.DecodeJsonAndWriteToFile(extracted_file, json_prefix, binary_out_name, extra_info_extract_func, dry_run)
 
 	@staticmethod
 	def IsScpFolderValid(extract_result):
@@ -570,9 +585,10 @@ class SiriusFwValidator():
 					continue
 
 				# check validity of model in folder
-				ret, jsonOut, binOut = SiriusFwValidator.RestoreJsonFromCompressed(model["FIRMWARE_FILE"],
+				ret, jsonOut, binOut, extraInfo = SiriusFwValidator.RestoreJsonFromCompressed(model["FIRMWARE_FILE"],
 																				   model["JSON_PREFIX"],
 																				   model["BINARY_FILE"],
+																				   model["EXTRA_INFO_EXTRACT_FUNC"],
 																				   dry_run=True)
 				if ret != True:
 					print_err("Err when extract file")
@@ -594,9 +610,15 @@ class SiriusFwValidator():
 			return False
 
 class SiriusFwRecoveryExecuter():
+	@staticmethod
+	def Pn5180AntennaGet(fw_dict):
+		return {
+			"pn5180_id": fw_dict["pn5180_id"],
+			"pn5180_connection": fw_dict["pn5180_connection"],
+		}
 
 	@staticmethod
-	def UpgradeSuribl(compress_file):
+	def UpgradeSuribl(compress_file, extraInfo):
 		SEND_SCP_SCRIPT 			= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/sendscp_mod.sh"
 		RF_SCP_EXTRACT_PATH 		= "/home/root/secureROM-Sirius/Host/customer_scripts/scripts/buildSCP/rf_fw/"
 		SEND_SCP_UART_PORT 			= "/dev/ttymxc3"
@@ -639,7 +661,7 @@ class SiriusFwRecoveryExecuter():
 		os.system("killall svc")
 
 	@staticmethod
-	def RunSvc(file_path):
+	def RunSvc(file_path, extraInfo):
 		ret = os.system("./" + file_path + " &")
 		if ret == 0:
 			time.sleep(0.5)
@@ -648,12 +670,16 @@ class SiriusFwRecoveryExecuter():
 			return False
 
 	@staticmethod
-	def UpgradeSurisdk(file_path):
+	def UpgradeSurisdk(file_path, extraInfo):
 		return True if os.system("/home/root/rfp_fwupgrade " + file_path) == 0 else False
 
 	@staticmethod
-	def UpgradePn5180(file_path):
-		ret = os.system("/home/root/pn5180/pn5180UpgradeApp 0 0 " + file_path)
+	def UpgradePn5180(filePath, extraInfo):
+		pn5180_id = int(extraInfo["pn5180_id"])
+		pn5180_connection = int(extraInfo["pn5180_connection"])
+		upg_cmd = "/home/root/pn5180/pn5180UpgradeApp %d %d %s" % (pn5180_connection, pn5180_id, filePath)
+		print(upg_cmd)
+		ret = os.system(upg_cmd)
 		if ret == 0:
 			return True
 		else:
@@ -661,7 +687,7 @@ class SiriusFwRecoveryExecuter():
 			return False
 
 	@staticmethod
-	def UpgradeEmv(file_path):
+	def UpgradeEmv(file_path, extraInfo):
 		"""
 		This function is used to upgrade emvconf0-3 or emvcapk
 		"""
@@ -677,6 +703,7 @@ class SiriusFwRecoveryExecuter():
 		print_noti("Going to rollback using \"%s firmwares\"" % (firmwareName))
 		output_json_filename = []
 		output_bin_filename = []
+		output_extra_info = []
 
 		for idx, model in enumerate(modelsArray):
 			if SiriusFwValidator.CheckFilePresence(model["FIRMWARE_FILE"]) != FILE_PRESENT:
@@ -694,13 +721,15 @@ class SiriusFwRecoveryExecuter():
 			else:
 				print_noti("Step1-%d: Going to extract from file \"%s\"" % (idx+1, model["FIRMWARE_FILE"]))
 
-			ret, outJsonName, outBinName = SiriusFwValidator.RestoreJsonFromCompressed(
+			ret, outJsonName, outBinName, extraInfo = SiriusFwValidator.RestoreJsonFromCompressed(
 				model["FIRMWARE_FILE"],
 				model["JSON_PREFIX"],
 				model["BINARY_FILE"],
+				model["EXTRA_INFO_EXTRACT_FUNC"]
 			)
 			output_json_filename.append(outJsonName)
 			output_bin_filename.append(outBinName)
+			output_extra_info.append(extraInfo)
 			if ret != True:
 				print_err("Err when extract %s" % model["FIRMWARE_FILE"])
 				return -1
@@ -718,9 +747,9 @@ class SiriusFwRecoveryExecuter():
 					break # go to next firmware
 
 				if model["FILE_USED"] == "BINARY":
-					ret = model["UPG_FUNC"](output_bin_filename[idx])
+					ret = model["UPG_FUNC"](output_bin_filename[idx], output_extra_info[idx])
 				elif model["FILE_USED"] == "JSON":
-					ret = model["UPG_FUNC"](output_json_filename[idx])
+					ret = model["UPG_FUNC"](output_json_filename[idx], output_extra_info[idx])
 				else:
 					raise Exception("Unregcognize FILE_USED: %s for firmware: %s" % (model["FILE_USED"], model["FIRMWARE_FILE"]))
 
