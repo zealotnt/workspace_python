@@ -188,6 +188,8 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 		wrap = 0
 		desc_str = '"%s":\r\n' % (desc_str)
 		postfix = "\r\n\r\n"
+	else:
+		postfix = "\r\n\t\t}\r\n\r\n"
 
 	# print desc_str + binascii.hexlify(data)
 	if wrap == 0:

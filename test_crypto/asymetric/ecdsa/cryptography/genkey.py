@@ -5,9 +5,17 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import utils
-import sys
 
-sys.path.insert(0, '../../../../test_bluefinserial/bluefinserial')
+import sys
+import git
+import os
+def get_git_root():
+	CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
+	path = CURRENT_DIR
+	git_repo = git.Repo(path, search_parent_directories=True)
+	git_root = git_repo.git.rev_parse("--show-toplevel")
+	return git_root
+sys.path.insert(0, get_git_root() + '/test_bluefinserial/bluefinserial')
 from utils import *
 
 
