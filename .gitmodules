@@ -16,3 +16,6 @@
 [submodule "test_pyusb/pyusb"]
 	path = test_pyusb/pyusb
 	url = git@github.com:walac/pyusb.git
+[submodule "test_elf/pyelftools"]
+	path = test_elf/pyelftools
+	url = https://github.com/eliben/pyelftools
