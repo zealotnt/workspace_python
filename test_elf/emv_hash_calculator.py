@@ -77,13 +77,19 @@ class EmvElfParser(object):
 				return section['sh_addr']
 		return 0
 
+	def getDataSectionOffset(self, sectionName):
+		for nsec, section in enumerate(self.elffile.iter_sections()):
+			if section.name == sectionName + "_data":
+				return section['sh_size']
+		return 0
+
 	def GetSectionInfo(self, sectionName):
 		"""
 		ret: (section_binary_address, section_size)
 		"""
 		for nsec, section in enumerate(self.elffile.iter_sections()):
 			if section.name == sectionName:
-				return (section['sh_addr'] - self.getFlashEntryAddress(), section['sh_size'])
+				return (section['sh_addr'] - self.getFlashEntryAddress(), section['sh_size'] + self.getDataSectionOffset(sectionName))
 		return (0, 0)
 
 	def GetBinaryData(self, offset, size):

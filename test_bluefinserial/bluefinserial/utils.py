@@ -193,7 +193,7 @@ def dump_hex(data, desc_str="", token=":", prefix="", wrap=0, preFormat=""):
 
 	# print desc_str + binascii.hexlify(data)
 	if wrap == 0:
-		to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n" + postfix
+		to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n"
 		write_and_concat_str(to_write)
 	else:
 		# [Ref](http://stackoverflow.com/questions/734368/type-checking-of-arguments-python)
