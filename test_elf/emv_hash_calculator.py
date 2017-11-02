@@ -119,6 +119,7 @@ def main():
 		sys.exit(-1)
 
 	binaryData = GetFileContent(binaryFile)
+	dump_hex(DoHash(binaryData), "SHA1 of binary firmware: ")
 	with open(sys.argv[1], 'rb') as file:
 		elfParser = EmvElfParser(file, binaryData, sys.stdout)
 		for emv_section in elfParser._emvSections:
