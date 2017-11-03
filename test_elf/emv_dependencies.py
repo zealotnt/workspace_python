@@ -4,7 +4,8 @@ from sys import argv
 from io import open
 from networkx import MultiDiGraph
 import networkx
-import re
+import re, os, sys
+from optparse import OptionParser, OptionGroup
 
 def find_cref(inmap):
 	while True:
@@ -51,7 +52,30 @@ def printDeps(user, provider, label):
 	print toPrint
 
 def main():
+	parser = OptionParser(
+			usage='usage: %prog [options] <map-file>',
+			description="This script print the dependencies of emv-modules to non-emv-modules",
+			prog=os.path.basename(__file__))
+	parser = OptionParser()
+	parser.add_option(	"--symbol-once",
+						dest="symbol_once",
+						action="store_true",
+						default=False,
+						help="Only print the symbol once, the next occurence will be ignored")
+	parser.add_option(	"-f", "--file",
+						type="string",
+						dest="file_path",
+						default="",
+						help="Path to .map file")
+	(options, args) = parser.parse_args()
+
+	if options.file_path == "":
+		print ("Error: file_path is required")
+		parser.print_help()
+		sys.exit(0)
+
 	filePatterns = [
+	r"\./source/styl/mlsEmv/mlsEmvCtlL1/[^\.]+\.o",
 	r"\./source/styl/mlsEmv/mlsAgnos/mlsAgnosEP/src/[^\.]+\.o",
 	r"\./source/styl/mlsEmv/mlsAgnos/mlsAgnosC2/src/[^\.]+\.o",
 	r"\./source/styl/mlsEmv/mlsAgnos/mlsAgnosC3/src/[^\.]+\.o",
@@ -69,12 +93,20 @@ def main():
 	r"\./source/styl/mlsEmv/mlsAgnos/mlsAgnosMW/src/[^\.]+\.o",
 	r"\./source/styl/mlsOsal/src/[^\.]+\.o",
 	r"\./source/styl/mlsOsal/freeRTOS/[^\.]+\.o",
+	r"/opt/arm-2014.05/bin/../lib/gcc/arm-none-eabi/4.8.3/../../../../arm-none-eabi/lib/thumb2/libc\.a",
+	r"/opt/arm-2014.05/bin/../lib/gcc/arm-none-eabi/4.8.3/thumb2/libgcc.a",
+	r"/surisdk/source/maxim/lib/libucl/cortex-m3/libucl-2.5.5_max32550.a",
 	]
 
-	inmap = open(argv[1], 'r')
+	results = []
+
+	inmap = open(options.file_path, 'r')
 
 	if find_cref(inmap):
 		modules = read_cref(inmap)
+
+		# for user, provider, label in modules.edges(data=True):
+		# 	print user, provider, label['label']
 
 		for user, provider, label in modules.edges(data=True):
 			isPrinted = False
@@ -92,8 +124,24 @@ def main():
 						if len(match2) == 0:
 							countNotMatch += 1
 						if countNotMatch >= len(filePatterns):
-							printDeps(user, provider, label['label'])
+							results.append([user, provider, label['label']])
 							isPrinted = True
+
+		labelOccur = []
+		for result in results:
+			user = result[0]
+			provider = result[1]
+			symbol = result[2]
+			ignore = False
+			if options.symbol_once:
+				for label_check in labelOccur:
+					if label_check == symbol:
+						ignore = True
+						break
+			if ignore:
+				continue
+			printDeps(user, provider, symbol)
+			labelOccur.append(symbol)
 
 		# networkx.drawing.nx_pydot.write_dot(modules, argv[2])
 

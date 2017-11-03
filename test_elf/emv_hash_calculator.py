@@ -2,50 +2,8 @@
 
 import os, sys, inspect, git
 import string, tempfile
-def get_git_root():
-	CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
-	path = CURRENT_DIR
-	git_repo = git.Repo(path, search_parent_directories=True)
-	git_root = git_repo.git.rev_parse("--show-toplevel")
-	return git_root
-sys.path.insert(0, get_git_root() + '/test_bluefinserial/bluefinserial')
-sys.path.insert(0, get_git_root() + '/test_elf/pyelftools')
-from utils import *
 
-from elftools import __version__
-from elftools.common.exceptions import ELFError
-from elftools.common.py3compat import (
-		ifilter, byte2int, bytes2str, itervalues, str2bytes, iterbytes)
 from elftools.elf.elffile import ELFFile
-from elftools.elf.dynamic import DynamicSection, DynamicSegment
-from elftools.elf.enums import ENUM_D_TAG
-from elftools.elf.segments import InterpSegment
-from elftools.elf.sections import NoteSection, SymbolTableSection
-from elftools.elf.gnuversions import (
-	GNUVerSymSection, GNUVerDefSection,
-	GNUVerNeedSection,
-	)
-from elftools.elf.relocation import RelocationSection
-from elftools.elf.descriptions import (
-	describe_ei_class, describe_ei_data, describe_ei_version,
-	describe_ei_osabi, describe_e_type, describe_e_machine,
-	describe_e_version_numeric, describe_p_type, describe_p_flags,
-	describe_sh_type, describe_sh_flags,
-	describe_symbol_type, describe_symbol_bind, describe_symbol_visibility,
-	describe_symbol_shndx, describe_reloc_type, describe_dyn_tag,
-	describe_ver_flags, describe_note
-	)
-from elftools.elf.constants import E_FLAGS
-from elftools.dwarf.dwarfinfo import DWARFInfo
-from elftools.dwarf.descriptions import (
-	describe_reg_name, describe_attr_value, set_global_machine_arch,
-	describe_CFI_instructions, describe_CFI_register_rule,
-	describe_CFI_CFA_rule,
-	)
-from elftools.dwarf.constants import (
-	DW_LNS_copy, DW_LNS_set_file, DW_LNE_define_file)
-from elftools.dwarf.callframe import CIE, FDE, ZERO
-
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
@@ -96,8 +54,8 @@ class EmvElfParser(object):
 		return self._binaryData[offset:offset+size]
 
 def GenerateBinaryFile(elfFile, gccPath="/opt/arm-2014.05/bin/"):
-	tempDir = tempfile.mkdtemp()
-	# tempDir = "./"
+	# tempDir = tempfile.mkdtemp()
+	tempDir = "./"
 	ret = os.system("%sarm-none-eabi-objcopy -O binary %s %s/output.bin" % (gccPath, elfFile, tempDir))
 	if ret != 0:
 		print_err("Error when call arm-none-eabi-objcopy")
@@ -109,9 +67,21 @@ def DoHash(binary_data):
 	hashEngine.update(binary_data)
 	return hashEngine.finalize()
 
+def dump_hex(data, desc_str="", token=":", prefix="", preFormat=""):
+	def write_and_concat_str(text):
+		sys.stdout.write(text)
+
+	to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n"
+	write_and_concat_str(to_write)
+
+def GetFileContent(path):
+	f = open(path, 'rb')
+	return f.read()
+
 def main():
 	if len(sys.argv) != 2:
 		print_err("Invalid argument:")
+		print("Usage: %s <firmware-elf-file>")
 		sys.exit(-1)
 
 	binaryFile = GenerateBinaryFile(sys.argv[1])
