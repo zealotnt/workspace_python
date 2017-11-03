@@ -7,6 +7,26 @@ from elftools.elf.elffile import ELFFile
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
+class bcolors:
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	ENDC = '\033[0m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
+
+def print_err(text):
+	print >> sys.stderr, bcolors.FAIL + text + bcolors.ENDC
+
+def dump_hex(data, desc_str="", token=":", prefix="", preFormat=""):
+	def write_and_concat_str(text):
+		sys.stdout.write(text)
+
+	to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n"
+	write_and_concat_str(to_write)
+
 class EmvElfParser(object):
 	""" display_* methods are used to emit output into the output stream
 	"""
@@ -25,7 +45,7 @@ class EmvElfParser(object):
 
 		self._versioninfo = None
 
-		self._emvSections = [".emv_ep", ".emv_c2", ".emv_c3", ".emv_agnos", ".emv_kizis", ".emv_sped", ".emv_mw", ".emv_freertos"]
+		self._emvSections = [".emv_l1", ".emv_ep", ".emv_c2", ".emv_c3", ".emv_agnos", ".emv_kizis", ".emv_sped", ".emv_mw", ".emv_freertos"]
 
 		self._binaryData = binary_data
 
@@ -33,12 +53,16 @@ class EmvElfParser(object):
 		for nsec, section in enumerate(self.elffile.iter_sections()):
 			if section.name == ".text.init":
 				return section['sh_addr']
+		print_err("Can't find .text.init")
+		sys.exit(-1)
 		return 0
 
 	def getDataSectionOffset(self, sectionName):
 		for nsec, section in enumerate(self.elffile.iter_sections()):
 			if section.name == sectionName + "_data":
 				return section['sh_size']
+		print_err("Can't find %s" % (sectionName + "_data"))
+		sys.exit(-1)
 		return 0
 
 	def GetSectionInfo(self, sectionName):
@@ -47,7 +71,12 @@ class EmvElfParser(object):
 		"""
 		for nsec, section in enumerate(self.elffile.iter_sections()):
 			if section.name == sectionName:
-				return (section['sh_addr'] - self.getFlashEntryAddress(), section['sh_size'] + self.getDataSectionOffset(sectionName))
+				size = section['sh_size']
+				du = 4 - (section['sh_size'] % 4)
+				if section['sh_size'] % 4 != 0:
+					size = size + 4 - (section['sh_size'] % 4)
+				return (section['sh_addr'] - self.getFlashEntryAddress(), size + self.getDataSectionOffset(sectionName), section['sh_size'], du)
+		print_err("Can't find %s" % sectionName)
 		return (0, 0)
 
 	def GetBinaryData(self, offset, size):
@@ -67,13 +96,6 @@ def DoHash(binary_data):
 	hashEngine.update(binary_data)
 	return hashEngine.finalize()
 
-def dump_hex(data, desc_str="", token=":", prefix="", preFormat=""):
-	def write_and_concat_str(text):
-		sys.stdout.write(text)
-
-	to_write = desc_str + token.join(prefix+"{:02x}".format(ord(c)) for c in data) + "\r\n"
-	write_and_concat_str(to_write)
-
 def GetFileContent(path):
 	f = open(path, 'rb')
 	return f.read()
@@ -81,7 +103,7 @@ def GetFileContent(path):
 def main():
 	if len(sys.argv) != 2:
 		print_err("Invalid argument:")
-		print("Usage: %s <firmware-elf-file>")
+		print("Usage: python %s <firmware-elf-file>" % os.path.basename(__file__))
 		sys.exit(-1)
 
 	binaryFile = GenerateBinaryFile(sys.argv[1])
@@ -93,8 +115,14 @@ def main():
 	with open(sys.argv[1], 'rb') as file:
 		elfParser = EmvElfParser(file, binaryData, sys.stdout)
 		for emv_section in elfParser._emvSections:
-			(offset, size) = elfParser.GetSectionInfo(emv_section)
+			(offset, size, f1, du) = elfParser.GetSectionInfo(emv_section)
 			section_data = elfParser.GetBinaryData(offset, size)
+			# If the firmware is being debug, the unoccupied flash will be 0xff (while the .bin file will be 0x00)
+			# So if you want to compare the hash of debug firmware, enable these following lines
+			# if du != 4:
+			# 	while du:
+			# 		du -= 1
+			# 		section_data = section_data[:f1+du] + '\xff' + section_data[f1+1+du:]
 			sys.stdout.write ("%-17.17s: offset=%10s , size=%-6.6s, hash_data=" % (emv_section, hex(offset), hex(size)))
 			dump_hex(DoHash(section_data))
 
