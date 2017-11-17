@@ -62,6 +62,14 @@ def main():
 						action="store_true",
 						default=False,
 						help="Only print the symbol once, the next occurence will be ignored")
+	parser.add_option(	"-s", "--symbol-only",
+						dest="symbol_only",
+						default="",
+						help="Only print selected symbol")
+	parser.add_option(	"--ignore-pattern",
+						dest="ignore_pattern",
+						default="",
+						help="Any symbol has prefix similar with this is ignored")
 	parser.add_option(	"-f", "--file",
 						type="string",
 						dest="file_path",
@@ -140,6 +148,13 @@ def main():
 						break
 			if ignore:
 				continue
+			if options.symbol_only != "":
+				if symbol == options.symbol_only:
+					printDeps(user, provider, symbol)
+				continue
+			if options.ignore_pattern != "":
+				if symbol.startswith(options.ignore_pattern):
+					continue
 			printDeps(user, provider, symbol)
 			labelOccur.append(symbol)
 
