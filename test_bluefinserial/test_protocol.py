@@ -141,6 +141,8 @@ if __name__ == "__main__":
 		# Update sending package
 		send_buff = prepare_buffer(cmd_len, rsp_len, times)
 		cmd = pkt.Packet(cmd_code, ctr_code, send_buff)
+		if times == 1:
+			dump_hex(cmd, "Command template (%d bytes): " % len(cmd))
 
 		# dump_hex(cmd, "Command: ")
 		start = time.time()

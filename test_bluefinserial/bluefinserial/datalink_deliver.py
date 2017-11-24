@@ -31,6 +31,7 @@ class BluefinserialCommand():
 	"""
 	pkt = ''
 	TARGET_APPLICATION = 0xC5
+	TARGET_APP = 0xC5
 	TARGET_RF = 0x35
 	VERBOSE = False
 	DATA_EXCEPT_CMD = 5100
@@ -83,7 +84,7 @@ class BluefinserialSend():
 	BluefinserialSend extends `Serial` by adding functions to read BluefinSerial commands.
 	"""
 	FLUSH_INPUT = 100
-	ACK_RETRY = 3
+	ACK_RETRY = 1
 	ACK_TIMEOUT = 500
 	RESPONSE_TIMEOUT = 6000
 	HEADER_APPLICATION_REP = '\xCA'
@@ -142,6 +143,7 @@ class BluefinserialSend():
 		retry = 0
 		ret = False
 		while ret == False and retry < self.ACK_RETRY:
+			# self._port.read(10000)
 			self._port.flushInput()
 			self._port.write(packet)
 			ret = self.GetACK()
