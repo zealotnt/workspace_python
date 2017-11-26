@@ -125,6 +125,8 @@ def print_err_dump(data, desc_str):
 def print_ok(text):
 	print (bcolors.OKGREEN + text + bcolors.ENDC)
 
+def print_noti(text):
+	print (bcolors.WARNING + text + bcolors.ENDC)
 
 def get_fullpath(file_dir, file_name):
 	if file_dir == "":

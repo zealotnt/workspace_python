@@ -19,3 +19,6 @@
 [submodule "test_elf/pyelftools"]
 	path = test_elf/pyelftools
 	url = https://github.com/eliben/pyelftools
+[submodule "projects/gr-peach-python-server"]
+	path = projects/gr-peach-python-server
+	url = git@github.com:zealotnt/gr-peach-2017-python-server.git
