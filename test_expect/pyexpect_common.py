@@ -2,7 +2,18 @@ import pexpect
 import sys
 import os
 from pyexpect_common import *
+from dotenv import load_dotenv
 
+# Common config
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path, verbose=True)
+HOST_PASSWORD = os.environ.get('HOST_PASSWORD')
+HOST_IP = os.environ.get('HOST_IP')
+HOST_INTERFACE = os.environ.get('HOST_INTERFACE')
+BOARD_PASSWORD = os.environ.get('BOARD_PASSWORD')
+BOARD_IP = os.environ.get('BOARD_IP')
+
+# Constant
 PYEXPECT_INFO_HDR = "[PY_EXPECT_INFO] "
 PYEXPECT_CMD_HDR = "[PY_EXPECT_CMD] "
 
