@@ -119,9 +119,11 @@ def GetNumberFromUser(prompt):
 	return int(user_prompt)
 
 def GetPn5180Info(pn5180Obj):
-	info = "pn5180_conn-" + "local" if pn5180Obj["pn5180_connection"] == 0 else "remote"
+	info = "pn5180_conn-"
+	info += "local" if pn5180Obj["pn5180_connection"] == 0 else "remote"
 	info += "_id-%d" % pn5180Obj["pn5180_id"]
 	info += "_force" if pn5180Obj["pn5180_forceID"] == 1 else ""
+	info += "_v" + pn5180Obj["pn5180_fwVer"]
 	if "pn5180_rfconf" in pn5180Obj and pn5180Obj["pn5180_rfconf"] != "":
 		info += "_cfg"
 	return info
@@ -133,8 +135,8 @@ def TrickyFirmwareConverter(objs):
 	if objs == "1.json":
 		path_from = "./BASELINE_TEMP/" + objs
 		path_to = "./BASELINE_TEMP/" + "pn5180.json"
-		print ("\t copy from %s to %s" % (path_from, path_to))
-		shutil.copy(path_from, path_to)
+		print ("\t rename from %s to %s" % (path_from, path_to))
+		shutil.move(path_from, path_to)
 
 def TrickyFirmwareComparer(file_name, path_target, path_temp):
 	if file_name == "pn5180.json":
@@ -157,7 +159,7 @@ def TrickyFirmwareComparer(file_name, path_target, path_temp):
 
 		# get the item user wants to compare in pn5180_temp:
 		if len(pn5180_temp) != 1:
-			print ("\r\n\tPN5180_TEMP has %d firmware: " % (len(pn5180_temp)))
+			print ("\r\n\tPN5180_TEMP has %d sub-firmware: " % (len(pn5180_temp)))
 			fw_count = 0
 			for fw in pn5180_temp:
 				print "\t% d. %s" % (fw_count, GetPn5180Info(fw))
@@ -209,6 +211,10 @@ def main():
 		CopyBaseline("./BASELINE")
 
 	if options.fwPath != "" or options.isValidateOnly == True:
+		if options.fwPath != "" and not os.path.isfile(options.fwPath):
+			print_err("Can't find %s" % options.fwPath)
+			sys.exit(-1)
+
 		passCount = 0
 
 		# download from sisius's current BASELINE to BASELINE_TARGET
@@ -248,11 +254,11 @@ def main():
 				if os.path.isfile(path_temp):
 					sys.stdout.write ("=> Comparing %-40.40s with   %-40.40s" % (path_target, path_temp))
 					if DoHash(path_target) == DoHash(path_temp):
-						print (" [%sOK%s]" % (bcolors.OKGREEN, bcolors.ENDC))
+						print (" [%sOK-Hash%s]" % (bcolors.OKGREEN, bcolors.ENDC))
 						passCount += 1
 					else:
 						if TrickyFirmwareComparer(fn, path_target, path_temp):
-							print (" [%sOK%s]" % (bcolors.OKGREEN, bcolors.ENDC))
+							print (" [%sOK-Compare%s]" % (bcolors.OKGREEN, bcolors.ENDC))
 							passCount += 1
 						else:
 							print (" [%sFAIL%s]" % (bcolors.FAIL, bcolors.ENDC))
@@ -261,11 +267,16 @@ def main():
 
 		if passCount >= NUM_OF_FIRMWARE:
 			print_noti("Validation result: ALL PASSED")
-			# if pass, ask for replace BASELINE_TEMP with current BASELINE
-			prompt = "Do you want to replace current firmware BASELINE_TEMP to BASELINE (for later comparison) ?"
-			if yes_or_no(prompt) == True:
+			# if pass, ask for replace BASELINE_TARGET to current BASELINE
+			# ** BASELINE -> should be copied from BASELINE_TARGET
+			# (because if we make BASELINE from BASELINE_TEMP,
+			# the pn5180 firmware isnt' really updated,
+			# remmembered, we extract new-pn5180-fw to BASELINE_TEMP,
+			# then choose which firmware to compare with BASELINE_TARGET)
+			prompt = "Do you want to replace current firmware BASELINE_TARGET to BASELINE (for later comparison) ?"
+			if options.isValidateOnly == False and yes_or_no(prompt) == True:
 				shutil.rmtree("./BASELINE", ignore_errors=True)
-				shutil.copytree("./BASELINE_TEMP", "./BASELINE")
+				shutil.copytree("./BASELINE_TARGET", "./BASELINE")
 		else:
 			# if fail prompt error and exit
 			print_err ("Compare firmware fail (pass %d/%d)!!!" % (passCount, NUM_OF_FIRMWARE))
