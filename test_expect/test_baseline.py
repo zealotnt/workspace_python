@@ -28,6 +28,12 @@ class bcolors:
 def print_err(text):
 	print >> sys.stderr, bcolors.FAIL + text + bcolors.ENDC
 
+def print_noti(text, isBold=False):
+	extra1 = ""
+	if isBold == True:
+		extra1 = bcolors.BOLD
+	print (extra1 + bcolors.WARNING + text + bcolors.ENDC)
+
 def CopyBaseline(targetFolder):
 	SetNetworkInterface(HOST_INTERFACE, HOST_IP, HOST_PASSWORD)
 	ScpDownloadFrom("/home/root/fw_backup/baseline", "root", BOARD_PASSWORD, BOARD_IP, targetFolder)
@@ -179,7 +185,7 @@ def TrickyFirmwareComparer(file_name, path_target, path_temp):
 # pn5180
 NUM_OF_FIRMWARE = 11
 
-if __name__ == '__main__':
+def main():
 	parser = OptionParser()
 	parser.add_option(  "-c", "--create-baseline",
 						dest="isCreateBaseline",
@@ -193,31 +199,39 @@ if __name__ == '__main__':
 	(options, args) = parser.parse_args()
 
 	if options.isCreateBaseline:
+		print_noti("0. Creating BASELINE", isBold=True)
 		CopyBaseline("./BASELINE")
 
 	if options.fwPath != "":
 		passCount = 0
 
 		# download from sisius's current BASELINE to BASELINE_TARGET
+		print_noti("1. Download SIRIUS's BASELINE, save it to BASELINE_TARGET", isBold=True)
 		shutil.rmtree("./BASELINE_TARGET", ignore_errors=True)
 		CopyBaseline("./BASELINE_TARGET")
 
 		# copy from current BASELINE to BASELINE_TEMP
+		print_noti("2. Copy our saved BASELINE, to BASELINE_TEMP", isBold=True)
 		shutil.rmtree("./BASELINE_TEMP", ignore_errors=True)
 		shutil.copytree("./BASELINE", "./BASELINE_TEMP")
 
 		# extract all compressed firmware in BASELINE_TEMP
+		print_noti("3. Prepare all firmware to compare", isBold=True)
+		print_noti("3.1 Extract all in BASELINE_TEMP")
 		ExtractAll('./BASELINE_TEMP')
 		# extract all compressed firmware in BASELINE_TARGET
+		print_noti("3.2 Extract all in BASELINE_TARGET")
 		ExtractAll('./BASELINE_TARGET')
 
 		# extract fwPath to BASELINE_TEMP
+		print_noti("3.3 Extract firmware in newly upgraded firmware to BASELINE_TEMP")
 		sys.stdout.write ("=> Extracting %s to BASELINE_TEMP" % (options.fwPath))
 		extractedFile = Extractfile(options.fwPath, "./", "./BASELINE_TEMP")
 		GotFirmware(extractedFile)
 		TrickyFirmwareConverter(extractedFile)
 
 		# compare all json in BASELINE_TARGET with BASELINE_TEMP
+		print_noti("4. Do the firmware validation", isBold=True)
 		for fn in os.listdir('./BASELINE_TARGET'):
 			path_target = "./BASELINE_TARGET/" + fn
 			path_temp = "./BASELINE_TEMP/" + fn
@@ -237,10 +251,15 @@ if __name__ == '__main__':
 					print ("=> Missing %s" % (path_temp))
 
 		if passCount >= NUM_OF_FIRMWARE:
+			print_noti("Validation reuslt: ALL PASSED")
 			# if pass, ask for replace BASELINE_TEMP with current BASELINE
-			if yes_or_no("Do you want to replace current firmware to BASELINE (for later comparison) ?") == True:
+			prompt = "Do you want to replace current firmware BASELINE_TEMP to BASELINE (for later comparison) ?"
+			if yes_or_no(prompt) == True:
 				shutil.rmtree("./BASELINE", ignore_errors=True)
 				shutil.copytree("./BASELINE_TEMP", "./BASELINE")
 		else:
 			# if fail prompt error and exit
-			print ("Compare firmware fail (pass %d/%d)!!!" % (passCount, NUM_OF_FIRMWARE))
+			print_err ("Compare firmware fail (pass %d/%d)!!!" % (passCount, NUM_OF_FIRMWARE))
+
+if __name__ == '__main__':
+	main()
