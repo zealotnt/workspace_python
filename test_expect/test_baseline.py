@@ -91,14 +91,22 @@ def yes_or_no(question):
 		return yes_or_no("Uhhhh... please enter ")
 
 def CompareDict(dict1, dict2):
-	diffkeys = [k for k in dict1 if dict1[k] != dict2[k]]
-	if len(diffkeys) != 0:
-		print("\r\n\tSomething wrong:")
-	for k in diffkeys:
+	isPassed = True
+	missing_keys_1 = [k for k in dict1 if k not in dict2]
+	missing_keys_2 = [k for k in dict2 if k not in dict1]
+	diff_keys = [k for k in dict1 if k in dict2 and dict1[k] != dict2[k]]
+	if (len(diff_keys) != 0 or
+		len(missing_keys_1) != 0 or
+		len(missing_keys_2) != 0):
+			print("\r\n\tSomething wrong:")
+			isPassed = False
+	for k in diff_keys:
 		print "\t\tDiff: " + k
-	if len(diffkeys) != 0:
-		return False
-	return True
+	for k in missing_keys_2:
+		print "\t\tDict1 missing: " + k
+	for k in missing_keys_1:
+		print "\t\tDict2 missing: " + k
+	return isPassed
 
 def GetNumberFromUser(prompt):
 	user_prompt = input(prompt)
