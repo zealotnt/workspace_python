@@ -136,7 +136,7 @@ class SiriusFirmwareRecovery():
 				"JSON_PREFIX": "pn5180",
 				"BINARY_FILE": "pn5180.bin",
 				"ACTION_NAME": "Recovery pn5180 firmware",
-				"FILE_USED": "BINARY",
+				"FILE_USED": "COMPRESSED",
 				"MAX_RETRY_TIMES": 5,
 				"RETRY_DELAY": 10,
 			},
@@ -364,7 +364,7 @@ class SiriusFwValidator():
 		output, err = pListFile.communicate()
 		rc = pListFile.returncode
 
-		tarCmd = "bsdtar -xvf " + file_path
+		tarCmd = "bsdtar -xf " + file_path
 		rc = os.system(tarCmd)
 		if rc != 0:
 			print_err("err when extracting file " + file_path)
@@ -380,6 +380,11 @@ class SiriusFwValidator():
 			json_decoded = json.loads(json_text)
 		except Exception as e:
 			raise Exception("Json decode file \"%s\" error: %s" % (json_file_name, str(e.message)))
+
+		# if this firmware is pn5180 firmware (the json firmware is array)
+		# no needd to process, the upgrade function will do it for us
+		if isinstance(json_decoded, list):
+			return True, json_file_name, "", []
 
 		fw_dict = {key: value for (key, value) in (json_decoded.items())}
 		if dry_run == False and json_prefix != "":
@@ -581,6 +586,7 @@ class SiriusFwValidator():
 		present = 0
 		for idx, model in enumerate(modelsArray):
 			try:
+				# we don't validate emv*.tar.xz firmware
 				if model["JSON_PREFIX"] == "":
 					continue
 
@@ -638,7 +644,7 @@ class SiriusFwRecoveryExecuter():
 			return False
 
 		# now, extract the firmware
-		tarCmd = "bsdtar -xvf " + compress_file + " -C " + RF_SCP_EXTRACT_PATH
+		tarCmd = "bsdtar -xf " + compress_file + " -C " + RF_SCP_EXTRACT_PATH
 		rc = os.system(tarCmd)
 		if rc != 0:
 			print_err("err when extracting file " + compress_file)
@@ -675,9 +681,7 @@ class SiriusFwRecoveryExecuter():
 
 	@staticmethod
 	def UpgradePn5180(filePath, extraInfo):
-		pn5180_id = int(extraInfo["pn5180_id"])
-		pn5180_connection = int(extraInfo["pn5180_connection"])
-		upg_cmd = "/home/root/pn5180/pn5180UpgradeApp %d %d %s" % (pn5180_connection, pn5180_id, filePath)
+		upg_cmd = "/home/root/pn5180/pn5180MutipleUpgradeApp %s" % (filePath)
 		print(upg_cmd)
 		ret = os.system(upg_cmd)
 		if ret == 0:
@@ -750,6 +754,8 @@ class SiriusFwRecoveryExecuter():
 					ret = model["UPG_FUNC"](output_bin_filename[idx], output_extra_info[idx])
 				elif model["FILE_USED"] == "JSON":
 					ret = model["UPG_FUNC"](output_json_filename[idx], output_extra_info[idx])
+				elif model["FILE_USED"] == "COMPRESSED":
+					ret = model["UPG_FUNC"](model["FIRMWARE_FILE"], output_extra_info[idx])
 				else:
 					raise Exception("Unregcognize FILE_USED: %s for firmware: %s" % (model["FILE_USED"], model["FIRMWARE_FILE"]))
 
