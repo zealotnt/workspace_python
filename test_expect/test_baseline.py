@@ -196,13 +196,19 @@ def main():
 						dest="fwPath",
 						default="",
 						help="path to firmware to added to baseline")
+	parser.add_option(  "-v", "--validate-only",
+						dest="isValidateOnly",
+						action="store_true",
+						default=False,
+						help="Only do the validate baseline of Sirius of Host's current BASELINE")
 	(options, args) = parser.parse_args()
 
 	if options.isCreateBaseline:
 		print_noti("0. Creating BASELINE", isBold=True)
+		shutil.rmtree("./BASELINE", ignore_errors=True)
 		CopyBaseline("./BASELINE")
 
-	if options.fwPath != "":
+	if options.fwPath != "" or options.isValidateOnly == True:
 		passCount = 0
 
 		# download from sisius's current BASELINE to BASELINE_TARGET
@@ -224,11 +230,14 @@ def main():
 		ExtractAll('./BASELINE_TARGET')
 
 		# extract fwPath to BASELINE_TEMP
-		print_noti("3.3 Extract firmware in newly upgraded firmware to BASELINE_TEMP")
-		sys.stdout.write ("=> Extracting %s to BASELINE_TEMP" % (options.fwPath))
-		extractedFile = Extractfile(options.fwPath, "./", "./BASELINE_TEMP")
-		GotFirmware(extractedFile)
-		TrickyFirmwareConverter(extractedFile)
+		if options.fwPath != "" and options.isValidateOnly == False:
+			print_noti("3.3 Extract firmware in newly upgraded firmware to BASELINE_TEMP")
+			sys.stdout.write ("=> Extracting %s to BASELINE_TEMP" % (options.fwPath))
+			extractedFile = Extractfile(options.fwPath, "./", "./BASELINE_TEMP")
+			GotFirmware(extractedFile)
+			TrickyFirmwareConverter(extractedFile)
+		else:
+			print_noti("3.3 Won't extract newly upgraded firmware, validate only")
 
 		# compare all json in BASELINE_TARGET with BASELINE_TEMP
 		print_noti("4. Do the firmware validation", isBold=True)
@@ -251,7 +260,7 @@ def main():
 					print ("=> Missing %s" % (path_temp))
 
 		if passCount >= NUM_OF_FIRMWARE:
-			print_noti("Validation reuslt: ALL PASSED")
+			print_noti("Validation result: ALL PASSED")
 			# if pass, ask for replace BASELINE_TEMP with current BASELINE
 			prompt = "Do you want to replace current firmware BASELINE_TEMP to BASELINE (for later comparison) ?"
 			if yes_or_no(prompt) == True:
