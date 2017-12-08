@@ -1,2 +1,4 @@
 .env
 BASELINE*
+*.7z
+*.tar.xz

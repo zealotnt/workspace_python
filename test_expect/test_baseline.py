@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+
 import subprocess
 from pexpect import pxssh
 import pexpect, getpass
 import sys
 import os
+import json
 from pyexpect_common import *
 from template_ifconfig_ip import *
 from template_scp import *
@@ -21,6 +24,9 @@ class bcolors:
 	ENDC = '\033[0m'
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
+
+def print_err(text):
+	print >> sys.stderr, bcolors.FAIL + text + bcolors.ENDC
 
 def CopyBaseline(targetFolder):
 	SetNetworkInterface(HOST_INTERFACE, HOST_IP, HOST_PASSWORD)
@@ -84,6 +90,28 @@ def yes_or_no(question):
 	else:
 		return yes_or_no("Uhhhh... please enter ")
 
+def CompareDict(dict1, dict2):
+	diffkeys = [k for k in dict1 if dict1[k] != dict2[k]]
+	if len(diffkeys) != 0:
+		print("\r\n\tSomething wrong:")
+	for k in diffkeys:
+		print "\t\tDiff: " + k
+	if len(diffkeys) != 0:
+		return False
+	return True
+
+def GetNumberFromUser(prompt):
+	user_prompt = input(prompt)
+	return int(user_prompt)
+
+def GetPn5180Info(pn5180Obj):
+	info = "pn5180_conn-" + "local" if pn5180Obj["pn5180_connection"] == 0 else "remote"
+	info += "_id-%d" % pn5180Obj["pn5180_id"]
+	info += "_force" if pn5180Obj["pn5180_forceID"] == 1 else ""
+	if "pn5180_rfconf" in pn5180Obj and pn5180Obj["pn5180_rfconf"] != "":
+		info += "_cfg"
+	return info
+
 def TrickyFirmwareConverter(objs):
 	# This function use to convert file name that SFIT produces
 	# to match with the file name that xmsdk produces
@@ -93,6 +121,50 @@ def TrickyFirmwareConverter(objs):
 		path_to = "./BASELINE_TEMP/" + "pn5180.json"
 		print ("\t copy from %s to %s" % (path_from, path_to))
 		shutil.copy(path_from, path_to)
+
+def TrickyFirmwareComparer(file_name, path_target, path_temp):
+	if file_name == "pn5180.json":
+		isPassed = False
+		pn5180_target = json.loads(open(path_target).read())
+		pn5180_temp = json.loads(open(path_temp).read())
+
+		# get the item user wants to compare in pn5180_target:
+		if len(pn5180_target) != 1:
+			print ("\r\n\tPN5180_TARGET has %d firmware: " % (len(pn5180_target)))
+			fw_count = 0
+			for fw in pn5180_target:
+				print "\t%d. %s" % (fw_count, GetPn5180Info(fw))
+				fw_count += 1
+
+			idx = GetNumberFromUser("\tPlease choose one:")
+			pn5180_target = pn5180_target[idx]
+		else:
+			pn5180_target = pn5180_target[0]
+
+		# get the item user wants to compare in pn5180_temp:
+		if len(pn5180_temp) != 1:
+			print ("\r\n\tPN5180_TEMP has %d firmware: " % (len(pn5180_temp)))
+			fw_count = 0
+			for fw in pn5180_temp:
+				print "\t% d. %s" % (fw_count, GetPn5180Info(fw))
+				fw_count += 1
+
+			idx = GetNumberFromUser("\tPlease choose one:")
+			pn5180_temp = pn5180_temp[idx]
+		else:
+			pn5180_temp = pn5180_temp[0]
+
+		# Note:
+		# the force id in SIRIUS when upgraded ok always set to 1
+		pn5180_temp["pn5180_forceID"] = 1
+
+		# compare two firmware
+		if CompareDict(pn5180_target, pn5180_temp):
+			isPassed = True
+		return isPassed
+
+	# Default: Fail
+	return False
 
 # xmsdk, svc, surisdk, suribl, eraser
 # emvconf x 4 + capk
@@ -148,7 +220,11 @@ if __name__ == '__main__':
 						print (" [%sOK%s]" % (bcolors.OKGREEN, bcolors.ENDC))
 						passCount += 1
 					else:
-						print (" [%sFAIL%s]" % (bcolors.FAIL, bcolors.ENDC))
+						if TrickyFirmwareComparer(fn, path_target, path_temp):
+							print (" [%sOK%s]" % (bcolors.OKGREEN, bcolors.ENDC))
+							passCount += 1
+						else:
+							print (" [%sFAIL%s]" % (bcolors.FAIL, bcolors.ENDC))
 				else:
 					print ("=> Missing %s" % (path_temp))
 
