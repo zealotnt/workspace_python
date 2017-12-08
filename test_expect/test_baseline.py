@@ -84,6 +84,16 @@ def yes_or_no(question):
 	else:
 		return yes_or_no("Uhhhh... please enter ")
 
+def TrickyFirmwareConverter(objs):
+	# This function use to convert file name that SFIT produces
+	# to match with the file name that xmsdk produces
+	# so they can be compared with each other later on
+	if objs == "1.json":
+		path_from = "./BASELINE_TEMP/" + objs
+		path_to = "./BASELINE_TEMP/" + "pn5180.json"
+		print ("\t copy from %s to %s" % (path_from, path_to))
+		shutil.copy(path_from, path_to)
+
 # xmsdk, svc, surisdk, suribl, eraser
 # emvconf x 4 + capk
 # pn5180
@@ -125,6 +135,7 @@ if __name__ == '__main__':
 		sys.stdout.write ("=> Extracting %s to BASELINE_TEMP" % (options.fwPath))
 		extractedFile = Extractfile(options.fwPath, "./", "./BASELINE_TEMP")
 		GotFirmware(extractedFile)
+		TrickyFirmwareConverter(extractedFile)
 
 		# compare all json in BASELINE_TARGET with BASELINE_TEMP
 		for fn in os.listdir('./BASELINE_TARGET'):
