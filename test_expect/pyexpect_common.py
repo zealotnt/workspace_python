@@ -10,8 +10,8 @@ load_dotenv(dotenv_path, verbose=True)
 HOST_PASSWORD = os.environ.get('HOST_PASSWORD')
 HOST_IP = os.environ.get('HOST_IP')
 HOST_INTERFACE = os.environ.get('HOST_INTERFACE')
-BOARD_PASSWORD = os.environ.get('BOARD_PASSWORD')
-BOARD_IP = os.environ.get('BOARD_IP')
+TARGET_PASSWORD = os.environ.get('TARGET_PASSWORD')
+TARGET_IP = os.environ.get('TARGET_IP')
 
 # Constant
 PYEXPECT_INFO_HDR = "[PY_EXPECT_INFO] "

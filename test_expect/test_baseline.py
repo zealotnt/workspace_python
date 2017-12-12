@@ -36,7 +36,7 @@ def print_noti(text, isBold=False):
 
 def CopyBaseline(targetFolder):
 	SetNetworkInterface(HOST_INTERFACE, HOST_IP, HOST_PASSWORD)
-	ScpDownloadFrom("/home/root/fw_backup/baseline", "root", BOARD_PASSWORD, BOARD_IP, targetFolder)
+	ScpDownloadFrom("/home/root/fw_backup/baseline", "root", TARGET_PASSWORD, TARGET_IP, targetFolder)
 
 def GotFirmware(obj):
 	print (" ... Got %s%s%s" % (bcolors.OKGREEN, obj, bcolors.ENDC))
