@@ -45,16 +45,26 @@ class ExpectActions():
 	def SupportedActionsStr():
 		return "/".join(list(ExpectActions.SUPPORT_ACTION))
 
-	def Connect(self, target_ip, target_name, target_pass):
-		target_ip = os.environ.get('TARGET_IP') if target_ip == "" else target_ip
-		target_name = os.environ.get('TARGET_NAME') if target_name == "" else target_name
-		target_pass = os.environ.get('TARGET_PASSWORD') if target_pass == "" else target_pass
-		SshLoginInteractive(target_ip, target_name, target_pass)
+	def SetValue(self, target_ip, target_name, target_pass):
+		self.target_ip = os.environ.get('TARGET_IP') if target_ip == "" else target_ip
+		self.target_name = os.environ.get('TARGET_USERNAME') if target_name == "" else target_name
+		self.target_pass = os.environ.get('TARGET_PASSWORD') if target_pass == "" else target_pass
 
-	def Download(target_ip, target_name, target_pass, target_target, local_path, local_target=""):
+	def Connect(self):
+		SshLoginInteractive(self.target_ip, self.target_name, self.target_pass)
+
+	def Download(self, target_item, local_path, to_local_item=""):
 		pass
 
-	def Upload(target_ip, target_name, target_pass, target_path, local_target, target_target=""):
+	def Upload(self, target_path, local_target, to_target_item=""):
+		ScpUploadTo(local_target,
+					self.target_name,
+					self.target_pass,
+					self.target_ip,
+					target_path+to_target_item,
+					os.environ.get('HOST_USERNAME'))
+
+	def ParseAction(self):
 		pass
 
 def main():
@@ -100,7 +110,8 @@ def main():
 		SetNetworkInterface(HOST_INTERFACE, HOST_IP, HOST_PASSWORD)
 
 	pyExpectedActions = ExpectActions(options.env_file)
-	pyExpectedActions.Connect(options.remote_host_ip, options.remote_host_name, options.remote_host_pass)
+	pyExpectedActions.SetValue(options.remote_host_ip, options.remote_host_name, options.remote_host_pass)
+	pyExpectedActions.Connect()
 
 
 if __name__ == "__main__":
