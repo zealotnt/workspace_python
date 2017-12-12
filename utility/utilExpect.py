@@ -11,6 +11,7 @@ import sys
 import git
 import os
 import inspect
+import yaml
 from optparse import OptionParser, OptionGroup
 def get_git_root():
 	CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
@@ -59,6 +60,18 @@ class ExpectActions():
 	def Connect(self, *kargs):
 		SshLoginInteractive(self.target_ip, self.target_name, self.target_pass)
 
+	def _download(self, download_from, download_to):
+		print("=> Downloading %s to %s" % (
+			make_yellow(download_from, True),
+			make_green(download_to, True)
+		))
+		ScpDownloadFrom(download_from,
+						self.target_name,
+						self.target_pass,
+						self.target_ip,
+						download_to,
+						os.environ.get('HOST_USERNAME'))
+
 	def Download(self, *kargs):
 		# target_item, local_path, to_local_item=""
 		args = kargs[0][0]
@@ -73,17 +86,21 @@ class ExpectActions():
 			to_local_item = args[2]
 			if not local_path.endswith(os.sep):
 				local_path += os.sep
+		self._download(target_item, local_path+to_local_item)
 
-		print("=> Downloading %s to %s" % (
-			make_yellow(target_item, True),
-			make_green(local_path+to_local_item, True)
+
+
+	def _upload(self, upload_from, upload_to):
+		print("=> Uploading %s to %s" % (
+			make_yellow(upload_from, True),
+			make_green(upload_to, True)
 		))
-		ScpDownloadFrom(target_item,
-						self.target_name,
-						self.target_pass,
-						self.target_ip,
-						local_path+to_local_item,
-						os.environ.get('HOST_USERNAME'))
+		ScpUploadTo(upload_from,
+					self.target_name,
+					self.target_pass,
+					self.target_ip,
+					upload_to,
+					os.environ.get('HOST_USERNAME'))
 
 	def Upload(self, *kargs):
 		# target_path, local_target, to_target_item=""
@@ -99,23 +116,40 @@ class ExpectActions():
 			to_target_item = args[2]
 			if not target_path.endswith(os.sep):
 				target_path += os.sep
+		self._upload(local_target, target_path+to_target_item)
 
-		print("=> Uploading %s to %s" % (
-			make_yellow(local_target, True),
-			make_green(target_path+to_target_item, True)
-		))
-		ScpUploadTo(local_target,
-					self.target_name,
-					self.target_pass,
-					self.target_ip,
-					target_path+to_target_item,
-					os.environ.get('HOST_USERNAME'))
+
+	def _validate_yaml_input(self, args, key):
+		# conf_file: yaml file that contain instruction to download from host
+		if len(args) != 1:
+			print_err("Requires 1 argument: <yaml-instruction-file>")
+			return None
+
+		conf_file = args[0]
+		if not os.path.isfile(conf_file):
+			print_err("Yaml config file: %s does not exist, exit" % conf_file)
+			return None
+
+		config_parsed = yaml.load(open(conf_file).read())
+		# TODO: validate the "config_parsed" dict
+
+		return config_parsed[key]
 
 	def DownloadList(self, *kargs):
-		pass
+		args = kargs[0][0]
+		list_files = self._validate_yaml_input(args, "DownloadList")
+		if list_files == None:
+			return None
+		for couple in list_files:
+			self._download(couple['from'], couple['to'])
 
 	def UploadList(self, *kargs):
-		pass
+		args = kargs[0][0]
+		list_files = self._validate_yaml_input(args, "UploadList")
+		if list_files == None:
+			return None
+		for couple in list_files:
+			self._upload(couple['from'], couple['to'])
 
 	def ParseAction(self, action):
 		actions = {

@@ -1,0 +1,7 @@
+DownloadList:
+  -
+    from: /home/root/xmsdk
+    to: ./
+  -
+    from: /home/root/svc
+    to: ./
