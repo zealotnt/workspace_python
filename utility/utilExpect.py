@@ -40,6 +40,10 @@ class ExpectActions():
 				print_err("%s does not exist, use default env file" % config)
 			else:
 				load_dotenv(config, verbose=True)
+		self.func = None
+		self.target_ip = os.environ.get('TARGET_IP')
+		self.target_name = os.environ.get('TARGET_USERNAME')
+		self.target_pass = os.environ.get('TARGET_PASSWORD')
 
 	@staticmethod
 	def SupportedActionsStr():
@@ -50,13 +54,20 @@ class ExpectActions():
 		self.target_name = os.environ.get('TARGET_USERNAME') if target_name == "" else target_name
 		self.target_pass = os.environ.get('TARGET_PASSWORD') if target_pass == "" else target_pass
 
-	def Connect(self):
+	def Connect(self, *kargs):
 		SshLoginInteractive(self.target_ip, self.target_name, self.target_pass)
 
-	def Download(self, target_item, local_path, to_local_item=""):
-		pass
+	def Download(self, *kargs):
+		# target_item, local_path, to_local_item=""
+		ScpDownloadFrom(target_item,
+						self.target_name,
+						self.target_pass,
+						self.target_ip,
+						local_path+to_local_item,
+						os.environ.get('HOST_USERNAME'))
 
-	def Upload(self, target_path, local_target, to_target_item=""):
+	def Upload(self, *kargs):
+		# target_path, local_target, to_target_item=""
 		ScpUploadTo(local_target,
 					self.target_name,
 					self.target_pass,
@@ -64,8 +75,18 @@ class ExpectActions():
 					target_path+to_target_item,
 					os.environ.get('HOST_USERNAME'))
 
-	def ParseAction(self):
-		pass
+	def ParseAction(self, action):
+		actions = {
+			self.ACTION_CONNECT: self.Connect,
+			self.ACTION_UPLOAD: self.Upload,
+			self.ACTION_DOWNLOAD: self.Download,
+		}
+		# Get the function from actions dictionary, func is None if no key is matched
+		self.func = actions.get(action, None)
+		return self.func
+
+	def DoAction(self, *kargs):
+		return self.func(kargs)
 
 def main():
 	parser = OptionParser()
@@ -106,13 +127,20 @@ def main():
 						help="Host's interface")
 	(options, args) = parser.parse_args()
 
+	if options.do_action == "":
+		parser.print_help()
+		print_err("DO_ACTION is required")
+		sys.exit(-1)
 	if options.do_config:
 		SetNetworkInterface(HOST_INTERFACE, HOST_IP, HOST_PASSWORD)
 
 	pyExpectedActions = ExpectActions(options.env_file)
 	pyExpectedActions.SetValue(options.remote_host_ip, options.remote_host_name, options.remote_host_pass)
-	pyExpectedActions.Connect()
-
+	action = pyExpectedActions.ParseAction(options.do_action)
+	if action == None:
+		print_err("Action \"%s\" not supported" % (options.do_action))
+		sys.exit(-1)
+	pyExpectedActions.DoAction()
 
 if __name__ == "__main__":
 	main()
