@@ -30,7 +30,9 @@ class ExpectActions():
 	ACTION_CONNECT = "c"
 	ACTION_UPLOAD = "u"
 	ACTION_DOWNLOAD = "d"
-	SUPPORT_ACTION = [ACTION_CONNECT, ACTION_DOWNLOAD, ACTION_UPLOAD]
+	ACTION_UPLOAD_LIST = "ul"
+	ACTION_DOWNLOAD_LIST = "dl"
+	SUPPORT_ACTION = [ACTION_CONNECT, ACTION_DOWNLOAD, ACTION_DOWNLOAD_LIST, ACTION_UPLOAD, ACTION_UPLOAD_LIST]
 
 	def __init__(self, config=""):
 		"""
@@ -109,11 +111,19 @@ class ExpectActions():
 					target_path+to_target_item,
 					os.environ.get('HOST_USERNAME'))
 
+	def DownloadList(self, *kargs):
+		pass
+
+	def UploadList(self, *kargs):
+		pass
+
 	def ParseAction(self, action):
 		actions = {
 			self.ACTION_CONNECT: self.Connect,
 			self.ACTION_UPLOAD: self.Upload,
 			self.ACTION_DOWNLOAD: self.Download,
+			self.ACTION_UPLOAD_LIST: self.UploadList,
+			self.ACTION_DOWNLOAD_LIST: self.DownloadList,
 		}
 		# Get the function from actions dictionary, func is None if no key is matched
 		self.func = actions.get(action, None)
@@ -139,26 +149,32 @@ def main():
 						action="store_true",
 						default=False,
 						help="do config network interface on local machine, use the info in default env file")
-	parser.add_option(  "--target-ip",
+
+	group = OptionGroup(parser, make_yellow("Target Options"))
+	group.add_option(  "--target-ip",
 						dest="remote_host_ip",
 						type="string",
 						default="",
 						help="IP address of remote machine to interact with")
-	parser.add_option(  "--target-name",
+	group.add_option(  "--target-name",
 						dest="remote_host_name",
 						type="string",
 						default="",
 						help="User name of remote machine to interact with")
-	parser.add_option(  "--target-pass",
+	group.add_option(  "--target-pass",
 						dest="remote_host_pass",
 						type="string",
 						default="",
 						help="User's password of remote machine to interact with")
-	parser.add_option(  "--host-iface",
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser, make_yellow("Local Host Options"))
+	group.add_option(  "--host-iface",
 						dest="host_iface",
 						type="string",
 						default="",
 						help="Host's interface")
+	parser.add_option_group(group)
 	(options, args) = parser.parse_args()
 
 	if options.do_action == "":
