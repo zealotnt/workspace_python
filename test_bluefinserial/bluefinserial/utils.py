@@ -115,6 +115,16 @@ class bcolors:
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
 
+def make_color(text, color, isBold=False):
+	ret = bcolors.BOLD if isBold == True else ""
+	ret += color + text + bcolors.ENDC
+	return ret
+
+def make_yellow(text, isBold=False):
+	return make_color(text, bcolors.WARNING, isBold)
+
+def make_green(text, isBold=False):
+	return make_color(text, bcolors.OKGREEN, isBold)
 
 def print_err(text):
 	print >> sys.stderr, bcolors.FAIL + text + bcolors.ENDC

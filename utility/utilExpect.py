@@ -59,6 +59,23 @@ class ExpectActions():
 
 	def Download(self, *kargs):
 		# target_item, local_path, to_local_item=""
+		args = kargs[0][0]
+		if len(args) != 3 and len(args) != 2:
+			print_err("Download requires 2 (1 optional) arguments: <remote-file-to-download> <local-path> [local-name]")
+			return None
+
+		target_item = args[0]
+		local_path = args[1]
+		to_local_item = ""
+		if len(args) == 3:
+			to_local_item = args[2]
+			if not local_path.endswith(os.sep):
+				local_path += os.sep
+
+		print("=> Downloading %s to %s" % (
+			make_yellow(target_item, True),
+			make_green(local_path+to_local_item, True)
+		))
 		ScpDownloadFrom(target_item,
 						self.target_name,
 						self.target_pass,
@@ -68,6 +85,23 @@ class ExpectActions():
 
 	def Upload(self, *kargs):
 		# target_path, local_target, to_target_item=""
+		args = kargs[0][0]
+		if len(args) != 3 and len(args) != 2:
+			print_err("Upload requires 2 (1 optional) arguments: <local-target-to-upload> <target-path> [target-name]")
+			return None
+
+		local_target = args[0]
+		target_path = args[1]
+		to_target_item = ""
+		if len(args) == 3:
+			to_target_item = args[2]
+			if not target_path.endswith(os.sep):
+				target_path += os.sep
+
+		print("=> Uploading %s to %s" % (
+			make_yellow(local_target, True),
+			make_green(target_path+to_target_item, True)
+		))
 		ScpUploadTo(local_target,
 					self.target_name,
 					self.target_pass,
@@ -140,7 +174,7 @@ def main():
 	if action == None:
 		print_err("Action \"%s\" not supported" % (options.do_action))
 		sys.exit(-1)
-	pyExpectedActions.DoAction()
+	pyExpectedActions.DoAction(args)
 
 if __name__ == "__main__":
 	main()
