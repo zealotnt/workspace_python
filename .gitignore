@@ -15,5 +15,6 @@
 *.ini
 *.log
 *.log.*
+.env
 
 !**/.example_config.json
