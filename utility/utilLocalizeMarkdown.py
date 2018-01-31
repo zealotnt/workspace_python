@@ -16,6 +16,15 @@ import textwrap
 from optparse import OptionParser, OptionGroup
 import colorama
 import urllib, urlparse
+import git, inspect
+def get_git_root():
+	CURRENT_DIR = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + os.sep
+	path = CURRENT_DIR
+	git_repo = git.Repo(path, search_parent_directories=True)
+	git_root = git_repo.git.rev_parse("--show-toplevel")
+	return git_root
+sys.path.insert(0, get_git_root() + '/test_bluefinserial/bluefinserial')
+from utils import *
 # https://stackoverflow.com/questions/27981545/suppress-insecurerequestwarning-unverified-https-request-is-being-made-in-pytho
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -49,15 +58,6 @@ def rchop(thestring, ending):
 
 def start_meld(original_file, new_file):
 	os.system("meld %s %s" % (original_file, new_file))
-
-def yes_or_no(question):
-	reply = str(raw_input(question+' (y/n): ')).lower().strip()
-	if reply[0] == 'y':
-		return True
-	if reply[0] == 'n':
-		return False
-	else:
-		return yes_or_no("Uhhhh... please enter ")
 
 def main():
 	EPILOG = textwrap.dedent(
@@ -98,12 +98,16 @@ def main():
 		# Loop through line by line
 		for idx, line in enumerate(content):
 			# Find line that contain the image link
-			image_line_patters = [r"!\[(.*)\]\((.+)\)"]
+			image_line_patters = [
+				r'!\[(.*)\]\(([\S]+)\s*".+"\)',
+				r"!\[(.*)\]\((.+)\)",
+			]
 			for pattern in image_line_patters:
 				match = re.findall(pattern, line, re.MULTILINE)
 				# There should not more than 2 image in one line
 				if len(match) == 1:
 					image_url = match[0][1]
+					image_url_org = image_url
 					# check if the image is from the internet
 					if is_external_link(image_url) == False:
 						print_noti("Image %s is not from internet, ignore" % image_url)
@@ -126,12 +130,17 @@ def main():
 					extension = imghdr.what(to_download)
 
 					# put the downloaded image with file name pattern: pics/<md-file-name>-<pic-count>
-					new_location = "pics/%s-%d.%s" % (markdown_file_name, pics_count, extension)
+					new_location = "./pics/%s-%d.%s" % (markdown_file_name, pics_count, extension)
 					print_noti("\t=> Save to %s" % new_location)
 					shutil.move(to_download, new_location)
 					pics_count += 1
 
-					content[idx] = content[idx].replace(image_url, new_location)
+					# we should use image_url_org, cause sometimes, a link has a trailling / in it
+					# -> markdown file protocol can't render the image
+					content[idx] = content[idx].replace(image_url_org, new_location)
+					# if match one pattern, don't check other pattern
+					# the last pattern is the most adpopt type, could be errorneous in some case
+					break
 
 		# Create new markdown file, with file name: <md-file-name>.new.md
 		markdown_new_file = markdown_file_name + ".new.md"
@@ -140,8 +149,13 @@ def main():
 			new_md_file.write("%s" % item)
 		new_md_file.close()
 
-		if yes_or_no("Do you want to compare org_file: %s and new_file: %s ?" % (markdown_file_path, markdown_new_file)) == True:
+		if yes_or_no("Do you want to compare: %s (org) and %s (new) ?" %
+			(make_green(markdown_file_name_full), make_yellow(markdown_new_file))) == True:
 			start_meld(markdown_file_path, markdown_new_file)
+
+			if yes_or_no("Is it seem ok, replace %s with %s ?" %
+				(make_green(markdown_file_name_full), make_yellow(markdown_new_file))) == True:
+				shutil.move(markdown_new_file, markdown_file_path)
 
 # ---- MAIN
 if __name__ == "__main__":

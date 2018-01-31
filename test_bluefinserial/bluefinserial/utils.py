@@ -406,3 +406,12 @@ def CompressFileWithExtension(extensionStr, filePath):
 
 # [Ref](http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-traceback)
 MYNAME = lambda: inspect.stack()[1][3]
+
+def yes_or_no(question):
+	reply = str(raw_input(question+' (y/n): ')).lower().strip()
+	if reply[0] == 'y':
+		return True
+	if reply[0] == 'n':
+		return False
+	else:
+		return yes_or_no("Uhhhh... please enter ")
