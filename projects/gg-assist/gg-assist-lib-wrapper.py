@@ -3,7 +3,7 @@ from io import StringIO, BytesIO
 import threading
 import time
 import collections
-import pyaudio
+import alsaaudio
 import wave
 import os
 import logging
@@ -15,6 +15,7 @@ load_dotenv(dotenv_path, verbose=True)
 
 # remember to chmod ugo+x hotword.py before running this
 ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
+audio_device_name = os.environ.get("AUDIO_DEVICE_NAME")
 
 std_out_buf = StringIO()
 std_err_buf = StringIO()
@@ -23,37 +24,50 @@ useThread = True
 # useThread = False
 
 DETECT_DING=os.environ.get("DING_FILE_PATH")
-ding_wav = wave.open(DETECT_DING, 'rb')
-ding_data = ding_wav.readframes(ding_wav.getnframes())
 
-def play_audio_file():
-    """Simple callback function to play a wave file. By default it plays
-    a Ding sound.
+def play_audio_file(audio_device_name, f):
+	device = alsaaudio.PCM(device=audio_device_name)
 
-    :return: None
-    """
-    global ding_wav
-    global ding_data
-    audio = pyaudio.PyAudio()
-    stream_out = audio.open(
-        format=audio.get_format_from_width(ding_wav.getsampwidth()),
-        channels=ding_wav.getnchannels(),
-        rate=ding_wav.getframerate(), input=False, output=True)
-    stream_out.start_stream()
-    stream_out.write(ding_data)
-    time.sleep(0.2)
-    stream_out.stop_stream()
-    stream_out.close()
-    audio.terminate()
+	# print('%d channels, %d sampling rate\n' % (f.getnchannels(), f.getframerate()))
+	# Set attributes
+	device.setchannels(f.getnchannels())
+	device.setrate(f.getframerate())
+
+	# 8bit is unsigned in wav files
+	if f.getsampwidth() == 1:
+		device.setformat(alsaaudio.PCM_FORMAT_U8)
+	# Otherwise we assume signed data, little endian
+	elif f.getsampwidth() == 2:
+		device.setformat(alsaaudio.PCM_FORMAT_S16_LE)
+	elif f.getsampwidth() == 3:
+		device.setformat(alsaaudio.PCM_FORMAT_S24_3LE)
+	elif f.getsampwidth() == 4:
+		device.setformat(alsaaudio.PCM_FORMAT_S32_LE)
+	else:
+		raise ValueError('Unsupported format')
+
+	periodsize = f.getframerate() / 8
+	periodsize = int(periodsize)
+	device.setperiodsize(periodsize)
+
+	data = f.readframes(periodsize)
+	while data:
+		# Read data from stdin
+		device.write(data)
+		data = f.readframes(periodsize)
+	f.rewind()
+	device.close()
 
 def StdOutAnalyzer():
-	global std_out_buf
+	STATE_TURN_STARTED_STR = "ON_CONVERSATION_TURN_STARTED"
 	time.sleep(0.5)
 	print ("StdOutAnalyzer thread started")
+
+	global std_out_buf
+	global audio_device_name
 	lastFollowOnTurn = False
 	allData = ""
-
-	STATE_TURN_STARTED_STR = "ON_CONVERSATION_TURN_STARTED"
+	ding_wav = wave.open(DETECT_DING, 'rb')
 	while True:
 		time.sleep(0.1)
 		data = std_out_buf.getvalue()
@@ -75,7 +89,7 @@ def StdOutAnalyzer():
 			if STATE_TURN_STARTED_STR in allData:
 				if lastFollowOnTurn is False:
 					print ("WW Done!!!")
-					play_audio_file()
+					play_audio_file(audio_device_name, ding_wav)
 				# strip the STATE_TURN_STARTED_STR out of the allData buff
 				allData = allData[allData.rfind(STATE_TURN_STARTED_STR)+len(STATE_TURN_STARTED_STR):]
 				print ("After strip: ", allData, "*********")
