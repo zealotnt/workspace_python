@@ -9,6 +9,7 @@ import os
 import logging
 import json
 from dotenv import load_dotenv
+import platform
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path, verbose=True)
@@ -58,8 +59,131 @@ def play_audio_file(audio_device_name, f):
 	f.rewind()
 	device.close()
 
+
+class BlinkLedThread(threading.Thread):
+	SYSFS_GPIO_VALUE_HIGH = '1'
+	SYSFS_GPIO_VALUE_LOW = '0'
+	PATTERN_ERROR = [1]
+	PATTERN_WAIT_FOR_WAKE_WORD = [6]
+	PATTERN_WAIT_FOR_SPEECH = [0, 2]
+	PATTERN_PROCESSING = [0, 3]
+	PATTERN_PLAYING = [0, 4]
+	PATTERN_RAINBOW = [0, 1, 2, 3, 4, 5, 6, 7]
+
+	def __init__(self, name):
+		threading.Thread.__init__(self)
+		self.name = name
+		self.shouldKilled = False
+
+	def run(self):
+		print ("Starting " + self.name)
+		self.BlinkLed()
+		print ("Exiting " + self.name)
+
+	def SetLedColor(self, value):
+		if (value & 0x01):
+			self.f_red.write(self.SYSFS_GPIO_VALUE_HIGH)
+		else:
+			self.f_red.write(self.SYSFS_GPIO_VALUE_LOW)
+
+		if (value & 0x02):
+			self.f_green.write(self.SYSFS_GPIO_VALUE_HIGH)
+		else:
+			self.f_green.write(self.SYSFS_GPIO_VALUE_LOW)
+
+		if (value & 0x04):
+			self.f_blue.write(self.SYSFS_GPIO_VALUE_HIGH)
+		else:
+			self.f_blue.write(self.SYSFS_GPIO_VALUE_LOW)
+
+		self.f_red.seek(0)
+		self.f_green.seek(0)
+		self.f_blue.seek(0)
+
+	def SetLedPattern(self, pattern_type):
+		patternDict = {
+			"STATE_WAIT_WAKE_WORD": self.PATTERN_WAIT_FOR_WAKE_WORD,
+			"STATE_WAIT_SPEECH": self.PATTERN_WAIT_FOR_SPEECH,
+			"STATE_PROCESSING": self.PATTERN_PROCESSING,
+			"STATE_PlAYING": self.PATTERN_PLAYING,
+			"STATE_ERROR": self.PATTERN_ERROR,
+		}
+		self.color_list = patternDict[pattern_type]
+
+	def BlinkLed(self):
+		LED_RED = 150
+		LED_GREEN = 151
+		LED_BLUE = 152
+
+		self.color_list = self.PATTERN_WAIT_FOR_WAKE_WORD
+
+		# Export gpio
+		os.system("echo 150 > /sys/class/gpio/export")
+		os.system("echo 151 > /sys/class/gpio/export")
+		os.system("echo 152 > /sys/class/gpio/export")
+
+		# Set output
+		os.system("echo out > /sys/class/gpio/gpio150/direction")
+		os.system("echo out > /sys/class/gpio/gpio151/direction")
+		os.system("echo out > /sys/class/gpio/gpio152/direction")
+
+		self.f_red = open("/sys/class/gpio/gpio150/value", "r+")
+		self.f_green = open("/sys/class/gpio/gpio151/value", "r+")
+		self.f_blue = open("/sys/class/gpio/gpio152/value", "r+")
+
+		while self.shouldKilled == False:
+			for color in self.color_list:
+				self.SetLedColor(color)
+				time.sleep(0.1)
+
+	def StopThread(self):
+		self.shouldKilled = True
+
+STATE_TURN_STARTED_STR = "ON_CONVERSATION_TURN_STARTED"
+STATE_ON_END_OF_UTTERANCE = "ON_END_OF_UTTERANCE"
+STATE_ON_RECOGNIZING_SPEECH_FINISHED = "ON_RECOGNIZING_SPEECH_FINISHED"
+STATE_ON_RESPONDING_STARTED = "ON_RESPONDING_STARTED"
+STATE_ON_RESPONDING_FINISHED = "ON_RESPONDING_FINISHED"
+STATE_ERROR_NO_MIC = "Input error"
+STATE_ERROR_NO_SPEAKER = "Invalid value for card"
+STATE_ON_CONVERSATION_TURN_TIMEOUT = "ON_CONVERSATION_TURN_TIMEOUT"
+
+STATES_STR = [
+	STATE_TURN_STARTED_STR,
+	STATE_ON_END_OF_UTTERANCE,
+	STATE_ON_RECOGNIZING_SPEECH_FINISHED,
+	STATE_ON_RESPONDING_STARTED,
+	STATE_ON_RESPONDING_FINISHED,
+	STATE_ERROR_NO_MIC,
+	STATE_ERROR_NO_SPEAKER,
+	STATE_ON_CONVERSATION_TURN_TIMEOUT
+]
+
+STATES_LED_PATTERN = {
+	STATE_TURN_STARTED_STR: "STATE_WAIT_SPEECH",
+	STATE_ON_END_OF_UTTERANCE: "STATE_PROCESSING",
+	STATE_ON_RECOGNIZING_SPEECH_FINISHED: "STATE_PROCESSING",
+	STATE_ON_RESPONDING_STARTED: "STATE_PROCESSING",
+	STATE_ON_RESPONDING_FINISHED: "STATE_WAIT_WAKE_WORD",
+	STATE_ERROR_NO_MIC: "STATE_ERROR",
+	STATE_ERROR_NO_SPEAKER: "STATE_ERROR",
+	STATE_ON_CONVERSATION_TURN_TIMEOUT: "STATE_WAIT_WAKE_WORD"
+}
+
+def AnalyzeStdoutForLED(all_data):
+	global blink_led
+	max_len = len(all_data)
+	idx = max_len
+	while idx >= 0:
+		check = all_data[idx:]
+		for state in STATES_STR:
+			if state in check:
+				blink_led.SetLedPattern(STATES_LED_PATTERN[state])
+				return
+		idx -= 1
+
 def StdOutAnalyzer():
-	STATE_TURN_STARTED_STR = "ON_CONVERSATION_TURN_STARTED"
+
 	time.sleep(0.5)
 	print ("StdOutAnalyzer thread started")
 
@@ -75,6 +199,8 @@ def StdOutAnalyzer():
 		if len(data) != 0:
 			allData += data
 			sys.stdout.write(data)
+
+			AnalyzeStdoutForLED(allData)
 			if "with_follow_on_turn" in allData:
 				startIdx = allData.rfind("{'with_follow_on_turn'")
 				jsonStr = allData[startIdx:].splitlines()[0]
@@ -86,17 +212,44 @@ def StdOutAnalyzer():
 				print (jsonStr)
 				print ("Parsed json: ", jsonObj["with_follow_on_turn"])
 				lastFollowOnTurn = jsonObj["with_follow_on_turn"]
+
 			if STATE_TURN_STARTED_STR in allData:
 				if lastFollowOnTurn is False:
 					print ("WW Done!!!")
-					play_audio_file(audio_device_name, ding_wav)
+					try:
+						play_audio_file(audio_device_name, ding_wav)
+					except:
+						blink_led.SetLedPattern("STATE_ERROR")
+						pass
+
 				# strip the STATE_TURN_STARTED_STR out of the allData buff
 				allData = allData[allData.rfind(STATE_TURN_STARTED_STR)+len(STATE_TURN_STARTED_STR):]
 				print ("After strip: ", allData, "*********")
 		data_err = std_err_buf.getvalue()
 		std_err_buf.truncate(0)
 		if len(data_err) != 0:
-			sys.stdout.write(data_err)
+			sys.stdout.write("[ERROR] " + data_err)
+			allData += data_err
+			AnalyzeStdoutForLED(allData)
+
+def GetHotwordPID():
+	# print (sh.glob("*"))
+	# print(sh.sort(sh.du(sh.glob("*"), "-sb"), "-rn"))
+	# print(sh.grep(sh.grep(sh.ps("-aux"), "python"), "hotword"))
+	# print(sh.grep(sh.grep(sh.ps("-aux"), "python")), "hotword")
+
+	out = sh.grep(sh.ps("-aux"), "python")
+	print ("***out***:\r\n", out, "*******")
+	print (type(out))
+	match = re.findall(b'[^\s]+\s+(\d+).+hotword.py', out.stdout, re.MULTILINE)
+	pprint.pprint(match)
+	for item in match:
+		pprint.pprint (item)
+		return int(item.decode("utf-8"))
+
+if "armv7l" in platform.processor():
+	blink_led = BlinkLedThread("Led blinker")
+	blink_led.start()
 
 def main():
 	if useThread:
@@ -120,7 +273,10 @@ def main():
 				_out=stdOutParam,
 				_err=stdErrParam,
 				_tty_out=True)
+				# _bg=True)
+	print ("Going to wait")
 	ggAssistCmd.wait()
 
 if __name__ == "__main__":
 	main()
+
