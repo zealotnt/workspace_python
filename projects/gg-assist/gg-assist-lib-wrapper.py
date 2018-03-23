@@ -10,7 +10,10 @@ import logging
 import json
 from dotenv import load_dotenv
 import platform
+from tendo import singleton
 
+# [Ref](https://stackoverflow.com/questions/380870/python-single-instance-of-program)
+me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path, verbose=True)
 
@@ -64,6 +67,7 @@ class BlinkLedThread(threading.Thread):
 	SYSFS_GPIO_VALUE_HIGH = '1'
 	SYSFS_GPIO_VALUE_LOW = '0'
 	PATTERN_ERROR = [1]
+	PATTERN_ON_START_FINISHED = [7]
 	PATTERN_WAIT_FOR_WAKE_WORD = [6]
 	PATTERN_WAIT_FOR_SPEECH = [0, 2]
 	PATTERN_PROCESSING = [0, 3]
@@ -102,6 +106,7 @@ class BlinkLedThread(threading.Thread):
 
 	def SetLedPattern(self, pattern_type):
 		patternDict = {
+			"STATE_ON_START_FINISHED": self.PATTERN_ON_START_FINISHED,
 			"STATE_WAIT_WAKE_WORD": self.PATTERN_WAIT_FOR_WAKE_WORD,
 			"STATE_WAIT_SPEECH": self.PATTERN_WAIT_FOR_SPEECH,
 			"STATE_PROCESSING": self.PATTERN_PROCESSING,
@@ -115,7 +120,7 @@ class BlinkLedThread(threading.Thread):
 		LED_GREEN = 151
 		LED_BLUE = 152
 
-		self.color_list = self.PATTERN_WAIT_FOR_WAKE_WORD
+		self.color_list = self.PATTERN_ON_START_FINISHED
 
 		# Export gpio
 		os.system("echo 150 > /sys/class/gpio/export")
@@ -139,6 +144,7 @@ class BlinkLedThread(threading.Thread):
 	def StopThread(self):
 		self.shouldKilled = True
 
+STATE_ON_START_FINISHED = "ON_START_FINISHED"
 STATE_TURN_STARTED_STR = "ON_CONVERSATION_TURN_STARTED"
 STATE_ON_END_OF_UTTERANCE = "ON_END_OF_UTTERANCE"
 STATE_ON_RECOGNIZING_SPEECH_FINISHED = "ON_RECOGNIZING_SPEECH_FINISHED"
@@ -149,6 +155,7 @@ STATE_ERROR_NO_SPEAKER = "Invalid value for card"
 STATE_ON_CONVERSATION_TURN_TIMEOUT = "ON_CONVERSATION_TURN_TIMEOUT"
 
 STATES_STR = [
+	STATE_ON_START_FINISHED,
 	STATE_TURN_STARTED_STR,
 	STATE_ON_END_OF_UTTERANCE,
 	STATE_ON_RECOGNIZING_SPEECH_FINISHED,
@@ -160,6 +167,7 @@ STATES_STR = [
 ]
 
 STATES_LED_PATTERN = {
+	STATE_ON_START_FINISHED: "STATE_WAIT_WAKE_WORD",
 	STATE_TURN_STARTED_STR: "STATE_WAIT_SPEECH",
 	STATE_ON_END_OF_UTTERANCE: "STATE_PROCESSING",
 	STATE_ON_RECOGNIZING_SPEECH_FINISHED: "STATE_PROCESSING",
@@ -171,6 +179,8 @@ STATES_LED_PATTERN = {
 }
 
 def AnalyzeStdoutForLED(all_data):
+	if "armv7l" not in platform.processor():
+		return
 	global blink_led
 	max_len = len(all_data)
 	idx = max_len
