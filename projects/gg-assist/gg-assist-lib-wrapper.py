@@ -13,6 +13,7 @@ import platform
 from tendo import singleton
 import urllib.request
 import progressbar
+import re, pprint
 
 # [Ref](https://stackoverflow.com/questions/380870/python-single-instance-of-program)
 me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
@@ -63,6 +64,33 @@ def play_audio_file(audio_device_name, f):
 	f.rewind()
 	device.close()
 
+class CheckNetworkThread(threading.Thread):
+	def __init__(self, name):
+		threading.Thread.__init__(self)
+		self.name = name
+		self.shouldKilled = False
+
+	def kill_hotword(self):
+		print ("[CheckNetworkThread] kill assist-app")
+		app_pid = GetHotwordPID()
+		if app_pid is not None:
+			print ("[CheckNetworkThread] killing")
+			os.system("kill -9 %d" % app_pid)
+		else:
+			print ("[CheckNetworkThread] can't find hotword")
+
+	def run(self):
+		print ("Starting " + self.name)
+		while self.shouldKilled is False:
+			try:
+				if internet_on() is False:
+					self.kill_hotword()
+				# print ("[CheckNetworkThread] Just Check")
+			except:
+				print ("[CheckNetworkThread] kill assist-app")
+				self.kill_hotword()
+			time.sleep(1)
+		print ("Exiting " + self.name)
 
 class BlinkLedThread(threading.Thread):
 	SYSFS_GPIO_VALUE_HIGH = '1'
@@ -108,6 +136,7 @@ class BlinkLedThread(threading.Thread):
 
 	def SetLedPattern(self, pattern_type):
 		patternDict = {
+			"STATE_POWERUP": self.PATTERN_ON_POWERUP,
 			"STATE_ON_START_FINISHED": self.PATTERN_ON_START_FINISHED,
 			"STATE_WAIT_WAKE_WORD": self.PATTERN_WAIT_FOR_WAKE_WORD,
 			"STATE_WAIT_SPEECH": self.PATTERN_WAIT_FOR_SPEECH,
@@ -269,6 +298,26 @@ def internet_on():
 if "armv7l" in platform.processor():
 	blink_led = BlinkLedThread("Led blinker")
 	blink_led.start()
+	check_network = CheckNetworkThread("Network checker")
+	check_network.start()
+
+def CheckNetwork(is_debug=False):
+	if is_debug is False:
+		return internet_on()
+
+	global blink_led
+	blink_led.SetLedPattern("STATE_POWERUP")
+	bbar = progressbar.ProgressBar(widgets=[progressbar.AnimatedMarker()], maxval=progressbar.UnknownLength).start()
+	network_availbility = internet_on()
+	while network_availbility is False:
+		network_availbility = internet_on()
+		print("Checking for internet: ")
+		for i in range(30):
+			bbar.update(i)
+			time.sleep(0.1)
+		sys.stdout.write(" %s" % ("ok" if network_availbility is True else "not ok") + "\r\n")
+		sys.stdout.flush()
+	blink_led.SetLedPattern("STATE_ON_START_FINISHED")
 
 def main():
 	if useThread:
@@ -285,31 +334,23 @@ def main():
 		stdOutParam = sys.stdout
 		stdErrParam = sys.stderr
 
-	network_availbility = internet_on()
-	bbar = progressbar.ProgressBar(widgets=[progressbar.AnimatedMarker()], maxval=progressbar.UnknownLength).start()
-	while network_availbility is False:
-		print("Checking for internet: ")
-		network_availbility = internet_on()
-		for i in range(30):
-			bbar.update(i)
-			time.sleep(0.1)
-		sys.stdout.write(" %s" % ("ok" if network_availbility is True else "not ok") + "\r\n")
-		sys.stdout.flush()
-	global blink_led
-	blink_led.SetLedPattern("STATE_ON_START_FINISHED")
-
 	while True:
-		ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
-		ggAssistCmd("--device_model_id",
-					os.environ.get("DEVICE_MODEL_ID"),
-					"--project_id",
-					os.environ.get("PROJECT_ID"),
-					_out=stdOutParam,
-					_err=stdErrParam,
-					_tty_out=True)
-					# _bg=True)
-		print ("Going to wait")
-		ggAssistCmd.wait()
+		CheckNetwork(True)
+		print ("Preparing to run")
+		try:
+			ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
+			ggAssistCmd("--device_model_id",
+						os.environ.get("DEVICE_MODEL_ID"),
+						"--project_id",
+						os.environ.get("PROJECT_ID"),
+						_out=stdOutParam,
+						_err=stdErrParam,
+						_tty_out=True)
+						# _bg=True)
+			print ("Going to wait")
+			ggAssistCmd.wait()
+		except:
+			print("App die, start again")
 
 if __name__ == "__main__":
 	main()
