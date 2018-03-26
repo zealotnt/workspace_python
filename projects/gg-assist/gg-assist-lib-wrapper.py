@@ -11,6 +11,7 @@ import json
 from dotenv import load_dotenv
 import platform
 from tendo import singleton
+import urllib.request
 
 # [Ref](https://stackoverflow.com/questions/380870/python-single-instance-of-program)
 me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
@@ -18,7 +19,6 @@ dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path, verbose=True)
 
 # remember to chmod ugo+x hotword.py before running this
-ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
 audio_device_name = os.environ.get("AUDIO_DEVICE_NAME")
 
 std_out_buf = StringIO()
@@ -257,6 +257,14 @@ def GetHotwordPID():
 		pprint.pprint (item)
 		return int(item.decode("utf-8"))
 
+def internet_on():
+	# [Ref](https://stackoverflow.com/questions/3764291/checking-network-connection)
+	try:
+		urllib.request.urlopen('http://216.58.192.142', timeout=1)
+		return True
+	except urllib.request.URLError as err:
+		return False
+
 if "armv7l" in platform.processor():
 	blink_led = BlinkLedThread("Led blinker")
 	blink_led.start()
@@ -276,16 +284,29 @@ def main():
 		stdOutParam = sys.stdout
 		stdErrParam = sys.stderr
 
-	ggAssistCmd("--device_model_id",
-				os.environ.get("DEVICE_MODEL_ID"),
-				"--project_id",
-				os.environ.get("PROJECT_ID"),
-				_out=stdOutParam,
-				_err=stdErrParam,
-				_tty_out=True)
-				# _bg=True)
-	print ("Going to wait")
-	ggAssistCmd.wait()
+	network_availbility = internet_on()
+	while network_availbility is False:
+		sys.stdout.write("Checking for internet: ")
+		network_availbility = internet_on()
+		sys.stdout.write(" %s" + "\r\n" % ("ok" if network_availbility is True else "not ok"))
+		sys.stdout.flush()
+		time.sleep(3)
+	if "armv7l" in platform.processor():
+		global blink_led
+		blink_led.SetLedPattern("STATE_ON_START_FINISHED")
+
+	while True:
+		ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
+		ggAssistCmd("--device_model_id",
+					os.environ.get("DEVICE_MODEL_ID"),
+					"--project_id",
+					os.environ.get("PROJECT_ID"),
+					_out=stdOutParam,
+					_err=stdErrParam,
+					_tty_out=True)
+					# _bg=True)
+		print ("Going to wait")
+		ggAssistCmd.wait()
 
 if __name__ == "__main__":
 	main()
