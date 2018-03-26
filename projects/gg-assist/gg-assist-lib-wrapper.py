@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import platform
 from tendo import singleton
 import urllib.request
+import progressbar
 
 # [Ref](https://stackoverflow.com/questions/380870/python-single-instance-of-program)
 me = singleton.SingleInstance() # will sys.exit(-1) if other instance is running
@@ -67,6 +68,7 @@ class BlinkLedThread(threading.Thread):
 	SYSFS_GPIO_VALUE_HIGH = '1'
 	SYSFS_GPIO_VALUE_LOW = '0'
 	PATTERN_ERROR = [1]
+	PATTERN_ON_POWERUP = [7, 0]
 	PATTERN_ON_START_FINISHED = [7]
 	PATTERN_WAIT_FOR_WAKE_WORD = [6]
 	PATTERN_WAIT_FOR_SPEECH = [0, 2]
@@ -120,7 +122,7 @@ class BlinkLedThread(threading.Thread):
 		LED_GREEN = 151
 		LED_BLUE = 152
 
-		self.color_list = self.PATTERN_ON_START_FINISHED
+		self.color_list = self.PATTERN_ON_POWERUP
 
 		# Export gpio
 		os.system("echo 150 > /sys/class/gpio/export")
@@ -258,7 +260,6 @@ def GetHotwordPID():
 		return int(item.decode("utf-8"))
 
 def internet_on():
-	# [Ref](https://stackoverflow.com/questions/3764291/checking-network-connection)
 	try:
 		urllib.request.urlopen('http://216.58.192.142', timeout=1)
 		return True
@@ -285,15 +286,17 @@ def main():
 		stdErrParam = sys.stderr
 
 	network_availbility = internet_on()
+	bbar = progressbar.ProgressBar(widgets=[progressbar.AnimatedMarker()], maxval=progressbar.UnknownLength).start()
 	while network_availbility is False:
-		sys.stdout.write("Checking for internet: ")
+		print("Checking for internet: ")
 		network_availbility = internet_on()
-		sys.stdout.write(" %s" + "\r\n" % ("ok" if network_availbility is True else "not ok"))
+		for i in range(30):
+			bbar.update(i)
+			time.sleep(0.1)
+		sys.stdout.write(" %s" % ("ok" if network_availbility is True else "not ok") + "\r\n")
 		sys.stdout.flush()
-		time.sleep(3)
-	if "armv7l" in platform.processor():
-		global blink_led
-		blink_led.SetLedPattern("STATE_ON_START_FINISHED")
+	global blink_led
+	blink_led.SetLedPattern("STATE_ON_START_FINISHED")
 
 	while True:
 		ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
