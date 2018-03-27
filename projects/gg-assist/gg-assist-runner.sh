@@ -7,6 +7,7 @@ start_gg_assistant() {
 	python ~/gg-assistant/gg-assist-lib-wrapper.py &
 }
 
+# https://serverfault.com/questions/187712/how-to-determine-if-im-logged-in-via-ssh
 if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
 	exit 0
 else
@@ -15,4 +16,8 @@ else
 	esac
 fi
 
-start_gg_assistant
+# https://unix.stackexchange.com/questions/270272/how-to-get-the-tty-in-which-bash-is-running/270372
+# TODO: only accept running app at ttymxc0
+if [[ $(tty) = "/dev/ttymxc0" ]]; then
+	start_gg_assistant
+fi
