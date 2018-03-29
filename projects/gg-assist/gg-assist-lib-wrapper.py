@@ -69,15 +69,22 @@ class CheckNetworkThread(threading.Thread):
 		threading.Thread.__init__(self)
 		self.name = name
 		self.shouldKilled = False
+		self.retry_count = 0
+		self.MAX_RETRY_NETWORK = 10 # after 2s of no internet connection, restart the assistant
+		self.INTERVAL_EACH_RETRY = 0.2
 
 	def kill_hotword(self):
-		print ("[CheckNetworkThread] kill assist-app")
+		self.retry_count += 1
+		if self.retry_count <= self.MAX_RETRY_NETWORK:
+			return
+		self.retry_count = 0
+
 		app_pid = GetHotwordPID()
 		if app_pid is not None:
-			print ("[CheckNetworkThread] killing")
+			print ("[CheckNetworkThread] kill assist-app")
 			os.system("kill -9 %d" % app_pid)
-		else:
-			print ("[CheckNetworkThread] can't find hotword")
+		# else:
+		# 	print ("[CheckNetworkThread] can't find hotword")
 
 	def run(self):
 		print ("Starting " + self.name)
@@ -85,11 +92,12 @@ class CheckNetworkThread(threading.Thread):
 			try:
 				if internet_on() is False:
 					self.kill_hotword()
+				else:
+					self.retry_count = 0
 				# print ("[CheckNetworkThread] Just Check")
 			except:
-				print ("[CheckNetworkThread] kill assist-app")
 				self.kill_hotword()
-			time.sleep(1)
+			time.sleep(self.INTERVAL_EACH_RETRY)
 		print ("Exiting " + self.name)
 
 class BlinkLedThread(threading.Thread):
@@ -184,20 +192,10 @@ STATE_ON_RESPONDING_FINISHED = "ON_RESPONDING_FINISHED"
 STATE_ERROR_NO_MIC = "Input error"
 STATE_ERROR_NO_SPEAKER = "Invalid value for card"
 STATE_ON_CONVERSATION_TURN_TIMEOUT = "ON_CONVERSATION_TURN_TIMEOUT"
-
-STATES_STR = [
-	STATE_ON_START_FINISHED,
-	STATE_TURN_STARTED_STR,
-	STATE_ON_END_OF_UTTERANCE,
-	STATE_ON_RECOGNIZING_SPEECH_FINISHED,
-	STATE_ON_RESPONDING_STARTED,
-	STATE_ON_RESPONDING_FINISHED,
-	STATE_ERROR_NO_MIC,
-	STATE_ERROR_NO_SPEAKER,
-	STATE_ON_CONVERSATION_TURN_TIMEOUT
-]
+STATE_ON_CONVERSATION_TURN_FINISHED = "ON_CONVERSATION_TURN_FINISHED"
 
 STATES_LED_PATTERN = {
+	STATE_ON_CONVERSATION_TURN_FINISHED: "STATE_WAIT_WAKE_WORD",
 	STATE_ON_START_FINISHED: "STATE_WAIT_WAKE_WORD",
 	STATE_TURN_STARTED_STR: "STATE_WAIT_SPEECH",
 	STATE_ON_END_OF_UTTERANCE: "STATE_PROCESSING",
@@ -217,7 +215,7 @@ def AnalyzeStdoutForLED(all_data):
 	idx = max_len
 	while idx >= 0:
 		check = all_data[idx:]
-		for state in STATES_STR:
+		for state in STATES_LED_PATTERN:
 			if state in check:
 				blink_led.SetLedPattern(STATES_LED_PATTERN[state])
 				return
@@ -280,10 +278,10 @@ def GetHotwordPID():
 	# print(sh.grep(sh.grep(sh.ps("-aux"), "python")), "hotword")
 
 	out = sh.grep(sh.ps("-aux"), "python")
-	print ("***out***:\r\n", out, "*******")
-	print (type(out))
+	# print ("***out***:\r\n", out, "*******")
+	# print (type(out))
 	match = re.findall(b'[^\s]+\s+(\d+).+hotword.py', out.stdout, re.MULTILINE)
-	pprint.pprint(match)
+	# pprint.pprint(match)
 	for item in match:
 		pprint.pprint (item)
 		return int(item.decode("utf-8"))
@@ -307,14 +305,15 @@ def CheckNetwork(is_debug=False):
 
 	global blink_led
 	blink_led.SetLedPattern("STATE_POWERUP")
-	bbar = progressbar.ProgressBar(widgets=[progressbar.AnimatedMarker()], maxval=progressbar.UnknownLength).start()
+	# bbar = progressbar.ProgressBar(widgets=[progressbar.AnimatedMarker()], maxval=progressbar.UnknownLength).start()
 	network_availbility = internet_on()
 	while network_availbility is False:
 		network_availbility = internet_on()
-		print("Checking for internet: ")
-		for i in range(30):
-			bbar.update(i)
-			time.sleep(0.1)
+		sys.stdout.write("Checking for internet: ")
+		time.sleep(1)
+		# for i in range(30):
+		# 	bbar.update(i)
+		# 	time.sleep(0.1)
 		sys.stdout.write(" %s" % ("ok" if network_availbility is True else "not ok") + "\r\n")
 		sys.stdout.flush()
 	blink_led.SetLedPattern("STATE_ON_START_FINISHED")
