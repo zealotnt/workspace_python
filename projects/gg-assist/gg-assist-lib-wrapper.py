@@ -6,7 +6,7 @@ import collections
 import alsaaudio
 import wave
 import os
-import logging
+import logging, logging.config
 import json
 from dotenv import load_dotenv
 import platform
@@ -29,12 +29,29 @@ std_err_buf = StringIO()
 useThread = True
 # useThread = False
 
+# read initial config file
+## [Ref](https://stackoverflow.com/questions/23161745/python-logging-file-config-keyerror-formatters)
+## use this to pass the correct logging.conf file path, otherwise, configparser will complain
+log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.conf')
+logging.config.fileConfig(log_file_path, disable_existing_loggers=False)
+
+# create and start listener on port 9999
+t = logging.config.listen(9999)
+t.start()
+
+logger = logging.getLogger('gg_assist_wrapper')
+
 DETECT_DING=os.environ.get("DING_FILE_PATH")
+
+def isBoard():
+	if "armv7l" in platform.processor():
+		return True
+	return False
 
 def play_audio_file(audio_device_name, f):
 	device = alsaaudio.PCM(device=audio_device_name)
 
-	# print('%d channels, %d sampling rate\n' % (f.getnchannels(), f.getframerate()))
+	# logger.info('%d channels, %d sampling rate\n' % (f.getnchannels(), f.getframerate()))
 	# Set attributes
 	device.setchannels(f.getnchannels())
 	device.setrate(f.getframerate())
@@ -81,24 +98,24 @@ class CheckNetworkThread(threading.Thread):
 
 		app_pid = GetHotwordPID()
 		if app_pid is not None:
-			print ("[CheckNetworkThread] kill assist-app")
+			logger.info ("[CheckNetworkThread] kill assist-app")
 			os.system("kill -9 %d" % app_pid)
 		# else:
-		# 	print ("[CheckNetworkThread] can't find hotword")
+		# 	logger.info ("[CheckNetworkThread] can't find hotword")
 
 	def run(self):
-		print ("Starting " + self.name)
+		logger.info ("Starting " + self.name)
 		while self.shouldKilled is False:
 			try:
 				if internet_on() is False:
 					self.kill_hotword()
 				else:
 					self.retry_count = 0
-				# print ("[CheckNetworkThread] Just Check")
+				# logger.info ("[CheckNetworkThread] Just Check")
 			except:
 				self.kill_hotword()
 			time.sleep(self.INTERVAL_EACH_RETRY)
-		print ("Exiting " + self.name)
+		logger.info ("Exiting " + self.name)
 
 class BlinkLedThread(threading.Thread):
 	SYSFS_GPIO_VALUE_HIGH = '1'
@@ -118,9 +135,9 @@ class BlinkLedThread(threading.Thread):
 		self.shouldKilled = False
 
 	def run(self):
-		print ("Starting " + self.name)
+		logger.info ("Starting " + self.name)
 		self.BlinkLed()
-		print ("Exiting " + self.name)
+		logger.info ("Exiting " + self.name)
 
 	def SetLedColor(self, value):
 		if (value & 0x01):
@@ -224,7 +241,7 @@ def AnalyzeStdoutForLED(all_data):
 def StdOutAnalyzer():
 
 	time.sleep(0.5)
-	print ("StdOutAnalyzer thread started")
+	logger.info ("StdOutAnalyzer thread started")
 
 	global std_out_buf
 	global audio_device_name
@@ -237,7 +254,7 @@ def StdOutAnalyzer():
 		std_out_buf.truncate(0)
 		if len(data) != 0:
 			allData += data
-			sys.stdout.write(data)
+			logger.info (data)
 
 			AnalyzeStdoutForLED(allData)
 			if "with_follow_on_turn" in allData:
@@ -248,13 +265,13 @@ def StdOutAnalyzer():
 				jsonStr = jsonStr.replace("False", "false")
 				jsonStr = jsonStr.replace("True", "true")
 				jsonObj = json.loads(jsonStr)
-				print (jsonStr)
-				print ("Parsed json: ", jsonObj["with_follow_on_turn"])
+				logger.info (jsonStr)
+				logger.info ("Parsed json: %s" % jsonObj["with_follow_on_turn"])
 				lastFollowOnTurn = jsonObj["with_follow_on_turn"]
 
 			if STATE_TURN_STARTED_STR in allData:
 				if lastFollowOnTurn is False:
-					print ("WW Done!!!")
+					logger.info ("WW Done!!!")
 					try:
 						play_audio_file(audio_device_name, ding_wav)
 					except:
@@ -263,27 +280,27 @@ def StdOutAnalyzer():
 
 				# strip the STATE_TURN_STARTED_STR out of the allData buff
 				allData = allData[allData.rfind(STATE_TURN_STARTED_STR)+len(STATE_TURN_STARTED_STR):]
-				print ("After strip: ", allData, "*********")
+				logger.info ("After strip: %s *********" % allData)
 		data_err = std_err_buf.getvalue()
 		std_err_buf.truncate(0)
 		if len(data_err) != 0:
-			sys.stdout.write("[ERROR] " + data_err)
+			logger.info ("[ERROR] " + data_err)
 			allData += data_err
 			AnalyzeStdoutForLED(allData)
 
 def GetHotwordPID():
-	# print (sh.glob("*"))
-	# print(sh.sort(sh.du(sh.glob("*"), "-sb"), "-rn"))
-	# print(sh.grep(sh.grep(sh.ps("-aux"), "python"), "hotword"))
-	# print(sh.grep(sh.grep(sh.ps("-aux"), "python")), "hotword")
+	# logger.info (sh.glob("*"))
+	# logger.info(sh.sort(sh.du(sh.glob("*"), "-sb"), "-rn"))
+	# logger.info(sh.grep(sh.grep(sh.ps("-aux"), "python"), "hotword"))
+	# logger.info(sh.grep(sh.grep(sh.ps("-aux"), "python")), "hotword")
 
 	out = sh.grep(sh.ps("-aux"), "python")
-	# print ("***out***:\r\n", out, "*******")
-	# print (type(out))
+	# logger.info ("***out***:\r\n", out, "*******")
+	# logger.info (type(out))
 	match = re.findall(b'[^\s]+\s+(\d+).+hotword.py', out.stdout, re.MULTILINE)
 	# pprint.pprint(match)
 	for item in match:
-		pprint.pprint (item)
+		plogger.info.plogger.info (item)
 		return int(item.decode("utf-8"))
 
 def internet_on():
@@ -293,7 +310,7 @@ def internet_on():
 	except urllib.request.URLError as err:
 		return False
 
-if "armv7l" in platform.processor():
+if isBoard():
 	blink_led = BlinkLedThread("Led blinker")
 	blink_led.start()
 	check_network = CheckNetworkThread("Network checker")
@@ -303,28 +320,28 @@ def CheckNetwork(is_debug=False):
 	if is_debug is False:
 		return internet_on()
 
-	global blink_led
-	blink_led.SetLedPattern("STATE_POWERUP")
+	if isBoard():
+		global blink_led
+		blink_led.SetLedPattern("STATE_POWERUP")
 	# bbar = progressbar.ProgressBar(widgets=[progressbar.AnimatedMarker()], maxval=progressbar.UnknownLength).start()
 	network_availbility = internet_on()
 	while network_availbility is False:
 		network_availbility = internet_on()
-		sys.stdout.write("Checking for internet: ")
 		time.sleep(1)
 		# for i in range(30):
 		# 	bbar.update(i)
 		# 	time.sleep(0.1)
-		sys.stdout.write(" %s" % ("ok" if network_availbility is True else "not ok") + "\r\n")
-		sys.stdout.flush()
-	blink_led.SetLedPattern("STATE_ON_START_FINISHED")
+		logger.info ("Checking for internet: %s" % ("ok" if network_availbility is True else "not ok"))
+	if isBoard():
+		blink_led.SetLedPattern("STATE_ON_START_FINISHED")
 
 def main():
 	if useThread:
-		print("Init thread")
+		logger.info("Init thread")
 		stdoutAnalyzer = threading.Thread(target=StdOutAnalyzer)
 		stdoutAnalyzer.start()
 	else:
-		print ("Not use thread")
+		logger.info ("Not use thread")
 
 	if useThread:
 		stdOutParam = std_out_buf
@@ -335,7 +352,7 @@ def main():
 
 	while True:
 		CheckNetwork(True)
-		print ("Preparing to run")
+		logger.info ("Preparing to run")
 		try:
 			ggAssistCmd = sh.Command(os.environ.get("HOTWORD_PATH"))
 			ggAssistCmd("--device_model_id",
@@ -346,10 +363,10 @@ def main():
 						_err=stdErrParam,
 						_tty_out=True)
 						# _bg=True)
-			print ("Going to wait")
+			logger.info ("Going to wait")
 			ggAssistCmd.wait()
 		except:
-			print("App die, start again")
+			logger.info("App die, start again")
 
 if __name__ == "__main__":
 	main()
