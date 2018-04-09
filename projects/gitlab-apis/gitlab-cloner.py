@@ -19,8 +19,11 @@ def get_git_root():
 	return git_root
 sys.path.insert(0, get_git_root() + '/test_bluefinserial/bluefinserial')
 from utils import *
+from dotenv import load_dotenv
 
 # ---- CONSTANTS
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path, verbose=True)
 
 # ---- GLOBALS
 def get_groups(projects):
@@ -62,13 +65,29 @@ def clone_groups(gl_mine, target_groups):
 		group.save()
 		print_ok("\tGroup %s created" % (group_name))
 
+def print_suggest_cloning_url(target_projects):
+	gl_account = os.environ.get("GL_TARGET_ACCOUNT")
+	gl_pass = os.environ.get("GL_TARGET_PASSWORD")
+	print (os.environ.get("GL_TARGET_ACCOUNT"))
+	print (os.environ.get("GL_TARGET_PASSWORD"))
+	full_urls = []
+	for project in target_projects:
+		inject_pos = len("http://")
+		full_url = (project.http_url_to_repo[:inject_pos] +
+					("%s:%s@" % (gl_account, gl_pass)) +
+					project.http_url_to_repo[inject_pos:])
+		full_urls.append(full_url)
+	full_urls.sort()
+	print_noti("Suggesting cloning URL:")
+	for url in full_urls:
+		print("\t%s" % url)
+
 def main():
 	gl = gitlab.Gitlab.from_config('gitlab-target', ['gitlab.cfg'])
 
-	# make an API request to create the gl.user object. This is mandatory if you
-	# use the username/password authentication.
-
 	target_projects = gl.projects.list(all=True)
+	print_suggest_cloning_url(target_projects)
+
 	print_noti("Group from target gitlab server: ")
 	target_groups = get_groups(target_projects)
 	pprint.pprint(target_groups)
